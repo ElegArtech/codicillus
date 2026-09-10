@@ -1,0 +1,95 @@
+{
+  "persona": "externe",
+  "dureeSecondes": 154,
+  "statut": "exploration terminée avec découverte",
+  "trouvailles": [
+    {
+      "observation": "Le guide public est trouvable et lisible sans compte ; la date de vérification est visible.",
+      "preuves": [
+        "01-accueil.png",
+        "04-guide-stable.png"
+      ]
+    },
+    {
+      "observation": "Le lien de domaine depuis le guide public mène à une destination inaccessible au lecteur externe.",
+      "preuves": [
+        "05-domaine.png",
+        "trace.zip"
+      ],
+      "objectifEtatFinalCandidat": "Depuis une note publique, les repères de domaine mènent à une destination publique utile où cette note reste retrouvable."
+    },
+    {
+      "observation": "Le retour à l’accueil depuis cette impasse fonctionne ; la consultation du guide passe de 0 à 1.",
+      "preuves": [
+        "06-retour-accueil.png"
+      ]
+    },
+    {
+      "observation": "À 1440×1000, titre et corps sont comprimés à environ 190 px à gauche face au cartouche latéral beaucoup plus large.",
+      "preuves": [
+        "04-guide-stable.png"
+      ],
+      "impact": "lecture inconfortable, non bloquante"
+    }
+  ],
+  "limites": [
+    "Exploration du décor garni public uniquement, pas une certification globale.",
+    "Deux tentatives avec sélecteurs inadéquats ont expiré (rôle button pour En bref et apostrophe typographique du retour) ; elles ne prouvent pas des défauts du produit.",
+    "La capture 02-guide.png précède la stabilisation de navigation et montre encore l’accueil ; utiliser 04-guide-stable.png pour le guide.",
+    "En bref, impression et recherche non vérifiés."
+  ],
+  "etapes": [
+    {
+      "capture": "01-accueil.png",
+      "observation": "Accueil anonyme : un guide public visible, date de vérification et domaine.",
+      "url": "http://127.0.0.1:5911/"
+    },
+    {
+      "lien": "01 Accès public au relais boréal Référence du relais boréal : inventaire et diagnostic publique. Vérifié il y a 3 jours Exploitation boréale 0 consultation",
+      "capture": "02-guide.png",
+      "url": "http://127.0.0.1:5911/guides/recette-publique"
+    },
+    {
+      "bouton": "En bref",
+      "capture": "03-en-bref.png",
+      "erreur": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'En bref', exact: true }).first()\u001b[22m\n"
+    },
+    {
+      "capture": "04-guide-stable.png",
+      "observation": "Contenu public Référence, auteur, domaine et date de vérification lisibles sans compte ; tentative En bref avec rôle button non concluante (sélecteur).",
+      "url": "http://127.0.0.1:5911/guides/recette-publique"
+    },
+    {
+      "lien": "Exploitation boréale",
+      "url": "http://127.0.0.1:5911/guides/recette-publique"
+    },
+    {
+      "capture": "05-domaine.png",
+      "url": "http://127.0.0.1:5911/univers/atelier-recette/exploitation-recette"
+    },
+    {
+      "lien": "Revenir à l’accueil",
+      "erreur": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('link', { name: 'Revenir à l’accueil', exact: true }).first()\u001b[22m\n"
+    },
+    {
+      "lien": "Revenir à l'accueil",
+      "url": "http://127.0.0.1:5911/univers/atelier-recette/exploitation-recette"
+    },
+    {
+      "capture": "06-retour-accueil.png",
+      "observation": "Le lien Revenir à l’accueil ramène à la liste publique.",
+      "url": "http://127.0.0.1:5911/"
+    }
+  ],
+  "preuves": [
+    "trace.zip",
+    "final.png",
+    "erreurs.json",
+    "01-accueil.png",
+    "02-guide.png",
+    "04-guide-stable.png",
+    "05-domaine.png",
+    "06-retour-accueil.png"
+  ],
+  "nettoyage": "Navigateur fermé, clone PostgreSQL et conteneur de recherche supprimés ; script terminé avec code 0."
+}

@@ -1,0 +1,97 @@
+Aller au contenu
+C
+Codicillus
+Vos connaissances. Vivantes.
+Rechercher…
+⌘ K
+UNIVERS
+Atelier boréal
+3
+Univers aurore
++
+Créer un univers
+RA
+Recette administrateur
+administrateur@recette.invalid
+›
+Console
+›
+Domaines
+Console
+Administration de l'instance
+CONTENUS
+Univers
+2
+Domaines
+1
+Types de note
+5
+Types de fiches
+0
+Types de relations
+0
+Templates
+0
+UTILISATEURS
+Comptes
+4
+SYSTÈME
+Imports
+0
+Exports
+Analytique
+Configuration
+Domaines
+
+Chaque domaine a ses contributeurs, son rangement et ses modules. Cartographie et Carte mentale sont toujours disponibles.
+
+Nouveau domaine
+NOM
+UNIVERS
+NOTES
+FICHES
+SIGNETS
+DOSSIERS
+CONTRIB.
+MODULES ACTIVÉS
+Exploitation boréale
+Atelier boréal
+3
+0
+0
+1
+1
+NOT
+DOS
+FIC
+SIG
+MOD
+Modifier
+Nouveau domaine
+Il apparaîtra dans la navigation de ceux qui y ont accès.
+Nom *
+Description
+Univers de rattachement *
+Atelier boréal
+Univers aurore
+Le rattachement change la place du domaine dans la navigation, jamais son contenu.
+Couleur
+Sert au repérage. Choisie hors des teintes de fraîcheur.
+Modules
+
+Cartographie et Carte mentale sont toujours disponibles pour tous les univers et domaines.
+
+Un module désactivé n'apparaît nulle part pour ce domaine : ni onglet grisé, ni entrée morte.
+Notes
+toujours actif
+Le corps même du domaine. Sans lui, il n'y a rien à ranger.
+Dossiers
+Rangement arborescent des notes. À désactiver pour un domaine plat de quelques dizaines de notes, où l'arborescence coûte plus qu'elle ne rapporte.
+Fiches
+Objets typés — serveurs, applications, contacts — avec leurs propriétés structurées et leurs relations.
+Modélisation
+La lecture des dépendances : ce qui porte, ce qui dépend, ce qui casse si on le retire. Sans lui, le graphe ne se lit qu'en cartographie.
+Signets
+Liens web curatés rattachés au domaine : documentation d'éditeur, portails de prestataires.
+Annuler
+Créer le domaine

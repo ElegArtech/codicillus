@@ -1,0 +1,20 @@
+[
+  {
+    "type": "http",
+    "code": 404,
+    "url": "http://127.0.0.1:5581/guides/recette-interne"
+  },
+  {
+    "type": "console",
+    "texte": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  },
+  {
+    "type": "http",
+    "code": 404,
+    "url": "http://127.0.0.1:5581/guides/inexistante-boreale"
+  },
+  {
+    "type": "console",
+    "texte": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  }
+]

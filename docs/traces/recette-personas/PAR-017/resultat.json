@@ -1,0 +1,42 @@
+{
+  "id": "PAR-017",
+  "persona": "intervenant",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Fiabilité de la note lisible immédiatement dans ses métadonnées de confiance",
+  "assertions": [
+    {
+      "assertion": "Métadonnée /Vérifiée le/",
+      "ok": true
+    },
+    {
+      "assertion": "Métadonnée /Recette contributeur/",
+      "ok": true
+    },
+    {
+      "assertion": "Métadonnée /Procédure/",
+      "ok": false
+    },
+    {
+      "assertion": "Métadonnée /Interne/",
+      "ok": false
+    },
+    {
+      "assertion": "Métadonnée /Vérifié il y a/",
+      "ok": false
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-017/fr-FR/passe-2",
+  "correction_candidate": null,
+  "limites": [
+    "Vérification du corpus de démonstration par aiguilles non réalisée.",
+    "Les dossiers de traces conservent les essais techniques et leurs reprises. Les erreurs de sélecteur, de connexion préalable et de prérequis ne prouvent aucun défaut produit.",
+    "Attente historique ou persona à rapprocher de la refonte et des droits : aucune restauration de l’ancienne interface demandée."
+  ],
+  "essais_avec_traces": [
+    "docs/traces/recette-personas/PAR-017/fr-FR/passe-1",
+    "docs/traces/recette-personas/PAR-017/fr-FR/passe-2"
+  ]
+}

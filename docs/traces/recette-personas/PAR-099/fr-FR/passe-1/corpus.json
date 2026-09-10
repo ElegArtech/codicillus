@@ -1,0 +1,9 @@
+{
+  "id": "PAR-099",
+  "aiguilles": 111,
+  "textes": 2,
+  "instantanes_dom": 38,
+  "trouvees": [],
+  "trace": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-099/fr-FR/passe-1/trace.zip",
+  "mesure": "Texte des captures et instantanés DOM enregistrés, hors contenu des balises script/style."
+}

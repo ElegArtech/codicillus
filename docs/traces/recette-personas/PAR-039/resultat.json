@@ -1,0 +1,37 @@
+{
+  "id": "PAR-039",
+  "persona": "contributeur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Version immuable récupérable après chaque changement effectif de corps",
+  "assertions": [
+    {
+      "critere": "Corps modifié relu",
+      "reussi": true
+    },
+    {
+      "critere": "Ancienne version restituée",
+      "reussi": false
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-039/fr-FR/passe-2",
+  "correction_candidate": [
+    "Ancienne version restituée"
+  ],
+  "limites": [
+    "Plafond, suppression et variantes de restauration non tous démontrés ; oracle complet non atteint."
+  ],
+  "passes_executees": 2,
+  "budget_reel": {
+    "passes_produit_completes": 0,
+    "reprises_de_script": "Démarrage HTTP, rôles accessibles, attentes de navigation et isolation ont été corrigés ; ces reprises ne sont pas une validation de deux versions du produit.",
+    "build": "build préexistant, aucun rebuild de ce lot"
+  },
+  "reproduction": [
+    "docs/traces/recette-personas/lot2/executer.mjs",
+    "docs/traces/recette-personas/lot2/reprendre.mjs",
+    "docs/traces/recette-personas/lot2/reparer-selecteurs.mjs"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "PAR-101",
+  "persona": "administrateur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Dernier administrateur protégé",
+      "ok": true
+    },
+    {
+      "nom": "Auteur conservé",
+      "ok": true
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Dernier administrateur conservé ; accès désactivé perdu immédiatement ; auteur des contributions conservé."
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-101/fr-FR/passe-2",
+  "correction_candidate": [
+    "Dernier administrateur conservé ; accès désactivé perdu immédiatement ; auteur des contributions conservé."
+  ],
+  "limites": [
+    "Session active compte désactivé non testée"
+  ],
+  "jeu": "garnie",
+  "passe": 2
+}

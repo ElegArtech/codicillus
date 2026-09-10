@@ -1,0 +1,32 @@
+{
+  "defautConfirme": true,
+  "persona": "contributeur",
+  "geste": "Ouvrir note en Référence ; cliquer Opérationnel ; Plus d’actions ; Marquer comme vérifiée.",
+  "attendu": "Seule la date de vérification Opérationnel avance ; le registre affiché reste Opérationnel.",
+  "observe": "La requête vise reference ; seule verifie_le avance ; retour en Référence.",
+  "avant": [
+    {
+      "verifie_le": "2026-05-13T05:51:50.283Z",
+      "verifie_le_operationnel": "2026-05-13T05:51:50.283Z"
+    }
+  ],
+  "apres": [
+    {
+      "verifie_le": "2026-09-10T06:35:04.891Z",
+      "verifie_le_operationnel": "2026-05-13T05:51:50.283Z"
+    }
+  ],
+  "posts": [
+    {
+      "url": "http://127.0.0.1:5920/notes/recette-interne?/verifier",
+      "corps": "fichier=&registre=reference"
+    }
+  ],
+  "preuves": [
+    "01-operationnel.png",
+    "02-apres-verification.png",
+    "trace.zip",
+    "actions.json",
+    "erreurs.json"
+  ]
+}

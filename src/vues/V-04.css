@@ -6,7 +6,7 @@ body { background: var(--c-fond); }
    Hors coquille applicative : ni navigation latérale, ni palette, ni menu de
    création. Le visiteur n'a pas de compte et n'en aura pas.
    ========================================================================== */
-.public { min-height: 100vh; display: flex; flex-direction: column; }
+.public.app { min-height: 100vh; display: flex; flex-direction: column; }
 
 /* --- Bandeau minimal ------------------------------------------------------- */
 .chapeau {

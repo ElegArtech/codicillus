@@ -1,0 +1,71 @@
+Aller au contenu
+C
+Codicillus
+Vos connaissances. Vivantes.
+Rechercher…
+⌘ K
+UNIVERS
+
+Aucun univers n'existe encore. Créez-en un ci-dessous, puis un domaine : le rangement s'ouvrira ici.
+
++
+Créer un univers
+RA
+Recette administrateur
+administrateur@recette.invalid
+›
+Console
+›
+Univers
+Console
+Administration de l'instance
+CONTENUS
+Univers
+0
+Domaines
+0
+Types de note
+5
+Types de fiches
+0
+Types de relations
+0
+Templates
+0
+UTILISATEURS
+Comptes
+4
+SYSTÈME
+Imports
+0
+Exports
+Analytique
+Configuration
+Univers
+
+La segmentation de plus haut niveau. Un univers regroupe des domaines qui partagent un contexte — ce qui tourne aujourd'hui, ce qui est en projet. Leur ordre pilote l'affichage dans la navigation latérale.
+
+Nouvel univers
+RANG
+NOM ET DESCRIPTION
+DOMAINES
+NOTES
+Aucun univers
+L'univers est la racine du rangement : sans lui, aucun domaine, aucun dossier et aucune note n'a de place. Le bouton « Nouvel univers », en haut à droite, crée le premier.
+
+L'ordre se règle avec les flèches, utilisables au clavier. Le changement prend effet immédiatement dans la navigation de tous les utilisateurs.
+
+Nouvel univers
+Il apparaîtra dans la navigation latérale de tous les utilisateurs.
+Nom *
+Description
+Affichée en couverture de la page d'univers. Une phrase suffit.
+Icône
+Couleur
+Vingt teintes. Elle colore le trait de l'icône, dans la navigation comme sur la page de l'univers.
+Position dans la navigation
+Position 1 — en tête
+Aperçu de la navigation
+Nouvel univers
+Annuler
+Créer l'univers

@@ -1,0 +1,7 @@
+[
+  {
+    "type": "requestfailed",
+    "url": "http://127.0.0.1:5755/console/exports/atelier-recette/exploitation-recette",
+    "texte": "net::ERR_ABORTED"
+  }
+]

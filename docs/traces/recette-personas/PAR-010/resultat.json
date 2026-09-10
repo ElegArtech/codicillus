@@ -1,0 +1,32 @@
+{
+  "id": "PAR-010",
+  "persona": "intervenant",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Note manquante créée depuis la recherche vide et retrouvable",
+  "assertions": [
+    {
+      "assertion": "Requête reprise et reformulation",
+      "ok": false
+    },
+    {
+      "assertion": "Objectif complet poursuivi au navigateur",
+      "ok": false,
+      "detail": "Action recherchée absente : Créer cette note"
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-010/fr-FR/passe-2-reprise",
+  "correction_candidate": null,
+  "limites": [
+    "Vérification du corpus de démonstration par aiguilles non réalisée.",
+    "Les dossiers de traces conservent les essais techniques et leurs reprises. Les erreurs de sélecteur, de connexion préalable et de prérequis ne prouvent aucun défaut produit.",
+    "Attente historique ou persona à rapprocher de la refonte et des droits : aucune restauration de l’ancienne interface demandée."
+  ],
+  "essais_avec_traces": [
+    "docs/traces/recette-personas/PAR-010/fr-FR/passe-1",
+    "docs/traces/recette-personas/PAR-010/fr-FR/passe-2",
+    "docs/traces/recette-personas/PAR-010/fr-FR/passe-2-reprise"
+  ]
+}

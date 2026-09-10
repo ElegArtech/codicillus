@@ -266,7 +266,7 @@ describe('V-14 — le sélecteur de registre', () => {
 		expect(html).toContain(`href="${ADRESSES.reference}"`);
 		expect(html).toContain(`href="${ADRESSES.operationnel}"`);
 		expect(html).toContain('Opérationnel</a>');
-		expect(html).not.toContain('Créer la version opérationnelle');
+		expect(html).not.toContain('Créer le registre Opérationnel');
 	});
 
 	/**
@@ -275,7 +275,7 @@ describe('V-14 — le sélecteur de registre', () => {
 	 */
 	it('n’affiche jamais d’onglet désactivé : sans Opérationnel, il offre de le créer', async () => {
 		const html = await rendu({ vivacite: { ...VIVACITE, operationnelle: null } });
-		expect(html).toContain('Créer la version opérationnelle');
+		expect(html).toContain('Créer le registre Opérationnel');
 		expect(html).toContain(`href="${ADRESSES.modifierLOperationnel}"`);
 		expect(html).not.toContain(`href="${ADRESSES.operationnel}"`);
 		expect(html).not.toContain('disabled');

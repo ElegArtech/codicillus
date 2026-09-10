@@ -1,0 +1,66 @@
+Aller au contenu
+C
+Codicillus
+Vos connaissances. Vivantes.
+Rechercher…
+⌘ K
+UNIVERS
+Atelier boréal
+3
++
+Créer un univers
+RA
+Recette administrateur
+administrateur@recette.invalid
+›
+Console
+›
+Types de fiches
+Console
+Administration de l'instance
+CONTENUS
+Univers
+1
+Domaines
+1
+Types de note
+5
+Types de fiches
+1
+Types de relations
+0
+Templates
+0
+UTILISATEURS
+Comptes
+4
+SYSTÈME
+Imports
+0
+Exports
+Analytique
+Configuration
+Types de fiches
+
+Les schémas de propriétés structurées. Un type de fiche transforme une note en objet exploitable : un serveur porte une adresse et une criticité, et devient un nœud de la cartographie.
+
+Nouveau type
+NOM ET DESCRIPTION
+PROPRIÉTÉS
+NOTES CONCERNÉES
+Application polaire
+1 propriété
+0 note
+Modifier
+Nouveau type de fiche
+Définissez les propriétés que porteront les notes de ce type.
+Nom du type *
+Description
+Icône
+Propriétés
+Leur ordre pilote l'affichage dans l'éditeur et dans le panneau de lecture. Réglez-le avec les flèches.
+Ajouter une propriété
+Aperçu du formulaire produit
+C'est ce que verra le rédacteur dans l'éditeur de note.
+Annuler
+Créer le type

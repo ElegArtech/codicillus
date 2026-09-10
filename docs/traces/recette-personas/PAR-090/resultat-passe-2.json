@@ -1,0 +1,43 @@
+{
+  "id": "PAR-090",
+  "persona": "contributeur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Type de relation disponible",
+      "ok": true
+    },
+    {
+      "nom": "Relation directe rendue",
+      "ok": false
+    },
+    {
+      "nom": "Relation inverse rendue",
+      "ok": false
+    },
+    {
+      "nom": "Doublon empêché",
+      "ok": false
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Une seule relation ; inverse adapté ; origine indiquée ; graphe instantanément cohérent ; doublon impossible."
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-090/fr-FR/passe-2",
+  "correction_candidate": [
+    "Relation directe rendue",
+    "Relation inverse rendue",
+    "Doublon empêché",
+    "Une seule relation ; inverse adapté ; origine indiquée ; graphe instantanément cohérent ; doublon impossible."
+  ],
+  "limites": [
+    "Aucun type de relation créé dans décor, inverse et doublon non établis"
+  ],
+  "jeu": "garnie",
+  "passe": 2
+}

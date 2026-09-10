@@ -1,0 +1,36 @@
+{
+  "id": "PAR-094",
+  "persona": "contributeur",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "assertions": [
+    {
+      "nom": "Action /^Continuer$/",
+      "ok": false,
+      "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+    },
+    {
+      "nom": "Action /Lancer|Importer|Simuler/",
+      "ok": false,
+      "detail": "Action cherchée parmi les liens et boutons visibles, absente."
+    },
+    {
+      "nom": "Oracle complet",
+      "ok": false,
+      "detail": "Simulation sans mutation ; mise à jour idempotente ; liens conservés ; indexation sous 10 s ; collisions hors mise à jour rendues uniques."
+    }
+  ],
+  "erreurs": [],
+  "traces": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-094/fr-FR/passe-1",
+  "correction_candidate": [
+    "Action cherchée parmi les liens et boutons visibles, absente.",
+    "Action cherchée parmi les liens et boutons visibles, absente.",
+    "Simulation sans mutation ; mise à jour idempotente ; liens conservés ; indexation sous 10 s ; collisions hors mise à jour rendues uniques."
+  ],
+  "limites": [
+    "Idempotence, liens et collisions non encore établis"
+  ],
+  "jeu": "garnie",
+  "passe": 1
+}

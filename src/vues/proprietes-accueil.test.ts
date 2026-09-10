@@ -50,7 +50,12 @@ let render: Rendre;
 async function corps(vue: IdentifiantDeVue, props: Record<string, unknown>): Promise<string> {
 	const module = await serveur.ssrLoadModule(`/src/vues/${vue}.svelte`);
 	return render(module.default, {
-		props: { vecteur: null, notes: corpusPourVue(vue), ...props }
+		props: {
+			vecteur: null,
+			notes: corpusPourVue(vue),
+			...(vue === 'V-08' ? { vivacites: {} } : {}),
+			...props
+		}
 	}).body;
 }
 

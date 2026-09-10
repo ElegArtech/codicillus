@@ -1,0 +1,54 @@
+{
+  "id": "PAR-003",
+  "persona": "referent",
+  "langue": "fr-FR",
+  "statut": "rouge",
+  "objectif_atteint": false,
+  "objectif": "Santé du domaine et accès aux modules activés visibles",
+  "assertions": [
+    {
+      "assertion": "/Notes/",
+      "ok": true
+    },
+    {
+      "assertion": "/Dossiers/",
+      "ok": true
+    },
+    {
+      "assertion": "/Fiches/",
+      "ok": true
+    },
+    {
+      "assertion": "/Signets/",
+      "ok": true
+    },
+    {
+      "assertion": "/Cartographie/",
+      "ok": true
+    },
+    {
+      "assertion": "/Carte mentale/",
+      "ok": true
+    },
+    {
+      "assertion": "/NOTES LES PLUS CONSULTÉES/",
+      "ok": true
+    },
+    {
+      "assertion": "Répartition par type, notes jamais vérifiées et demandes de révision absentes du domaine observé; stabilité entre rôles non établie",
+      "ok": false
+    }
+  ],
+  "erreurs": [],
+  "traces": "docs/traces/recette-personas/PAR-003/fr-FR/passe-2",
+  "correction_candidate": null,
+  "limites": [
+    "Vérification du corpus de démonstration par aiguilles non réalisée.",
+    "Les dossiers de traces conservent les essais techniques et leurs reprises. Les erreurs de sélecteur, de connexion préalable et de prérequis ne prouvent aucun défaut produit.",
+    "Oracle complet non couvert : ce rouge inclut une limite de recette, pas uniquement un défaut produit démontré."
+  ],
+  "essais_avec_traces": [
+    "docs/traces/recette-personas/PAR-003/fr-FR/passe-1",
+    "docs/traces/recette-personas/PAR-003/fr-FR/passe-2"
+  ]
+}
