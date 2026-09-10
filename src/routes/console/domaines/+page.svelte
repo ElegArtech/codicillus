@@ -61,6 +61,7 @@
 	notes={data.notes}
 	univers={data.univers}
 	universInitial={data.universInitial}
+	domaineInitial={data.domaineInitial}
 	domaines={data.domaines}
 	compte={data.compte}
 	detailDomaines={data.detailDomaines}
