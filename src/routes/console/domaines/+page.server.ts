@@ -65,7 +65,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	return {
 		universInitial,
-		vecteur: null,
+		vecteur: url.searchParams.get('creation') === 'domaine' ? { form: 'creation' } : null,
 		notes: acces.ressource.notes,
 		univers: acces.ressource.univers,
 		domaines: acces.ressource.domaines,

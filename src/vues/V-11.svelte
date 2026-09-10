@@ -460,7 +460,7 @@
 					stroke="currentColor"
 					stroke-width="1.8"
 					aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg
-				>Créer</a
+				>Créer une note</a
 			>{/if}{#if compteAffiche !== null && compteAffiche.initiales !== ''}<a
 				class="avatar-entete"
 				href="/mon-profil"

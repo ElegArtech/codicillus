@@ -295,7 +295,11 @@
 	);
 	/** `su.value` : l'univers du domaine, ou le premier du registre en création. */
 	const universChoisi = $derived(
-		ouverture !== null ? fUnivers : edite ? edite.univers : (univers[0] as Univers).nom
+		ouverture !== null
+			? fUnivers
+			: edite
+				? edite.univers
+				: universInitial || ((univers[0] as Univers)?.nom ?? '')
 	);
 	/** `edite.modules` : ceux du domaine, ou ceux qu'un domaine neuf propose. */
 	const modulesActifs: readonly CleDeModule[] = $derived(

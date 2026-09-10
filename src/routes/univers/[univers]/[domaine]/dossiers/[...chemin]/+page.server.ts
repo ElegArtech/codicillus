@@ -236,7 +236,8 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			   dossier passe par ses ancêtres, dans le périmètre ou non — c'est le
 			   chemin de la ressource, pas un droit. */
 			dos: cheminAffiche(segmentsAffiches(acces.dossiers, dossier.id)),
-			dr: droit
+			dr: droit,
+			creation: url.searchParams.get('creation') === 'dossier'
 		},
 		notes: notesLisibles,
 		/**

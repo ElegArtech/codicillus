@@ -390,7 +390,7 @@
 					stroke="currentColor"
 					stroke-width="1.6"
 					aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg
-				>Créer</a
+				>Créer une note</a
 			>{/if}
 		<a
 			class="avatar-entete"
