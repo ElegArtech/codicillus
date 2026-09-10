@@ -905,12 +905,12 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
   .fil__courant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
-
-}
-
 @media (min-width: 1180px) {
   .lecture--sans-sommaire { grid-template-columns: minmax(0, 1fr) var(--l-panneaux); }
 }
+
+}
+
 .demande-revision {
   padding: var(--e-3) var(--e-4);
   border-left: 3px solid var(--c-accent);
