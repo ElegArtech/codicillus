@@ -51,7 +51,6 @@
 		vecteur: Record<string, string | boolean> | null;
 		notes: readonly Note[];
 		univers: readonly Univers[];
-		universInitial?: string;
 		domaines: readonly Domaine[];
 		compte: UtilisateurCourant;
 		/**
@@ -89,7 +88,6 @@
 		vecteur,
 		notes,
 		univers,
-		universInitial = '',
 		domaines: tousLesDomaines,
 		compte,
 		onSupprimer,
@@ -223,7 +221,7 @@
 			: ouverture === 'edition'
 				? (liste.find((u) => u.nom === cible) ?? null)
 				: form === 'edition'
-					? (liste.find((u) => u.nom === universInitial) ?? liste[0] ?? null)
+					? (liste[0] ?? null)
 					: null
 	);
 	/**
