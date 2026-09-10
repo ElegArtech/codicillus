@@ -237,7 +237,8 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			   chemin de la ressource, pas un droit. */
 			dos: cheminAffiche(segmentsAffiches(acces.dossiers, dossier.id)),
 			dr: droit,
-			creation: url.searchParams.get('creation') === 'dossier'
+			creation: url.searchParams.get('creation') === 'dossier',
+			edition: url.searchParams.get('edition') === 'dossier'
 		},
 		notes: notesLisibles,
 		/**
