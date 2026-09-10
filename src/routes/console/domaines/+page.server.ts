@@ -62,17 +62,30 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		Object.entries(designationsUnivers).find(
 			([, identifiant]) => identifiant === url.searchParams.get('univers')
 		)?.[0] ?? '';
+	const designations = await lireLesDesignationsDeDomaine(base);
+	const domaineInitial =
+		Object.entries(designations).find(
+			([, canonique]) =>
+				canonique.univers === url.searchParams.get('univers') &&
+				canonique.domaine === url.searchParams.get('domaine')
+		)?.[0] ?? '';
 
 	return {
 		universInitial,
-		vecteur: url.searchParams.get('creation') === 'domaine' ? { form: 'creation' } : null,
+		domaineInitial,
+		vecteur:
+			url.searchParams.get('creation') === 'domaine'
+				? { form: 'creation' }
+				: url.searchParams.get('edition') === 'domaine' && domaineInitial !== ''
+					? { form: 'edition' }
+					: null,
 		notes: acces.ressource.notes,
 		univers: acces.ressource.univers,
 		domaines: acces.ressource.domaines,
 		compte: acces.ressource.compte,
 		detailDomaines: await lireLeDetailDesDomaines(base),
 		modules: CATALOGUE_DE_MODULES,
-		designations: await lireLesDesignationsDeDomaine(base),
+		designations,
 		/* L'IDENTIFIANT D'UN UNIVERS PAR SON NOM D'AFFICHAGE — la même table que
 		   `/console/univers` emploie déjà, et pour la même raison : le `<select>`
 		   de rattachement porte le nom, les deux gestes exigent l'identifiant, et

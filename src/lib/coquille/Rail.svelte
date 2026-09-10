@@ -199,6 +199,10 @@
 		return { type: 'univers', nom: section.nom, cible: section.cible, identifiant: null };
 	}
 
+	function cibleDeNoteRecente(note: NoteRecente): CibleContextuelle {
+		return { type: 'note', nom: note.titre, cible: null, identifiant: note.identifiant };
+	}
+
 	async function ouvrirLeMenu(evenement: MouseEvent, cible: CibleContextuelle): Promise<void> {
 		if (cible.type === 'univers' && !admin) return;
 		if ((cible.type === 'domaine' || cible.type === 'dossier') && !ecriture) return;
@@ -261,6 +265,33 @@
 			univers: cible.cible?.univers ?? '',
 			creation: 'domaine'
 		});
+	}
+
+	function adresseDeRenommageDUnivers(cible: CibleContextuelle): string {
+		return avecParametres(resolve('/console/univers'), {
+			univers: cible.cible?.univers ?? '',
+			edition: 'univers'
+		});
+	}
+
+	function adresseDeRenommageDeDomaine(cible: CibleContextuelle): string {
+		return avecParametres(resolve('/console/domaines'), {
+			univers: cible.cible?.univers ?? '',
+			domaine: cible.cible?.domaine ?? '',
+			edition: 'domaine'
+		});
+	}
+
+	function adresseDeRenommageDeDossier(cible: CibleContextuelle): string {
+		if (cible.cible === null) return '#';
+		return avecParametres(
+			resolve(ROUTE_DOSSIER, {
+				univers: cible.cible.univers,
+				domaine: cible.cible.domaine,
+				chemin: cible.cible.chemin.join('/')
+			}),
+			{ edition: 'dossier' }
+		);
 	}
 
 	function adresseDeNote(cible: CibleContextuelle): string {
@@ -570,6 +601,7 @@
 							class="rail__recent"
 							href={resolve(ROUTE_NOTE, { identifiant: note.identifiant })}
 							aria-current={note.identifiant === noteCourante ? 'page' : undefined}
+							oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDeNoteRecente(note))}
 						>
 							<Pictogramme
 								traits={iconeDeNoeud('note')}
@@ -672,17 +704,21 @@
 	>
 		<div class="rail__menu-contextuel-titre">{menuContextuel.nom}</div>
 		{#if menuContextuel.type === 'univers'}
+			<a role="menuitem" href={adresseDeRenommageDUnivers(menuContextuel)}>Renommer</a>
 			<a role="menuitem" href={adresseDeCreationDeDomaine(menuContextuel)}>Créer un domaine</a>
 		{:else if menuContextuel.type === 'domaine'}
+			{#if admin}<a role="menuitem" href={adresseDeRenommageDeDomaine(menuContextuel)}>Renommer</a
+				>{/if}
 			<a role="menuitem" href={adresseDeCreationDeNote(menuContextuel)}>Créer une note</a>
 			<a role="menuitem" href={adresseDeCreationDeDossier(menuContextuel)}>Créer un dossier</a>
 		{:else if menuContextuel.type === 'dossier'}
+			<a role="menuitem" href={adresseDeRenommageDeDossier(menuContextuel)}>Renommer</a>
 			<a role="menuitem" href={adresseDeCreationDeNote(menuContextuel)}>Créer une note ici</a>
 			<a role="menuitem" href={adresseDeCreationDeDossier(menuContextuel)}>Créer un sous-dossier</a>
 		{:else if menuContextuel.identifiant}
 			<a role="menuitem" href={adresseDeNote(menuContextuel)}>Ouvrir</a>
 			{#if ecriture}
-				<a role="menuitem" href={`${adresseDeNote(menuContextuel)}/modifier`}>Modifier</a>
+				<a role="menuitem" href={`${adresseDeNote(menuContextuel)}/modifier`}>Renommer</a>
 				<form
 					method="POST"
 					action={`${adresseDeNote(menuContextuel)}?/supprimer`}

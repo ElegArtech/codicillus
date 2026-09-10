@@ -38,18 +38,27 @@ import {
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const base = basePartagee();
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
+	const designations = await lireLesDesignationsDUnivers(base);
+	const universInitial =
+		Object.entries(designations).find(
+			([, identifiant]) => identifiant === url.searchParams.get('univers')
+		)?.[0] ?? '';
 
 	return {
-		vecteur: null,
+		universInitial,
+		vecteur:
+			url.searchParams.get('edition') === 'univers' && universInitial !== ''
+				? { form: 'edition' }
+				: null,
 		notes: acces.ressource.notes,
 		univers: acces.ressource.univers,
 		domaines: acces.ressource.domaines,
 		compte: acces.ressource.compte,
-		designations: await lireLesDesignationsDUnivers(base)
+		designations
 	};
 };
 
