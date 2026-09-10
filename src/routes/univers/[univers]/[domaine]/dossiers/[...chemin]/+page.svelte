@@ -101,11 +101,6 @@
 			dlgCreer?.showModal();
 			champCreer?.focus();
 		}
-		if (data.vecteur.edition === true) {
-			dlgDeplacer?.showModal();
-			champDep?.focus();
-			champDep?.select();
-		}
 
 		/* 4. NOUVELLE NOTE — une NAVIGATION, pas une action : rien n'est écrit ici,
 		   et le droit qui la gouverne est celui de la route d'arrivée.

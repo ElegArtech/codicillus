@@ -64,7 +64,6 @@
 		notes: readonly Note[];
 		univers: readonly Univers[];
 		universInitial: string;
-		domaineInitial?: string;
 		domaines: readonly Domaine[];
 		compte: UtilisateurCourant;
 		detailDomaines: Record<NomDeDomaine, DetailDeDomaine>;
@@ -100,7 +99,6 @@
 		notes,
 		univers,
 		universInitial,
-		domaineInitial = '',
 		domaines: registreDeDomaines,
 		compte,
 		detailDomaines,
@@ -275,9 +273,7 @@
 			: ouverture === 'edition'
 				? (domaines.find((d) => d.nom === cible) ?? null)
 				: form === 'edition'
-					? (domaines.find((d) => d.nom === domaineInitial && d.univers === universInitial) ??
-						domaines[0] ??
-						null)
+					? (domaines[0] ?? null)
 					: null
 	);
 	/**

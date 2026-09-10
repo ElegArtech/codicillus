@@ -237,8 +237,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			   chemin de la ressource, pas un droit. */
 			dos: cheminAffiche(segmentsAffiches(acces.dossiers, dossier.id)),
 			dr: droit,
-			creation: url.searchParams.get('creation') === 'dossier',
-			edition: url.searchParams.get('edition') === 'dossier'
+			creation: url.searchParams.get('creation') === 'dossier'
 		},
 		notes: notesLisibles,
 		/**
@@ -462,10 +461,14 @@ export const actions: Actions = {
 		const formulaire = await request.formData();
 		const brutNom = formulaire.get('nouveauNom');
 		const brutDestination = formulaire.get('destination');
+		const destination =
+			typeof brutDestination === 'string' && brutDestination !== ''
+				? brutDestination
+				: (dossier.parentId ?? '');
 
 		const fait = await renommerOuDeplacerUnDossier(basePartagee(), {
 			dossierId: dossier.id,
-			destinationId: typeof brutDestination === 'string' ? brutDestination : '',
+			destinationId: destination,
 			nom: typeof brutNom === 'string' ? brutNom : '',
 			lignes,
 			droit: (id) => droitEffectif(acces, id)

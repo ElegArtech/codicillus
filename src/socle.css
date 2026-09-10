@@ -401,6 +401,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
    dessine en `currentColor`. */
 .noeud__teinte { flex: none; line-height: 0; }
 .noeud__texte { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rail__champ-renommage {
+  flex: 1; min-width: 0; height: 26px; padding: 3px 7px;
+  border: 1px solid var(--c-accent); border-radius: var(--r-1);
+  background: var(--c-papier); color: var(--c-encre);
+  font: inherit; outline: 2px solid var(--c-accent-voile);
+}
+.rail__champ-renommage[aria-invalid="true"] { border-color: var(--c-danger); outline-color: var(--c-danger-voile); }
 /* LE COMPTEUR — mono, à droite, aux niveaux univers et domaine seulement. */
 .noeud__compte {
   flex: none; font-family: var(--f-donnee); font-size: var(--t-mini);
