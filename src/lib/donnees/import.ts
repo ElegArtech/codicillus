@@ -995,6 +995,14 @@ export function classerLeLot(
 				echec('contenu-illisible');
 				return;
 			}
+			if (format === 'pdf') {
+				const debut = new TextDecoder('ascii').decode(fichier.binaire.subarray(0, 1024));
+				const fin = new TextDecoder('ascii').decode(fichier.binaire.subarray(-1024));
+				if (!/%PDF-\d\.\d/.test(debut) || !/%%EOF\s*$/.test(fin)) {
+					echec('contenu-illisible');
+					return;
+				}
+			}
 			const nomDuFichier = fichier.chemin.slice(fichier.chemin.lastIndexOf('/') + 1);
 			const titreIntegre = nomSansExtension(fichier.chemin);
 			const placeIntegree = segmentsPlafonnes(fichier.chemin, contexte.profondeurDeDepart);

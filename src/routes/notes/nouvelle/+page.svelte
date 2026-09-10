@@ -126,8 +126,14 @@
 	 */
 	const surEnvoi: SubmitFunction = () => {
 		return async ({ result, update }) => {
+			if (result.type === 'error') {
+				peindreLeRefusDEdition(formulaire, {
+					motif: 'Enregistrement impossible. Votre saisie est conservée ; réessayez.'
+				});
+				return;
+			}
 			if (result.type === 'redirect' || result.type === 'success') brouillon?.effacer();
-			await update();
+			await update({ reset: false });
 		};
 	};
 

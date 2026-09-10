@@ -109,7 +109,7 @@ export function poserLeTemoin(racine: ParentNode, etat: EtatDuTemoin): void {
  */
 export function poserLeTemoinDeBrouillon(racine: ParentNode, heure: string): void {
 	const temoin = racine.querySelector<HTMLElement>('#sauvegarde');
-	if (temoin?.dataset['etat'] === 'encours') return;
+	if (temoin?.dataset['etat'] === 'encours' || temoin?.dataset['etat'] === 'erreur') return;
 	poserLeTemoin(racine, 'modifie');
 	const texte = racine.querySelector<HTMLElement>('#sauvegarde-txt');
 	if (texte === null) return;

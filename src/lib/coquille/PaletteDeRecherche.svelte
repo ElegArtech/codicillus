@@ -206,6 +206,14 @@
 		dialogue?.close();
 	}
 
+	function creerLaNoteRecherchee(evenement: MouseEvent): void {
+		evenement.preventDefault();
+		const adresse = new URL(resolve('/notes/nouvelle'), window.location.origin);
+		adresse.searchParams.set('titre', requeteServie);
+		fermer();
+		window.location.assign(adresse);
+	}
+
 	function effacer(): void {
 		requete = '';
 		champ?.focus();
@@ -361,8 +369,58 @@
 			Recherche par sens indisponible — résultats en mots-clés
 		</div>
 
-		<!-- prettier-ignore -->
-		<div class="palette__liste" id="palette-liste" bind:this={liste} role="listbox" aria-label="Résultats">{#if groupe}<div class="palette__groupe etiq">{groupe}</div>{/if}{#each resultats as n, position (n.id)}{@render ligne(n, requeteServie, position)}{/each}{#if panne}<div class="palette__etat"><p><strong>La recherche n'a pas répondu.</strong> Le moteur est peut-être arrêté ; le corpus reste lisible depuis le rail.</p><button class="btn" type="button" onclick={() => void interroger(requete)}>Réessayer</button></div>{:else if tropCourte}<div class="palette__etat"><p>Continuez à taper — les résultats apparaissent dès le deuxième caractère.</p></div>{:else if motif !== null}<div class="palette__etat"><p><strong>{TITRE_DU_VIDE[motif]}</strong> {TEXTE_DU_VIDE[motif]}</p>{#if motif === 'sans-univers'}<a class="btn btn--principal" href={resolve('/console/univers')} onclick={fermer}>Créer un univers</a>{:else if motif === 'corpus-vide' && ecriture}<a class="btn btn--principal" href={resolve('/notes/nouvelle')} onclick={fermer}>Créer une note</a>{/if}</div>{:else if resultats.length === 0 && servie !== null && servie.reponse.recentes}<div class="palette__etat"><p>Aucune note ouverte récemment. Tapez deux caractères pour chercher dans ce que vous pouvez lire.</p></div>{:else if resultats.length === 0 && servie !== null}<div class="palette__etat"><p>Aucun résultat pour<span class="palette__requete">{' « ' + requeteServie + ' »'}</span></p>{#if ecriture}<a class="btn btn--principal" href={resolve('/notes/nouvelle')} onclick={fermer}>Créer cette note</a>{/if}</div>{/if}</div>
+		<div
+			class="palette__liste"
+			id="palette-liste"
+			bind:this={liste}
+			role="listbox"
+			aria-label="Résultats"
+		>
+			{#if groupe}<div class="palette__groupe etiq">
+					{groupe}
+				</div>{/if}{#each resultats as n, position (n.id)}{@render ligne(
+					n,
+					requeteServie,
+					position
+				)}{/each}{#if panne}<div class="palette__etat">
+					<p>
+						<strong>La recherche n'a pas répondu.</strong> Le moteur est peut-être arrêté ; le corpus
+						reste lisible depuis le rail.
+					</p>
+					<button class="btn" type="button" onclick={() => void interroger(requete)}
+						>Réessayer</button
+					>
+				</div>{:else if tropCourte}<div class="palette__etat">
+					<p>Continuez à taper — les résultats apparaissent dès le deuxième caractère.</p>
+				</div>{:else if motif !== null}<div class="palette__etat">
+					<p><strong>{TITRE_DU_VIDE[motif]}</strong> {TEXTE_DU_VIDE[motif]}</p>
+					{#if motif === 'sans-univers'}<a
+							class="btn btn--principal"
+							href={resolve('/console/univers')}
+							onclick={fermer}>Créer un univers</a
+						>{:else if motif === 'corpus-vide' && ecriture}<a
+							class="btn btn--principal"
+							href={resolve('/notes/nouvelle')}
+							onclick={fermer}>Créer une note</a
+						>{/if}
+				</div>{:else if resultats.length === 0 && servie !== null && servie.reponse.recentes}<div
+					class="palette__etat"
+				>
+					<p>
+						Aucune note ouverte récemment. Tapez deux caractères pour chercher dans ce que vous
+						pouvez lire.
+					</p>
+				</div>{:else if resultats.length === 0 && servie !== null}<div class="palette__etat">
+					<p>
+						Aucun résultat pour<span class="palette__requete">{' « ' + requeteServie + ' »'}</span>
+					</p>
+					{#if ecriture}<a
+							class="btn btn--principal"
+							href={resolve('/notes/nouvelle')}
+							onclick={creerLaNoteRecherchee}>Créer cette note</a
+						>{/if}
+				</div>{/if}
+		</div>
 
 		<div class="palette__pied">
 			<!-- prettier-ignore -->

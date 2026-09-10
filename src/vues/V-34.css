@@ -433,19 +433,19 @@
 .repart button { border: 0; padding: 0; cursor: pointer; transition: filter var(--m-vif); }
 .repart button:hover { filter: brightness(.9); }
 .repart button + button { border-left: 1px solid var(--c-papier); }
-.repart .p-frais { background: var(--c-frais); }
-.repart .p-vieil {
-  background: repeating-linear-gradient(90deg, var(--c-vieil) 0 2px, #c99a3d 2px 5px);
-}
-.repart .p-obs {
-  background: repeating-linear-gradient(135deg, var(--c-obsolete) 0 4px, #d1705f 4px 8px);
-}
+.repart .p-ajour { background: var(--c-ajour); }
+.repart .p-bientot { background: var(--c-bientot); }
+.repart .p-averifier { background: var(--c-averifier); }
+.repart .p-arevoir { background: var(--c-arevoir); }
+.repart .p-obsolete { background: var(--c-obsolete); }
 .legende { display: flex; gap: var(--e-3); flex-wrap: wrap; margin-top: var(--e-2); }
 .legende span { display: inline-flex; align-items: center; gap: var(--e-1); font-size: var(--t-mini); color: var(--c-encre-2); }
 .legende i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
-.legende .p-frais { background: var(--c-frais); }
-.legende .p-vieil { background: repeating-linear-gradient(90deg, var(--c-vieil) 0 2px, #c99a3d 2px 5px); }
-.legende .p-obs { background: repeating-linear-gradient(135deg, var(--c-obsolete) 0 3px, #d1705f 3px 6px); }
+.legende .p-ajour { background: var(--c-ajour); }
+.legende .p-bientot { background: var(--c-bientot); }
+.legende .p-averifier { background: var(--c-averifier); }
+.legende .p-arevoir { background: var(--c-arevoir); }
+.legende .p-obsolete { background: var(--c-obsolete); }
 .legende b { font-family: var(--f-donnee); font-weight: var(--g-lourd); }
 
 /* ==========================================================================

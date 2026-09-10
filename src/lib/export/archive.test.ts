@@ -214,6 +214,40 @@ describe('RG-M13-01 — l’aller-retour sur un domaine entier du corpus figé',
 	});
 });
 
+describe('le manifeste nécessaire à une réimportation réelle', () => {
+	it('conserve l’identité, la configuration et les modules d’un domaine sans note', () => {
+		const avant: DomaineAExporter = {
+			universIdentifiant: 'vide',
+			universNom: 'Univers vide',
+			identifiant: 'nouveau',
+			nom: 'Nouveau domaine',
+			configuration: {
+				description: 'Une description propre au domaine',
+				couleur: '#123456',
+				modules: ['notes', 'dossiers']
+			},
+			dossiers: [{ chemin: ['Racine'] }],
+			notes: []
+		};
+
+		expect(reimporterLArchive(exporterLeDomaine(avant).octets)).toEqual(avant);
+	});
+
+	it('conserve les deux cycles de vivacité et le registre visé par la révision', () => {
+		const avecCycle = note({
+			cycle: {
+				validiteReference: 45,
+				validiteOperationnel: 8,
+				verifieLeOperationnel: '2026-08-02T00:00:00.000Z',
+				revisionRegistre: 'operationnel'
+			}
+		});
+
+		const relue = reimporterLArchive(exporterLeDomaine(domaineDe([avecCycle])).octets);
+		expect(relue.notes[0]?.cycle).toEqual(avecCycle.cycle);
+	});
+});
+
 /* ═══════════════════════════ L'EN-TÊTE, ET SA LECTURE SANS AMBIGUÏTÉ ═══ */
 
 describe('l’en-tête de métadonnées — V-36:2929, « c’est ce bloc qui rend l’archive réimportable »', () => {
