@@ -80,7 +80,6 @@
 -->
 <Vue
 	vecteur={data.vecteur}
-	universInitial={data.universInitial}
 	notes={data.notes}
 	univers={data.univers}
 	domaines={data.domaines}

@@ -24,6 +24,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Pictogramme from '$lib/console/Pictogramme.svelte';
+	import { CHAMP_DOMAINE_CIBLE, CHAMP_NOM, CHAMP_UNIVERS_CIBLE } from '$lib/console/structure';
 	import { identifiantLisible } from '$lib/rangement/adresses';
 	import {
 		AUCUNE_PAGE,
@@ -185,6 +186,12 @@
 	let elementDuMenu = $state<HTMLDivElement>();
 	let noteDeplacee = $state<CibleContextuelle | null>(null);
 	let cibleDeDepot = $state<string | null>(null);
+	let renommage = $state<{
+		cible: CibleContextuelle;
+		valeur: string;
+		envoi: boolean;
+		erreur: string | null;
+	} | null>(null);
 
 	function cibleDeNoeud(noeud: NoeudRendu): CibleContextuelle {
 		return {
@@ -234,6 +241,103 @@
 		return `${adresse}?${new URLSearchParams(parametres)}`;
 	}
 
+	function cleDeCible(cible: CibleContextuelle): string {
+		if (cible.type === 'note') return `note:${cible.identifiant ?? ''}`;
+		return `${cible.type}:${cible.cible?.univers ?? ''}:${cible.cible?.domaine ?? ''}:${cible.cible?.chemin.join('/') ?? ''}`;
+	}
+
+	function renommageDe(cible: CibleContextuelle): boolean {
+		return renommage !== null && cleDeCible(renommage.cible) === cleDeCible(cible);
+	}
+
+	async function commencerLeRenommage(cible: CibleContextuelle): Promise<void> {
+		renommage = { cible, valeur: cible.nom, envoi: false, erreur: null };
+		menuContextuel = null;
+		await tick();
+		const champ = document.querySelector<HTMLInputElement>('.rail__champ-renommage');
+		champ?.focus();
+		champ?.select();
+	}
+
+	function commencerLeRenommageDuMenu(): void {
+		if (menuContextuel !== null) void commencerLeRenommage(menuContextuel);
+	}
+
+	function annulerLeRenommage(): void {
+		if (renommage?.envoi === true) return;
+		renommage = null;
+	}
+
+	function adresseDeRenommage(cible: CibleContextuelle): string {
+		if (cible.type === 'univers') return `${resolve('/console/univers')}?/enregistrer`;
+		if (cible.type === 'domaine') return `${resolve('/console/domaines')}?/enregistrer`;
+		if (cible.type === 'dossier' && cible.cible !== null) {
+			return `${resolve(ROUTE_DOSSIER, {
+				univers: cible.cible.univers,
+				domaine: cible.cible.domaine,
+				chemin: cible.cible.chemin.join('/')
+			})}?/renommerOuDeplacer`;
+		}
+		return `${adresseDeNote(cible)}/modifier`;
+	}
+
+	async function validerLeRenommage(): Promise<void> {
+		if (renommage === null || renommage.envoi) return;
+		const nom = renommage.valeur.trim();
+		if (nom === '') {
+			renommage.erreur = 'Le nom ne peut pas être vide.';
+			return;
+		}
+		if (nom === renommage.cible.nom) {
+			renommage = null;
+			return;
+		}
+
+		const actif = renommage;
+		actif.envoi = true;
+		actif.erreur = null;
+		const champs = new FormData();
+		if (actif.cible.type === 'univers') {
+			champs.set(CHAMP_UNIVERS_CIBLE, actif.cible.cible?.univers ?? '');
+			champs.set(CHAMP_NOM, nom);
+		} else if (actif.cible.type === 'domaine') {
+			champs.set(CHAMP_UNIVERS_CIBLE, actif.cible.cible?.univers ?? '');
+			champs.set(CHAMP_DOMAINE_CIBLE, actif.cible.cible?.domaine ?? '');
+			champs.set(CHAMP_NOM, nom);
+		} else if (actif.cible.type === 'dossier') {
+			champs.set('nouveauNom', nom);
+		} else {
+			champs.set('titre', nom);
+		}
+
+		try {
+			const reponse = await fetch(adresseDeRenommage(actif.cible), {
+				method: 'POST',
+				body: champs
+			});
+			if (!reponse.ok) {
+				actif.erreur = 'Ce nom ne peut pas être utilisé.';
+				actif.envoi = false;
+				return;
+			}
+			renommage = null;
+			await invalidateAll();
+		} catch {
+			actif.erreur = 'Le renommage a échoué.';
+			actif.envoi = false;
+		}
+	}
+
+	function clavierDuRenommage(evenement: KeyboardEvent): void {
+		if (evenement.key === 'Enter') {
+			evenement.preventDefault();
+			void validerLeRenommage();
+		} else if (evenement.key === 'Escape') {
+			evenement.preventDefault();
+			annulerLeRenommage();
+		}
+	}
+
 	function adresseDeCreationDeNote(cible: CibleContextuelle): string {
 		if (cible.cible === null) return resolve('/notes/nouvelle');
 		const dossier =
@@ -265,33 +369,6 @@
 			univers: cible.cible?.univers ?? '',
 			creation: 'domaine'
 		});
-	}
-
-	function adresseDeRenommageDUnivers(cible: CibleContextuelle): string {
-		return avecParametres(resolve('/console/univers'), {
-			univers: cible.cible?.univers ?? '',
-			edition: 'univers'
-		});
-	}
-
-	function adresseDeRenommageDeDomaine(cible: CibleContextuelle): string {
-		return avecParametres(resolve('/console/domaines'), {
-			univers: cible.cible?.univers ?? '',
-			domaine: cible.cible?.domaine ?? '',
-			edition: 'domaine'
-		});
-	}
-
-	function adresseDeRenommageDeDossier(cible: CibleContextuelle): string {
-		if (cible.cible === null) return '#';
-		return avecParametres(
-			resolve(ROUTE_DOSSIER, {
-				univers: cible.cible.univers,
-				domaine: cible.cible.domaine,
-				chemin: cible.cible.chemin.join('/')
-			}),
-			{ edition: 'dossier' }
-		);
 	}
 
 	function adresseDeNote(cible: CibleContextuelle): string {
@@ -459,7 +536,7 @@
 					taille="16"
 					boite="0 0 16 16"
 					epaisseur="1.4"
-				/><span class="noeud__texte">{n.nom}</span>{#if n.compte !== null}<span
+				/>{@render texteRenommable(cibleDeNoeud(n))}{#if n.compte !== null}<span
 						class="noeud__compte">{n.compte}</span
 					>{/if}</a
 			>{#if n.chargement}<span class="noeud__rouet" aria-label="Chargement"></span>{/if}
@@ -477,6 +554,29 @@
 	onkeydown={fermerLeMenuAuClavier}
 	onresize={() => fermerLeMenu()}
 />
+
+{#snippet texteRenommable(cible: CibleContextuelle)}
+	{#if renommageDe(cible)}
+		<input
+			class="rail__champ-renommage"
+			aria-label={`Nouveau nom de ${cible.nom}`}
+			aria-invalid={renommage?.erreur === null ? undefined : 'true'}
+			title={renommage?.erreur ?? 'Entrée pour valider, Échap pour annuler'}
+			disabled={renommage?.envoi}
+			value={renommage?.valeur ?? ''}
+			oninput={(evenement) => {
+				if (renommage !== null) renommage.valeur = evenement.currentTarget.value;
+			}}
+			onkeydown={clavierDuRenommage}
+			onclick={(evenement) => {
+				evenement.preventDefault();
+				evenement.stopPropagation();
+			}}
+		/>
+	{:else}
+		<span class="noeud__texte">{cible.nom}</span>
+	{/if}
+{/snippet}
 
 <aside class="rail" aria-label="Navigation principale">
 	<!-- LA CROIX DU TIROIR — rendue toujours, visible sous 1024 px seulement, où le
@@ -566,7 +666,7 @@
 										boite="0 0 24 24"
 										epaisseur="1.9"
 									/></span
-								><span class="noeud__texte">{section.nom}</span>{#if section.compte > 0}<span
+								>{@render texteRenommable(cibleDUnivers(section))}{#if section.compte > 0}<span
 										class="noeud__compte">{section.compte}</span
 									>{/if}</a
 							>
@@ -608,7 +708,7 @@
 								taille="16"
 								boite="0 0 16 16"
 								epaisseur="1.4"
-							/><span class="noeud__texte">{note.titre}</span>
+							/>{@render texteRenommable(cibleDeNoteRecente(note))}
 						</a>
 					</li>
 				{/each}
@@ -704,21 +804,22 @@
 	>
 		<div class="rail__menu-contextuel-titre">{menuContextuel.nom}</div>
 		{#if menuContextuel.type === 'univers'}
-			<a role="menuitem" href={adresseDeRenommageDUnivers(menuContextuel)}>Renommer</a>
+			<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}>Renommer</button>
 			<a role="menuitem" href={adresseDeCreationDeDomaine(menuContextuel)}>Créer un domaine</a>
 		{:else if menuContextuel.type === 'domaine'}
-			{#if admin}<a role="menuitem" href={adresseDeRenommageDeDomaine(menuContextuel)}>Renommer</a
+			{#if admin}<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}
+					>Renommer</button
 				>{/if}
 			<a role="menuitem" href={adresseDeCreationDeNote(menuContextuel)}>Créer une note</a>
 			<a role="menuitem" href={adresseDeCreationDeDossier(menuContextuel)}>Créer un dossier</a>
 		{:else if menuContextuel.type === 'dossier'}
-			<a role="menuitem" href={adresseDeRenommageDeDossier(menuContextuel)}>Renommer</a>
+			<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}>Renommer</button>
 			<a role="menuitem" href={adresseDeCreationDeNote(menuContextuel)}>Créer une note ici</a>
 			<a role="menuitem" href={adresseDeCreationDeDossier(menuContextuel)}>Créer un sous-dossier</a>
 		{:else if menuContextuel.identifiant}
 			<a role="menuitem" href={adresseDeNote(menuContextuel)}>Ouvrir</a>
 			{#if ecriture}
-				<a role="menuitem" href={`${adresseDeNote(menuContextuel)}/modifier`}>Renommer</a>
+				<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}>Renommer</button>
 				<form
 					method="POST"
 					action={`${adresseDeNote(menuContextuel)}?/supprimer`}
