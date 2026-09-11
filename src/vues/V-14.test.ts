@@ -325,6 +325,15 @@ describe('V-14 — les libellés dont un geste dépend', () => {
 });
 
 describe('V-14 — la colonne de contexte ne ment pas', () => {
+	it('est dépliée au premier affichage et porte ses deux gestes accessibles', async () => {
+		const html = await rendu();
+		expect(html).toContain('data-contexte-replie="non"');
+		expect(html).toContain('id="contexte-note"');
+		expect(html).toContain('aria-label="Replier le contexte"');
+		expect(html).toContain('aria-label="Déplier le contexte"');
+		expect(html.match(/aria-controls="contexte-note"/g)).toHaveLength(2);
+	});
+
 	it('dit un compteur à zéro en un chiffre, sans grande zone vide', async () => {
 		const html = await rendu();
 		const colonne = html.slice(html.indexOf('data-zone="pieces"'));
