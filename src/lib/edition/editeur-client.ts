@@ -279,9 +279,9 @@ function commandes(fenetre: Window): Record<AttributDeBouton, Record<string, Com
 			insertOrderedList: wrapInList(noeudDeSchema('orderedList'))
 		},
 		bloc: {
+			h1: setBlockType(noeudDeSchema('heading'), { level: 1 }),
 			h2: setBlockType(noeudDeSchema('heading'), { level: 2 }),
 			h3: setBlockType(noeudDeSchema('heading'), { level: 3 }),
-			h4: setBlockType(noeudDeSchema('heading'), { level: 4 }),
 			citation: wrapIn(noeudDeSchema('blockquote')),
 			code: setBlockType(noeudDeSchema('codeBlock')),
 			taches: wrapInList(noeudDeSchema('taskList')),
@@ -409,8 +409,8 @@ export function monterLEditeur(
 			history(),
 			inputRules({
 				rules: [
-					textblockTypeInputRule(/^(#{2,4})\s$/, noeudDeSchema('heading'), (m) => ({
-						level: m[1]?.length ?? 2
+					textblockTypeInputRule(/^(#{1,3})\s$/, noeudDeSchema('heading'), (m) => ({
+						level: m[1]?.length ?? 1
 					})),
 					textblockTypeInputRule(/^```([a-z]*)\s$/, noeudDeSchema('codeBlock'), (m) => ({
 						language: m[1] || null

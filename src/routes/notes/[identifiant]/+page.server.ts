@@ -147,8 +147,8 @@ function instantAffiche(valeur: Date): InstantAffiche {
 
 /**
  * LE SOMMAIRE, RELEVÉ SUR LE DOCUMENT CANONIQUE : `construireSommaire()` du gel
- * relit le DOM rendu, ce qu'un composant Svelte ne peut pas faire. Seuls les
- * niveaux 2 et 3 l'alimentent.
+ * relit le DOM rendu, ce qu'un composant Svelte ne peut pas faire. Tous les
+ * niveaux 1 à 6 l'alimentent ; la vue replie seule les niveaux de détail.
  *
  * Écarter les titres SANS ANCRE vidait le sommaire de toute note écrite dans le
  * produit, l'éditeur n'en posant jamais. L'ancre est dérivée du texte au rendu,
@@ -166,7 +166,7 @@ function sommaireDe(document: Document): readonly EntreeDeSommaire[] {
 	const retenus: EntreeDeSommaire[] = [];
 	for (const [titre, ancre] of ancresDuDocument(document)) {
 		retenus.push({
-			niveau: titre.attrs.level === 3 ? 3 : 2,
+			niveau: titre.attrs.level,
 			ancre,
 			libelle: (titre.content ?? []).map((t) => t.text).join('')
 		});

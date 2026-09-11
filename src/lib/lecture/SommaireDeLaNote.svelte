@@ -2,10 +2,10 @@
 	/**
 	 * LE SOMMAIRE DE LA NOTE — V-14 et V-15, même balisage, même contenu.
 	 *
-	 * `construireSommaire()` (`V-14:3901`, `V-15:2625`) relève les titres de
-	 * niveau 2 et 3 du corps affiché et en construit une liste : classe `n1`
-	 * pour un `h2`, `n2` pour un `h3`, numéro sur deux chiffres devant les
-	 * seuls niveaux 2, lien vers l'ancre du titre.
+	 * Le chargeur relève tous les titres du corps affiché. Les niveaux 1 et 2
+	 * restent visibles au premier affichage ; H3 à H6 sont le détail que le
+	 * lecteur peut révéler sans retirer leurs liens du DOM, afin que le suivi de
+	 * lecture et le défilement doux restent branchés.
 	 *
 	 * LE SUIVI DE LECTURE N'EST PAS RENDU. Le gel pose `aria-current="true"`
 	 * sur l'entrée du titre traversé, par un `IntersectionObserver` dont la
@@ -47,16 +47,30 @@
 	const { classe = 'sommaire', entrees }: Proprietes = $props();
 
 	const lignes = $derived(sommaireRendu(entrees));
+	const porteDuDetail = $derived(lignes.some((ligne) => ligne.niveau > 2));
+	let detailVisible = $state(false);
 </script>
 
-<nav class={classe} aria-label="Sommaire de la note">
+<nav class={classe} aria-label="Sommaire de la note" data-detail={detailVisible ? 'oui' : 'non'}>
 	<div class="etiq">Sommaire</div>
 	<!-- prettier-ignore -->
 	<ul class="sommaire__liste" id="sommaire">{#each lignes as ligne (ligne.ancre)}<li
-			class={ligne.niveau === 2 ? 'n1' : 'n2'}
+			class="n{ligne.profondeur}"
+			class:sommaire__detail={ligne.niveau > 2}
 		><a href="#{ligne.ancre}"
 			>{#if ligne.numero}<span class="sommaire__num">{ligne.numero}</span>{/if}<span
 				>{ligne.libelle}</span
 			></a
 		></li>{:else}<li class="n1"><span>Aucun titre dans cette note</span></li>{/each}</ul>
+	{#if porteDuDetail}
+		<button
+			class="sommaire__detail-bascule"
+			type="button"
+			aria-controls="sommaire"
+			aria-expanded={detailVisible}
+			onclick={() => (detailVisible = !detailVisible)}
+		>
+			{detailVisible ? 'Masquer le détail' : 'Afficher le détail'}
+		</button>
+	{/if}
 </nav>

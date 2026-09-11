@@ -60,16 +60,27 @@ const alerte = (niveau: NiveauDAlerte, glyphe: string, corps: string): Alerte =>
  */
 export const GABARITS: readonly GabaritDInsertion[] = [
 	{
+		cle: 'h1',
+		libelle: 'Titre de niveau 1',
+		source: 'barre d’édition',
+		blocs: [
+			{
+				type: 'heading',
+				/* L'ANCRE N'EST PAS POSÉE ICI : deux insertions du même bloc ne doivent
+				   jamais partager une cible. Elle est dérivée du texte au rendu par
+				   `ancresDuDocument()`, où l'unicité se juge sur le document entier. */
+				attrs: { level: 1, ancre: null },
+				content: [{ type: 'text', text: 'Titre principal' }]
+			}
+		]
+	},
+	{
 		cle: 'h2',
 		libelle: 'Titre de niveau 2',
 		source: 'V-17:3069',
 		blocs: [
 			{
 				type: 'heading',
-				/* L'ANCRE N'EST PAS POSÉE ICI : le gabarit écrivait `s-nouveau` EN DUR, donc
-				   deux insertions du même bloc partageaient une ancre et le sommaire
-				   renvoyait deux entrées au même titre. Elle est dérivée du texte au rendu
-				   — `ancresDuDocument()` —, où l'unicité se juge sur le document entier. */
 				attrs: { level: 2, ancre: null },
 				content: [{ type: 'text', text: 'Titre de section' }]
 			}
@@ -84,18 +95,6 @@ export const GABARITS: readonly GabaritDInsertion[] = [
 				type: 'heading',
 				attrs: { level: 3, ancre: null },
 				content: [{ type: 'text', text: 'Sous-titre' }]
-			}
-		]
-	},
-	{
-		cle: 'h4',
-		libelle: 'Titre de niveau 4',
-		source: 'V-17:3071',
-		blocs: [
-			{
-				type: 'heading',
-				attrs: { level: 4, ancre: null },
-				content: [{ type: 'text', text: 'Regroupement' }]
 			}
 		]
 	},
@@ -364,7 +363,7 @@ export const CONSTRUCTIONS_DE_LEDITEUR: readonly ConstructionDeLEditeur[] = CONS
 			15: ['@tiptap/starter-kit']
 		};
 		const commandes: Record<number, readonly string[]> = {
-			1: ['h2', 'h3', 'h4'],
+			1: ['h1', 'h2', 'h3'],
 			2: ['bold', 'italic', 'underline', 'strikeThrough', 'surligne'],
 			3: ['code'],
 			4: ['code (bloc)'],

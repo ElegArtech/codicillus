@@ -71,8 +71,23 @@
   color: var(--c-accent); font-weight: var(--g-fort); border-left-color: var(--c-accent);
 }
 .sommaire__num { font-family: var(--f-donnee); font-size: 11.5px; padding-top: 1px; }
-.sommaire .n2 a { padding-left: var(--e-6); }
-.sommaire .n2 a span:last-child { color: var(--c-encre-4); font-size: 11.5px; }
+.sommaire .n2 a { padding-left: 22px; }
+.sommaire .n3 a { padding-left: 30px; }
+.sommaire .n4 a { padding-left: 38px; }
+.sommaire .n5 a { padding-left: 46px; }
+.sommaire .n6 a { padding-left: 54px; }
+.sommaire :is(.n2, .n3, .n4, .n5, .n6) a span:last-child {
+  color: var(--c-encre-4); font-size: 11.5px;
+}
+.sommaire[data-detail="non"] .sommaire__detail { display: none; }
+.sommaire__detail-bascule {
+  margin-top: var(--e-2); padding: 5px var(--e-3);
+  border: 0; background: transparent; color: var(--c-encre-3);
+  font: inherit; font-size: var(--t-mini); text-decoration: underline dotted;
+  text-underline-offset: 3px; cursor: pointer;
+}
+.sommaire__detail-bascule:hover { color: var(--c-accent); }
+.sommaire__detail-bascule:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 
 /* --- Le sélecteur de registre --------------------------------------------- */
 .registres {
@@ -495,6 +510,11 @@
 .prose > .figure,
 .prose > .alerte { max-width: none; }
 
+.prose h1 {
+  font-family: var(--f-lecture); font-size: var(--t-t1); font-weight: var(--g-moyen);
+  line-height: 1.2; letter-spacing: -.01em; margin: var(--e-8) 0 22px;
+  scroll-margin-top: calc(var(--h-entete) + var(--e-5));
+}
 .prose h2 {
   counter-increment: sec;
   font-family: var(--f-lecture); font-size: var(--t-section); font-weight: var(--g-moyen);
@@ -515,12 +535,12 @@
   line-height: 1.3; letter-spacing: -.008em; margin: var(--e-6) 0 var(--e-3);
   scroll-margin-top: calc(var(--h-entete) + var(--e-5));
 }
-.prose h4 { font-family: var(--f-ui); font-size: var(--t-t3); font-weight: var(--g-fort); margin: var(--e-5) 0 var(--e-2); }
-.prose h5 { font-family: var(--f-ui); font-size: var(--t-base); font-weight: var(--g-fort); margin: var(--e-4) 0 var(--e-2); }
+.prose h4 { font-family: var(--f-ui); font-size: var(--t-t3); font-weight: var(--g-fort); margin: var(--e-5) 0 var(--e-2); scroll-margin-top: calc(var(--h-entete) + var(--e-5)); }
+.prose h5 { font-family: var(--f-ui); font-size: var(--t-base); font-weight: var(--g-fort); margin: var(--e-4) 0 var(--e-2); scroll-margin-top: calc(var(--h-entete) + var(--e-5)); }
 .prose h6 {
   font-family: var(--f-donnee); font-size: var(--t-mini); font-weight: var(--g-fort);
   text-transform: uppercase; letter-spacing: .09em; color: var(--c-encre-2);
-  margin: var(--e-4) 0 var(--e-2);
+  margin: var(--e-4) 0 var(--e-2); scroll-margin-top: calc(var(--h-entete) + var(--e-5));
 }
 .prose strong { font-weight: var(--g-fort); }
 .prose em { font-style: italic; }

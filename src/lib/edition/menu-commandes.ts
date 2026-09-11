@@ -2,9 +2,9 @@ import type { Command } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 
 const ENTREES = [
+	['h1', 'Titre 1'],
 	['h2', 'Titre 2'],
 	['h3', 'Titre 3'],
-	['h4', 'Titre 4'],
 	['citation', 'Citation'],
 	['code', 'Code'],
 	['taches', 'Liste de tâches'],

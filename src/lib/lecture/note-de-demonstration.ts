@@ -11,23 +11,24 @@
 import type { Note } from '../../../seeds/corpus';
 import { segmentsDeDossier } from '../rangement/adresses';
 
-/* LE SOMMAIRE. `construireSommaire()` relève les `h2[id]` et `h3[id]` du corps
-   AFFICHÉ, dans l'ordre du document, et rien d'autre : « seuls les niveaux 2 et 3
-   alimentent le sommaire ». La numérotation ne porte que sur les niveaux 2, sur deux
-   chiffres.
+/* LE SOMMAIRE. Il relève les titres du corps AFFICHÉ, du niveau 1 au niveau 6,
+   dans l'ordre du document. La vue montre les niveaux 1 et 2 d'abord et permet
+   de révéler les niveaux plus fins. La numérotation porte sur le premier niveau
+   réellement présent, sur deux chiffres : une ancienne note qui commence à H2
+   garde donc sa segmentation principale.
 
    CETTE LISTE DOIT SUIVRE LES TITRES DU CORPS : elle les redit parce que le corps est
    du balisage figé dans le composant, et qu'un composant Svelte ne peut pas se relire
    lui-même comme le script de la maquette relit son DOM. */
 
 export interface EntreeDeSommaire {
-	/** 2 ou 3 — la classe rendue est `n1` pour 2, `n2` pour 3. */
-	readonly niveau: 2 | 3;
+	/** Le niveau réel du titre dans le document canonique. */
+	readonly niveau: 1 | 2 | 3 | 4 | 5 | 6;
 	readonly ancre: string;
 	readonly libelle: string;
 }
 
-/** Les onze titres du registre Référence, dans l'ordre du document. */
+/** Les quatorze titres du registre Référence, dans l'ordre du document. */
 export const SOMMAIRE_REFERENCE: readonly EntreeDeSommaire[] = [
 	{ niveau: 2, ancre: 's-avant', libelle: 'Avant de commencer' },
 	{ niveau: 3, ancre: 's-prerequis', libelle: 'Prérequis' },
@@ -39,25 +40,33 @@ export const SOMMAIRE_REFERENCE: readonly EntreeDeSommaire[] = [
 	{ niveau: 2, ancre: 's-verifier', libelle: 'Vérifier le résultat' },
 	{ niveau: 2, ancre: 's-echec', libelle: "En cas d'échec" },
 	{ niveau: 2, ancre: 's-annexe', libelle: 'Annexe — conventions de rédaction' },
-	{ niveau: 3, ancre: 's-n3', libelle: 'Niveau 3 — sous-partie' }
+	{ niveau: 3, ancre: 's-n3', libelle: 'Niveau 3 — sous-partie' },
+	{ niveau: 4, ancre: 's-niveau-4-regroupement', libelle: 'Niveau 4 — regroupement' },
+	{ niveau: 5, ancre: 's-niveau-5-precision', libelle: 'Niveau 5 — précision' },
+	{ niveau: 6, ancre: 's-niveau-6-annotation', libelle: 'Niveau 6 — annotation' }
 ];
 
 export interface LigneDeSommaire extends EntreeDeSommaire {
-	/** Deux chiffres pour un niveau 2, `null` pour un niveau 3. */
+	/** Rang visuel depuis le premier niveau présent, entre 1 et 6. */
+	readonly profondeur: 1 | 2 | 3 | 4 | 5 | 6;
+	/** Deux chiffres pour le niveau principal, `null` pour ses descendants. */
 	readonly numero: string | null;
 }
 
 /**
  * Le sommaire rendu — numérotation comprise.
  *
- * `String(n).padStart(2, "0")` du gel, et le compteur n'avance que sur un
- * niveau 2.
+ * Le compteur n'avance que sur le niveau le moins profond du document. Les
+ * profondeurs sont normalisées pour qu'une note ancienne commençant à H2 ne
+ * soit pas artificiellement indentée.
  */
 export function sommaireRendu(entrees: readonly EntreeDeSommaire[]): readonly LigneDeSommaire[] {
 	let n = 0;
+	const niveauPrincipal = Math.min(...entrees.map((entree) => entree.niveau));
 	return entrees.map((e) => ({
 		...e,
-		numero: e.niveau === 2 ? String(++n).padStart(2, '0') : null
+		profondeur: Math.min(6, e.niveau - niveauPrincipal + 1) as LigneDeSommaire['profondeur'],
+		numero: e.niveau === niveauPrincipal ? String(++n).padStart(2, '0') : null
 	}));
 }
 
