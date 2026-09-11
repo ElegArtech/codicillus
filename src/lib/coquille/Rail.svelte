@@ -20,12 +20,15 @@
 	 * qu'à l'administrateur ; « Import » demande de pouvoir écrire quelque part.
 	 */
 	import { getContext, tick } from 'svelte';
+	import { deserialize } from '$app/forms';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Pictogramme from '$lib/console/Pictogramme.svelte';
 	import { CHAMP_DOMAINE_CIBLE, CHAMP_NOM, CHAMP_UNIVERS_CIBLE } from '$lib/console/structure';
 	import { identifiantLisible } from '$lib/rangement/adresses';
+	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
+	import { SCENARIO_DE_DOMAINE, SCENARIO_LIVRE } from '$lib/donnees/scenarios-d-import';
 	import {
 		AUCUNE_PAGE,
 		railRendu,
@@ -186,6 +189,7 @@
 	let elementDuMenu = $state<HTMLDivElement>();
 	let noteDeplacee = $state<CibleContextuelle | null>(null);
 	let cibleDeDepot = $state<string | null>(null);
+	let importEnCours = $state(false);
 	let renommage = $state<{
 		cible: CibleContextuelle;
 		valeur: string;
@@ -427,6 +431,14 @@
 		return ecriture && (cible.type === 'domaine' || cible.type === 'dossier');
 	}
 
+	function transfertDeFichiers(evenement: DragEvent): boolean {
+		return Array.from(evenement.dataTransfer?.types ?? []).includes('Files');
+	}
+
+	function peutRecevoirUnDepot(cible: CibleContextuelle): boolean {
+		return cible.type === 'univers' ? admin : peutRecevoir(cible);
+	}
+
 	function commencerLeDeplacement(evenement: DragEvent, cible: CibleContextuelle): void {
 		if (!ecriture || cible.type !== 'note' || cible.identifiant === null) {
 			evenement.preventDefault();
@@ -445,10 +457,12 @@
 		cible: CibleContextuelle,
 		cle: string
 	): void {
-		if (noteDeplacee === null || !peutRecevoir(cible)) return;
+		const externe = noteDeplacee === null && transfertDeFichiers(evenement);
+		if ((!externe && noteDeplacee === null) || !peutRecevoirUnDepot(cible)) return;
 		evenement.preventDefault();
 		cibleDeDepot = cle;
-		if (evenement.dataTransfer !== null) evenement.dataTransfer.dropEffect = 'move';
+		if (evenement.dataTransfer !== null)
+			evenement.dataTransfer.dropEffect = externe ? 'copy' : 'move';
 	}
 
 	function quitterLaDestination(evenement: DragEvent, cle: string): void {
@@ -469,6 +483,10 @@
 	}
 
 	async function deposerLaNote(evenement: DragEvent, cible: CibleContextuelle): Promise<void> {
+		if (noteDeplacee === null && transfertDeFichiers(evenement)) {
+			await importerLeDepot(evenement, cible);
+			return;
+		}
 		if (noteDeplacee === null || noteDeplacee.identifiant === null || !peutRecevoir(cible)) return;
 		evenement.preventDefault();
 		const note = noteDeplacee;
@@ -500,6 +518,79 @@
 			window.alert("La note n'a pas pu être déplacée vers ce dossier.");
 		} finally {
 			noteDeplacee = null;
+		}
+	}
+
+	async function importerLeDepot(evenement: DragEvent, cible: CibleContextuelle): Promise<void> {
+		if (importEnCours || !peutRecevoirUnDepot(cible) || evenement.dataTransfer === null) return;
+		evenement.preventDefault();
+		cibleDeDepot = null;
+		const transfert = evenement.dataTransfer;
+		const entreeDeDossier = Array.from(transfert.items ?? []).some((item) => {
+			const entree = item.webkitGetAsEntry?.();
+			return (
+				entree !== null && entree !== undefined && 'isDirectory' in entree && entree.isDirectory
+			);
+		});
+		const fichiers = await fichiersDuTransfert(transfert);
+		if (fichiers.length === 0) {
+			window.alert('Ce dépôt ne contient aucun fichier.');
+			return;
+		}
+		const porteUnDossier =
+			entreeDeDossier || fichiers.some((fichier) => cheminDuFichier(fichier).includes('/'));
+		if (cible.type === 'univers' && !porteUnDossier) {
+			window.alert('Déposez un dossier sur un univers pour créer un domaine.');
+			return;
+		}
+
+		const corps = new FormData();
+		corps.set('scenario', cible.type === 'univers' ? SCENARIO_DE_DOMAINE : SCENARIO_LIVRE);
+		if (cible.type === 'univers') {
+			corps.set('univers-cible', cible.cible?.univers ?? '');
+		} else {
+			corps.set('cible-univers', cible.cible?.univers ?? '');
+			corps.set('cible-domaine', cible.cible?.domaine ?? '');
+			corps.set(
+				'cible-chemin',
+				cible.type === 'dossier' ? (cible.cible?.chemin.join('/') ?? '') : ''
+			);
+		}
+		for (const fichier of fichiers) corps.append('fichiers', fichier, cheminDuFichier(fichier));
+
+		importEnCours = true;
+		try {
+			const reponse = await fetch(`${resolve('/importer')}?/importer`, {
+				method: 'POST',
+				body: corps
+			});
+			const resultat = deserialize(await reponse.text());
+			if (resultat.type !== 'success') {
+				window.alert('L’import n’a pas pu être exécuté sur cette cible.');
+				return;
+			}
+			const rapport = (
+				resultat.data as
+					| {
+							rapport?: {
+								notesCreees: number;
+								notesMisesAJour: number;
+								echecs: number;
+								dossiersCrees: number;
+							};
+					  }
+					| undefined
+			)?.rapport;
+			await invalidateAll();
+			window.alert(
+				rapport === undefined
+					? 'Import terminé.'
+					: `Import terminé : ${rapport.notesCreees} note(s) créée(s), ${rapport.notesMisesAJour} mise(s) à jour, ${rapport.dossiersCrees} dossier(s) créé(s), ${rapport.echecs} échec(s).`
+			);
+		} catch {
+			window.alert('L’import a échoué.');
+		} finally {
+			importEnCours = false;
 		}
 	}
 
@@ -673,6 +764,7 @@
 							class="noeud noeud--univers"
 							class:noeud--courant={section.page}
 							class:noeud--branche={section.courant && !section.page}
+							class:noeud--depot={cibleDeDepot === `univers:${section.cible?.univers ?? ''}`}
 							data-ouvert={section.ouvert ? 'oui' : undefined}
 						>
 							{#if section.domaines.length}<button
@@ -695,6 +787,15 @@
 									: resolve(ROUTE_UNIVERS, { univers: section.cible.univers })}
 								aria-current={section.page ? 'page' : undefined}
 								oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDUnivers(section))}
+								ondragover={(evenement) =>
+									survolerLaDestination(
+										evenement,
+										cibleDUnivers(section),
+										`univers:${section.cible?.univers ?? ''}`
+									)}
+								ondragleave={(evenement) =>
+									quitterLaDestination(evenement, `univers:${section.cible?.univers ?? ''}`)}
+								ondrop={(evenement) => deposerLaNote(evenement, cibleDUnivers(section))}
 								><span class="noeud__teinte" style="color:{section.couleur}"
 									><Pictogramme
 										traits={glypheDUnivers(section.glyphe)}
