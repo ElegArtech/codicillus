@@ -34,6 +34,7 @@
 	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import type { Notification } from '$lib/coquille/notifications';
+	import { tick } from 'svelte';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import GlypheDeVivacite from '$lib/GlypheDeVivacite.svelte';
 	import SommaireDeLaNote from '$lib/lecture/SommaireDeLaNote.svelte';
@@ -144,6 +145,27 @@
 
 	/** La frise : la position d'aujourd'hui, en pourcentage, telle que la fabrique la donne. */
 	const positionDuJour = $derived(`${(viv.fraction * 100).toFixed(1)}%`);
+
+	/**
+	 * Sur grand écran, le lecteur peut rendre toute la largeur au corps de la note.
+	 * Sous le seuil du tiroir, le socle garde seul la main : cette préférence n'y
+	 * remplace jamais le bouton « Contexte » de la barre.
+	 */
+	let contexteReplie = $state(false);
+	let boutonReplier: HTMLButtonElement | undefined;
+	let boutonDeplier: HTMLButtonElement | undefined;
+
+	async function replierLeContexte(): Promise<void> {
+		contexteReplie = true;
+		await tick();
+		boutonDeplier?.focus();
+	}
+
+	async function deplierLeContexte(): Promise<void> {
+		contexteReplie = false;
+		await tick();
+		boutonReplier?.focus();
+	}
 </script>
 
 <!-- Les pictogrammes du prototype, tracés dans une boîte de 16 — un seul patron. -->
@@ -234,7 +256,10 @@
 	fil={['Accueil', ...rangement, note.titre]}
 	courant={rangement.slice(1)}
 	{droits}
-	donnees={{ 'data-registre': registre }}
+	donnees={{
+		'data-registre': registre,
+		'data-contexte-replie': contexteReplie ? 'oui' : 'non'
+	}}
 	{univers}
 	{domaines}
 	notes={corpus}
@@ -468,11 +493,39 @@
 			</footer>
 		</article>
 
+		<button
+			class="contexte-replie__ouvrir"
+			type="button"
+			aria-label="Déplier le contexte"
+			aria-controls="contexte-note"
+			aria-expanded="false"
+			bind:this={boutonDeplier}
+			onclick={deplierLeContexte}
+		>
+			{@render ic('M6 3l5 5-5 5', 15)}
+		</button>
+
 		<!-- ═══════════ Colonne de contexte — tiroir sous 1180 px ═══════════════ -->
-		<aside class="contexte" data-colonne="contexte" aria-label="Contexte de la note">
+		<aside
+			class="contexte"
+			id="contexte-note"
+			data-colonne="contexte"
+			aria-label="Contexte de la note"
+		>
 			<button class="contexte__fermer" type="button" data-fermer-tiroir aria-label="Fermer"
 				>{@render ic('M3 3l10 10M13 3L3 13')}</button
 			>
+			<button
+				class="contexte__replier"
+				type="button"
+				aria-label="Replier le contexte"
+				aria-controls="contexte-note"
+				aria-expanded="true"
+				bind:this={boutonReplier}
+				onclick={replierLeContexte}
+			>
+				{@render ic('M10 3L5 8l5 5', 15)}
+			</button>
 
 			<!-- eslint-disable svelte/no-navigation-without-resolve -- adresses composées par la route -->
 			<section class="zone" data-zone="actions">
