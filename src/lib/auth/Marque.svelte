@@ -1,8 +1,8 @@
 <script lang="ts">
+	import { base as racineDesAssets } from '$app/paths';
+
 	/**
-	 * L'identité du produit en tête des deux écrans d'authentification —
-	 * « le nom, et rien de plus » (`mockups/V-05-connexion.html:423`,
-	 * commentaire du bloc `.auth__marque`).
+	 * L'identité du produit en tête des deux écrans d'authentification.
 	 *
 	 * POURQUOI CE FRAGMENT EST PARTAGÉ, ET LUI SEUL. V-05 et V-06 portent la
 	 * MÊME ossature `auth`, déclarée par leurs deux feuilles sous le titre
@@ -29,8 +29,8 @@
 	 */
 </script>
 
-<!-- Identité du produit : le nom, et rien de plus. -->
+<!-- Le nom visible porte déjà l'alternative textuelle du logo. -->
 <div class="auth__marque">
-	<span class="auth__sceau" aria-hidden="true">C</span>
+	<img class="auth__sceau" src={`${racineDesAssets}/logo.png`} alt="" width="30" height="30" />
 	<span class="auth__nom">Codicillus</span>
 </div>
