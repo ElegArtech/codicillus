@@ -72,6 +72,28 @@ export class NomDePieceVide extends Error {
 	}
 }
 
+/** Une pièce encore rendue dans un registre ne peut pas être effacée sous son image. */
+export class PieceUtiliseeDansUnRegistre extends Error {
+	constructor(readonly registres: readonly ('Référence' | 'Opérationnel')[]) {
+		super(`cette image est encore utilisée dans le registre ${registres.join(' et ')}`);
+		this.name = 'PieceUtiliseeDansUnRegistre';
+	}
+}
+
+function documentPorteLaSource(valeur: unknown, source: string): boolean {
+	if (Array.isArray(valeur)) return valeur.some((v) => documentPorteLaSource(v, source));
+	if (typeof valeur !== 'object' || valeur === null) return false;
+	const objet = valeur as Record<string, unknown>;
+	if (
+		objet['type'] === 'image' &&
+		typeof objet['attrs'] === 'object' &&
+		objet['attrs'] !== null &&
+		(objet['attrs'] as Record<string, unknown>)['src'] === source
+	)
+		return true;
+	return Object.values(objet).some((v) => documentPorteLaSource(v, source));
+}
+
 export interface DepotDePieceJointe {
 	readonly note: string;
 	readonly nom: string;
@@ -220,7 +242,12 @@ export async function retirerUnePieceJointeParNom(
 	if (nom === '') return INTROUVABLE;
 
 	const [note] = await base
-		.select({ id: notes.id, dossierId: notes.dossierId })
+		.select({
+			id: notes.id,
+			dossierId: notes.dossierId,
+			corpsReference: notes.corpsReference,
+			corpsOperationnel: notes.corpsOperationnel
+		})
 		.from(notes)
 		.where(eq(notes.identifiant, retrait.note))
 		.limit(1);
@@ -233,6 +260,12 @@ export async function retirerUnePieceJointeParNom(
 		.where(and(eq(piecesJointes.noteId, note.id), eq(piecesJointes.nom, nom)))
 		.limit(1);
 	if (piece === undefined) return INTROUVABLE;
+
+	const source = adresseDePieceJointe(retrait.note, nom);
+	const registres: ('Référence' | 'Opérationnel')[] = [];
+	if (documentPorteLaSource(note.corpsReference, source)) registres.push('Référence');
+	if (documentPorteLaSource(note.corpsOperationnel, source)) registres.push('Opérationnel');
+	if (registres.length > 0) throw new PieceUtiliseeDansUnRegistre(registres);
 
 	/* `RG-NF-05` — l'auteur est exigé avant la destruction. */
 	const auteur = auteurDeLaSuppression(retrait.identite);
