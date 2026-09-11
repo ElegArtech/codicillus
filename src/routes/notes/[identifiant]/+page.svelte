@@ -360,17 +360,29 @@
 			retrait.dataset[MARQUE_DU_CABLAGE] = 'retrait';
 			retrait.setAttribute('aria-label', `Retirer la pièce jointe ${piece.nom}`);
 			retrait.append('×');
-			const reaction = (): void => {
+			const reaction = async (): Promise<void> => {
 				/* `RG-M18-05` — l'action irréversible nomme ce qu'elle détruit. */
 				const rappelDuRetrait =
 					`Retirer « ${piece.nom} » de cette note ?\n\n` +
 					'Le fichier est effacé de l’entrepôt : le retrait est définitif.';
 				if (!document.defaultView?.confirm(rappelDuRetrait)) return;
-				poserLeNomDeLaPiece(cible, piece.nom);
-				soumettreVers(cible, '?/retirerPiece', false);
+				const corps = new FormData();
+				corps.set('piece', piece.nom);
+				const reponse = await fetch('?/retirerPiece', { method: 'POST', body: corps });
+				const resultat = deserialize(await reponse.text());
+				if (resultat.type === 'success') {
+					document.location.reload();
+					return;
+				}
+				const charge = resultat.type === 'failure' ? (resultat.data ?? null) : null;
+				const annonce = charge === null ? undefined : charge['motif'];
+				document.defaultView?.alert(
+					typeof annonce === 'string' ? annonce : 'La pièce jointe n’a pas pu être retirée.'
+				);
 			};
-			retrait.addEventListener('click', reaction);
-			debranchements.push(() => retrait.removeEventListener('click', reaction));
+			const auRetrait = (): void => void reaction();
+			retrait.addEventListener('click', auRetrait);
+			debranchements.push(() => retrait.removeEventListener('click', auRetrait));
 			lien.after(retrait);
 		});
 
@@ -663,23 +675,6 @@
 		const annonce = charge === null ? undefined : charge['motif'];
 		const motif = typeof annonce === 'string' ? annonce : 'la relation n’a pas pu être déclarée';
 		boite.ownerDocument.defaultView?.alert(`Relation refusée : ${motif}.`);
-	}
-
-	/**
-	 * Le nom de la pièce visée par le retrait, en champ caché du formulaire.
-	 *
-	 * IL NE S'APPELLE PAS `fichier` : le champ de dépôt porte déjà ce nom-là, et les
-	 * deux vivent dans le MÊME formulaire — deux champs homonymes rendent le PREMIER
-	 * dans l'ordre du document, et le retrait aurait reçu un fichier vide.
-	 */
-	function poserLeNomDeLaPiece(cible: HTMLFormElement, nom: string): void {
-		const existant = cible.querySelector<HTMLInputElement>('input[data-cable-pj-nom]');
-		const champ = existant ?? cible.ownerDocument.createElement('input');
-		champ.type = 'hidden';
-		champ.name = 'piece';
-		champ.dataset['cablePjNom'] = 'oui';
-		champ.value = nom;
-		if (existant === null) cible.appendChild(champ);
 	}
 </script>
 

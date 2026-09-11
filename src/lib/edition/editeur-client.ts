@@ -34,13 +34,28 @@ import {
 	goToNextCell,
 	tableEditing
 } from '@tiptap/pm/tables';
-import { Slice, type MarkType, type NodeType } from '@tiptap/pm/model';
+import {
+	Slice,
+	type MarkType,
+	type Node as NoeudProseMirror,
+	type NodeType
+} from '@tiptap/pm/model';
 import { schemaDeLEditeur } from './schema';
 import { documentDepuisNoeud, noeudDepuisDocument } from './document';
 import { GABARITS, MARQUES_DE_LA_BARRE } from './constructions';
 import type { Document } from '../contenu/document';
 
 const schema = schemaDeLEditeur;
+
+function documentEstVide(document: NoeudProseMirror): boolean {
+	const premier = document.firstChild;
+	return (
+		document.childCount === 1 &&
+		premier !== null &&
+		premier.type === schema.nodes.paragraph &&
+		premier.textContent.trim() === ''
+	);
+}
 
 /**
  * Les TROIS attributs par lesquels le gel nomme un bouton de barre. `data-mark`
@@ -79,6 +94,8 @@ export interface EditeurMonte {
 	 * porte unique (`noeudDepuisDocument`) : rien n'est inséré qui ne soit valide.
 	 */
 	inserer(document: Document): void;
+	/** Ouvre le sélecteur et insère une image réellement déposée. */
+	ajouterUneImage(): void;
 	/**
 	 * REMPLACE tout le contenu par ce document. C'est la restauration d'un brouillon
 	 * local, et elle ne peut pas passer par `inserer()` : celle-ci pose au point
@@ -99,6 +116,10 @@ export interface OptionsDeMontage {
 	 * enregistrées ». L'état est DÉDUIT d'une frappe, jamais déclaré par un bouton.
 	 */
 	surChangement?: () => void;
+	/** Dépose les octets avant que leur adresse interne entre dans le document. */
+	deposerImage?: (fichier: File) => Promise<{ readonly src: string; readonly nom: string }>;
+	/** Employé en création pour persister d'abord la note comme brouillon. */
+	preparerPourUneImage?: () => void;
 }
 
 function inserer(type: NodeType, attrs?: Record<string, unknown>): Command {
@@ -147,17 +168,6 @@ function lienInterne(fenetre: Window): Command {
 		const cible = fenetre.prompt('Identifiant de la note cible');
 		if (cible === null || cible.trim() === '') return false;
 		return toggleMark(marqueDeSchema('lienInterne'), { cible: cible.trim() })(etat, envoyer);
-	};
-}
-
-function image(fenetre: Window): Command {
-	return (etat, envoyer) => {
-		const src = fenetre.prompt('Adresse de l’image');
-		if (src === null || src.trim() === '') return false;
-		/* `P-06` — toute image porte une alternative textuelle. Elle est demandée,
-		   jamais laissée vide par défaut. */
-		const alt = fenetre.prompt('Description de l’image (alternative textuelle)') ?? '';
-		return inserer(noeudDeSchema('image'), { src: src.trim(), alt })(etat, envoyer);
 	};
 }
 
@@ -282,7 +292,6 @@ function commandes(fenetre: Window): Record<AttributDeBouton, Record<string, Com
 			'alerte-attention': alerte('alerte-attention'),
 			'alerte-danger': alerte('alerte-danger'),
 			tableau: tableau(),
-			image: image(fenetre),
 			lien: lien(fenetre),
 			'lien-interne': lienInterne(fenetre),
 			diagramme: diagramme(fenetre)
@@ -470,11 +479,114 @@ export function monterLEditeur(
 		}
 	};
 	const menu = menuDeCommandes(zone, table.bloc);
+	const demanderDescriptionImage = (): Promise<{
+		readonly alt: string;
+		readonly legende: string | null;
+	} | null> =>
+		new Promise((resoudre) => {
+			const boite = zone.ownerDocument.createElement('dialog');
+			boite.className = 'dlg';
+			boite.setAttribute('aria-labelledby', 'titre-description-image');
+			boite.innerHTML = `<form method="dialog" class="dlg__boite">
+				<div class="dlg__tete"><h2 class="dlg__titre" id="titre-description-image">Décrire l’image</h2></div>
+				<div class="dlg__corps">
+					<label for="description-image">Description de l’image *</label>
+					<input class="saisie" id="description-image" name="alt" required />
+					<label for="legende-image">Légende <span>(facultative)</span></label>
+					<input class="saisie" id="legende-image" name="legende" />
+				</div>
+				<div class="dlg__pied">
+					<button class="btn" type="button" data-annuler>Annuler</button>
+					<button class="btn btn--principal" type="submit">Insérer l’image</button>
+				</div>
+			</form>`;
+			zone.ownerDocument.body.append(boite);
+			let termine = false;
+			const finir = (valeur: { readonly alt: string; readonly legende: string | null } | null) => {
+				if (termine) return;
+				termine = true;
+				boite.close();
+				boite.remove();
+				resoudre(valeur);
+			};
+			boite.querySelector('[data-annuler]')?.addEventListener('click', () => finir(null));
+			boite.addEventListener('cancel', (evenement) => {
+				evenement.preventDefault();
+				finir(null);
+			});
+			boite.querySelector('form')?.addEventListener('submit', (evenement) => {
+				evenement.preventDefault();
+				const donnees = new FormData(evenement.currentTarget as HTMLFormElement);
+				const alt = String(donnees.get('alt') ?? '').trim();
+				if (alt === '') return;
+				const legende = String(donnees.get('legende') ?? '').trim();
+				finir({ alt, legende: legende || null });
+			});
+			boite.showModal();
+			boite.querySelector<HTMLInputElement>('[name="alt"]')?.focus();
+		});
+
+	const insererLeFichier = async (vue: EditorView, fichier: File): Promise<void> => {
+		if (options.deposerImage === undefined) {
+			options.preparerPourUneImage?.();
+			return;
+		}
+		const description = await demanderDescriptionImage();
+		if (description === null) return;
+		try {
+			const deposee = await options.deposerImage(fichier);
+			const commande = inserer(noeudDeSchema('image'), {
+				src: deposee.src,
+				alt: description.alt,
+				etiquette: null,
+				legende: description.legende
+			});
+			commande(vue.state, vue.dispatch, vue);
+			vue.focus();
+		} catch (cause) {
+			fenetre.alert(cause instanceof Error ? cause.message : 'Le dépôt de l’image a échoué.');
+		}
+	};
+
+	const choisirUneImage = (vue: EditorView): void => {
+		if (options.deposerImage === undefined) {
+			options.preparerPourUneImage?.();
+			return;
+		}
+		const champ = zone.ownerDocument.createElement('input');
+		champ.type = 'file';
+		champ.accept = 'image/jpeg,image/png,image/webp';
+		champ.addEventListener('change', () => {
+			const fichier = champ.files?.[0];
+			if (fichier !== undefined) void insererLeFichier(vue, fichier);
+		});
+		champ.click();
+	};
+	table.bloc['image'] = (_etat, _envoyer, vueCourante) => {
+		if (vueCourante !== undefined) choisirUneImage(vueCourante);
+		return true;
+	};
+
 	const vue: EditorView = new EditorView({ mount: zone } as unknown as HTMLElement, {
 		state: etat,
 		handlePaste: (vue, evenement) => {
+			const image = Array.from(evenement.clipboardData?.files ?? []).find((f) =>
+				f.type.startsWith('image/')
+			);
+			if (image !== undefined) {
+				void insererLeFichier(vue, image);
+				return true;
+			}
 			if (evenement.clipboardData?.getData('text/html')) return false;
 			return insererMarkdown(vue, evenement.clipboardData?.getData('text/plain') ?? '');
+		},
+		handleDrop: (vue, evenement) => {
+			const image = Array.from(evenement.dataTransfer?.files ?? []).find((f) =>
+				f.type.startsWith('image/')
+			);
+			if (image === undefined) return false;
+			void insererLeFichier(vue, image);
+			return true;
 		},
 		handleTextInput: (vue, _debut, _fin, texte) =>
 			texte.includes('\n') && insererMarkdown(vue, texte),
@@ -495,13 +607,13 @@ export function monterLEditeur(
 			menu.actualiser(vue);
 			/* `data-vide` commande le seul rendu visible du vide — l'invite d'amorçage
 			   que la feuille gelée écrit en `::before`. Il est déduit, jamais déclaré. */
-			zone.setAttribute('data-vide', vue.state.doc.textContent.trim() === '' ? 'oui' : 'non');
+			zone.setAttribute('data-vide', documentEstVide(vue.state.doc) ? 'oui' : 'non');
 			/* Le témoin de sauvegarde ne bouge que si le DOCUMENT a bougé : un simple
 			   déplacement du point d'insertion n'est pas une modification. */
 			if (transaction.docChanged) options.surChangement?.();
 		}
 	});
-	zone.setAttribute('data-vide', vue.state.doc.textContent.trim() === '' ? 'oui' : 'non');
+	zone.setAttribute('data-vide', documentEstVide(vue.state.doc) ? 'oui' : 'non');
 
 	/* LA BARRE D'OUTILS — un seul écouteur, délégué, sur la racine. Aucun
 	   attribut n'est posé sur un bouton du gel. */
@@ -513,6 +625,10 @@ export function monterLEditeur(
 		for (const attribut of ATTRIBUTS_DE_BOUTON) {
 			const nom = jeu[attribut];
 			if (nom === undefined) continue;
+			if (attribut === 'bloc' && nom === 'image') {
+				choisirUneImage(vue);
+				return;
+			}
 			const commande = table[attribut][nom];
 			if (commande === undefined) {
 				/* Un bouton auquel rien ne répond est un lien mort. On le DIT. */
@@ -546,6 +662,7 @@ export function monterLEditeur(
 
 	return {
 		document: () => documentDepuisNoeud(vue.state.doc),
+		ajouterUneImage: () => choisirUneImage(vue),
 		/**
 		 * L'insertion d'un document entier — le squelette d'un gabarit, le plan repris
 		 * de la Référence. Ce sont les BLOCS qui sont insérés, jamais le nœud `doc`
@@ -570,7 +687,7 @@ export function monterLEditeur(
 				vue.state.tr.replaceWith(0, vue.state.doc.content.size, noeud.content).scrollIntoView()
 			);
 		},
-		vide: () => vue.state.doc.textContent.trim() === '',
+		vide: () => documentEstVide(vue.state.doc),
 		detruire: () => {
 			racine.removeEventListener('mousedown', auMousedown);
 			racine.removeEventListener('click', auClic);

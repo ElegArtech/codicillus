@@ -186,6 +186,14 @@
 						surChangement: () => {
 							gestes?.signalerUneModification();
 							brouillon?.signaler();
+						},
+						preparerPourUneImage: () => {
+							const statutBrouillon = Array.from(
+								formulaire.querySelectorAll<HTMLButtonElement>('#m-statut button')
+							).find((bouton) => bouton.dataset['val'] === 'Brouillon');
+							statutBrouillon?.click();
+							formulaire.action = '?ajouter=image';
+							formulaire.querySelector<HTMLButtonElement>('#enregistrer')?.click();
 						}
 					});
 		const defaire = cablerLEditeur(formulaire, {

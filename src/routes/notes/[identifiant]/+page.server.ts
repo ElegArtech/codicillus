@@ -92,6 +92,7 @@ import {
 	NomDePieceDejaPris,
 	NomDePieceVide,
 	PieceTropVolumineuse,
+	PieceUtiliseeDansUnRegistre,
 	retirerUnePieceJointeParNom
 } from '$lib/donnees/pieces';
 import { racineDesFichiers } from '$lib/fichiers/entrepot';
@@ -1283,11 +1284,19 @@ export const actions: Actions = {
 		if (typeof soumis !== 'string' || soumis.trim() === '') {
 			return fail(400, { motif: 'aucune pièce jointe désignée' });
 		}
-		const fait = await retirerUnePieceJointeParNom(basePartagee(), racineDesFichiers(env), {
-			note: params.identifiant,
-			nom: soumis,
-			identite: locals.identite
-		});
+		let fait;
+		try {
+			fait = await retirerUnePieceJointeParNom(basePartagee(), racineDesFichiers(env), {
+				note: params.identifiant,
+				nom: soumis,
+				identite: locals.identite
+			});
+		} catch (cause) {
+			if (cause instanceof PieceUtiliseeDansUnRegistre) {
+				return fail(400, { motif: cause.message });
+			}
+			throw cause;
+		}
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
 		return { pieceRetiree: fait.ressource.nom };
 	}
