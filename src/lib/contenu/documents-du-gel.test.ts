@@ -13,6 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { SOMMAIRE_REFERENCE } from '../lecture/note-de-demonstration';
+import { ancresDuDocument } from './rendu';
 import { texteBrut, titres, liensInternes } from './document';
 import {
 	CIBLES_SANS_NOTE,
@@ -129,14 +130,14 @@ describe('les corps transcrits du gel', () => {
 });
 
 describe('le sommaire du gel se déduit du document transcrit', () => {
-	it('redonne les onze entrées de note-de-demonstration.ts, dans l’ordre', () => {
-		const releve = titres(documentDuGel('n-restaurer-pg', 'reference'))
-			.filter((t) => (t.attrs.level === 2 || t.attrs.level === 3) && t.attrs.ancre !== null)
-			.map((t) => ({
+	it('redonne les quatorze entrées de note-de-demonstration.ts, dans l’ordre', () => {
+		const releve = [...ancresDuDocument(documentDuGel('n-restaurer-pg', 'reference'))].map(
+			([t, ancre]) => ({
 				niveau: t.attrs.level,
-				ancre: t.attrs.ancre,
+				ancre,
 				libelle: (t.content ?? []).map((x) => x.text).join('')
-			}));
+			})
+		);
 		expect(releve).toEqual(SOMMAIRE_REFERENCE.map((e) => ({ ...e })));
 	});
 

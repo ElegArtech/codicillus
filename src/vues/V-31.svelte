@@ -220,6 +220,7 @@
 
 	/** Ce que chaque bouton de bloc insère — littéral du gel (`V-31:3399`). */
 	const BLOCS: Record<string, string> = {
+		h1: '<h1>Titre principal</h1>',
 		h2: '<h2>Titre de section</h2>',
 		h3: '<h3>Sous-titre</h3>',
 		taches: '<ul class="taches"><li><input type="checkbox"><span>À contrôler</span></li></ul>',
@@ -241,7 +242,7 @@
 		while (
 			noeud !== null &&
 			noeud !== zone &&
-			!(noeud instanceof HTMLElement && /^(P|DIV|H2|H3|LI)$/.test(noeud.tagName))
+			!(noeud instanceof HTMLElement && /^(P|DIV|H1|H2|H3|LI)$/.test(noeud.tagName))
 		) {
 			noeud = noeud.parentNode;
 		}
@@ -633,6 +634,13 @@
 
 					<div class="outils-red" role="toolbar" aria-label="Mise en forme du squelette">
 						<div class="oz">
+							<button
+								class="ob ob--txt"
+								type="button"
+								data-bloc="h1"
+								title="Titre principal"
+								onclick={() => insererUnBloc('h1')}>H1</button
+							>
 							<button
 								class="ob ob--txt"
 								type="button"

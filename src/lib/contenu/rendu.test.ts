@@ -197,9 +197,10 @@ describe('le rendu du gel', () => {
 		);
 	});
 
-	it('rend l’ancre des titres, et n’en invente pas là où le gel n’en pose pas', () => {
+	it('rend une ancre sur tous les niveaux de titre du sommaire', () => {
 		expect(html).toContain('<h2 id="s-avant">Avant de commencer</h2>');
-		expect(html).toContain('<h4>Niveau 4 — regroupement</h4>');
+		expect(html).toContain('<h4 id="s-niveau-4-regroupement">Niveau 4 — regroupement</h4>');
+		expect(html).toContain('<h6 id="s-niveau-6-annotation">Niveau 6 — annotation</h6>');
 	});
 
 	it('ouvre les liens externes dans un nouvel onglet, avec le `rel` qui va avec', () => {
