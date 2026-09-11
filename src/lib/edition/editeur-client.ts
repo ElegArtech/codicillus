@@ -118,8 +118,6 @@ export interface OptionsDeMontage {
 	surChangement?: () => void;
 	/** Dépose les octets avant que leur adresse interne entre dans le document. */
 	deposerImage?: (fichier: File) => Promise<{ readonly src: string; readonly nom: string }>;
-	/** Employé en création pour persister d'abord la note comme brouillon. */
-	preparerPourUneImage?: () => void;
 }
 
 function inserer(type: NodeType, attrs?: Record<string, unknown>): Command {
@@ -479,8 +477,13 @@ export function monterLEditeur(
 		}
 	};
 	const menu = menuDeCommandes(zone, table.bloc);
-	const demanderDescriptionImage = (): Promise<{
+	const demanderDescriptionImage = (depart: {
 		readonly alt: string;
+		readonly etiquette: string | null;
+		readonly legende: string | null;
+	}): Promise<{
+		readonly alt: string;
+		readonly etiquette: string | null;
 		readonly legende: string | null;
 	} | null> =>
 		new Promise((resoudre) => {
@@ -488,21 +491,35 @@ export function monterLEditeur(
 			boite.className = 'dlg';
 			boite.setAttribute('aria-labelledby', 'titre-description-image');
 			boite.innerHTML = `<form method="dialog" class="dlg__boite">
-				<div class="dlg__tete"><h2 class="dlg__titre" id="titre-description-image">Décrire l’image</h2></div>
+				<div class="dlg__tete"><h2 class="dlg__titre" id="titre-description-image">Informations de l’image</h2></div>
 				<div class="dlg__corps">
-					<label for="description-image">Description de l’image *</label>
-					<input class="saisie" id="description-image" name="alt" required />
+					<label for="description-image">Description de l’image</label>
+					<input class="saisie" id="description-image" name="alt" />
+					<label for="etiquette-image">Étiquette <span>(facultative)</span></label>
+					<input class="saisie" id="etiquette-image" name="etiquette" />
 					<label for="legende-image">Légende <span>(facultative)</span></label>
 					<input class="saisie" id="legende-image" name="legende" />
 				</div>
 				<div class="dlg__pied">
 					<button class="btn" type="button" data-annuler>Annuler</button>
-					<button class="btn btn--principal" type="submit">Insérer l’image</button>
+					<button class="btn btn--principal" type="submit">Enregistrer</button>
 				</div>
 			</form>`;
 			zone.ownerDocument.body.append(boite);
+			const champAlt = boite.querySelector<HTMLInputElement>('[name="alt"]');
+			const champEtiquette = boite.querySelector<HTMLInputElement>('[name="etiquette"]');
+			const champLegende = boite.querySelector<HTMLInputElement>('[name="legende"]');
+			if (champAlt !== null) champAlt.value = depart.alt;
+			if (champEtiquette !== null) champEtiquette.value = depart.etiquette ?? '';
+			if (champLegende !== null) champLegende.value = depart.legende ?? '';
 			let termine = false;
-			const finir = (valeur: { readonly alt: string; readonly legende: string | null } | null) => {
+			const finir = (
+				valeur: {
+					readonly alt: string;
+					readonly etiquette: string | null;
+					readonly legende: string | null;
+				} | null
+			) => {
 				if (termine) return;
 				termine = true;
 				boite.close();
@@ -517,29 +534,31 @@ export function monterLEditeur(
 			boite.querySelector('form')?.addEventListener('submit', (evenement) => {
 				evenement.preventDefault();
 				const donnees = new FormData(evenement.currentTarget as HTMLFormElement);
-				const alt = String(donnees.get('alt') ?? '').trim();
-				if (alt === '') return;
+				const alt = String(donnees.get('alt') ?? '').trim() || depart.alt;
+				const etiquette = String(donnees.get('etiquette') ?? '').trim();
 				const legende = String(donnees.get('legende') ?? '').trim();
-				finir({ alt, legende: legende || null });
+				finir({ alt, etiquette: etiquette || null, legende: legende || null });
 			});
 			boite.showModal();
 			boite.querySelector<HTMLInputElement>('[name="alt"]')?.focus();
 		});
+	const alternativeDepuisLeNom = (nom: string): string => {
+		const sansSuffixe = nom
+			.replace(/\.[^.]+$/, '')
+			.replace(/[-_]+/g, ' ')
+			.trim();
+		return sansSuffixe || 'Image';
+	};
 
 	const insererLeFichier = async (vue: EditorView, fichier: File): Promise<void> => {
-		if (options.deposerImage === undefined) {
-			options.preparerPourUneImage?.();
-			return;
-		}
-		const description = await demanderDescriptionImage();
-		if (description === null) return;
+		if (options.deposerImage === undefined) return;
 		try {
 			const deposee = await options.deposerImage(fichier);
 			const commande = inserer(noeudDeSchema('image'), {
 				src: deposee.src,
-				alt: description.alt,
+				alt: alternativeDepuisLeNom(deposee.nom),
 				etiquette: null,
-				legende: description.legende
+				legende: null
 			});
 			commande(vue.state, vue.dispatch, vue);
 			vue.focus();
@@ -549,10 +568,7 @@ export function monterLEditeur(
 	};
 
 	const choisirUneImage = (vue: EditorView): void => {
-		if (options.deposerImage === undefined) {
-			options.preparerPourUneImage?.();
-			return;
-		}
+		if (options.deposerImage === undefined) return;
 		const champ = zone.ownerDocument.createElement('input');
 		champ.type = 'file';
 		champ.accept = 'image/jpeg,image/png,image/webp';
@@ -587,6 +603,34 @@ export function monterLEditeur(
 			if (image === undefined) return false;
 			void insererLeFichier(vue, image);
 			return true;
+		},
+		handleDOMEvents: {
+			dblclick: (vue, evenement) => {
+				const cible = evenement.target instanceof HTMLImageElement ? evenement.target : null;
+				if (cible === null) return false;
+				const position = vue.posAtDOM(cible, 0);
+				const noeud = vue.state.doc.nodeAt(position);
+				if (noeud === null || noeud.type !== schema.nodes.image) return false;
+				const attributs = { ...noeud.attrs };
+				void demanderDescriptionImage({
+					alt: String(attributs['alt']),
+					etiquette: (attributs['etiquette'] as string | null) ?? null,
+					legende: (attributs['legende'] as string | null) ?? null
+				}).then((description) => {
+					if (description === null) return;
+					vue.dispatch(
+						vue.state.tr.setNodeMarkup(position, undefined, { ...attributs, ...description })
+					);
+					vue.focus();
+				});
+				return true;
+			},
+			contextmenu: (_vue, evenement) => {
+				if (!(evenement.target instanceof HTMLImageElement)) return false;
+				evenement.preventDefault();
+				evenement.target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+				return true;
+			}
 		},
 		handleTextInput: (vue, _debut, _fin, texte) =>
 			texte.includes('\n') && insererMarkdown(vue, texte),
