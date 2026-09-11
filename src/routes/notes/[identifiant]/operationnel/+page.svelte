@@ -26,6 +26,7 @@
 	import { page } from '$app/state';
 	import { cablerLEditeur } from '$lib/cablage/formulaires';
 	import { monterLEditeur } from '$lib/edition/editeur-client';
+	import { deposerImageDansLaNote } from '$lib/edition/images-client';
 	import {
 		cablerLesGestesDEdition,
 		resolveurDuCorpusServi,
@@ -81,7 +82,9 @@
 			zone === null
 				? null
 				: monterLEditeur(zone, data.corps, formulaire, {
-						surChangement: () => gestes?.signalerUneModification()
+						surChangement: () => gestes?.signalerUneModification(),
+						deposerImage: (fichier) =>
+							deposerImageDansLaNote(page.params['identifiant'] ?? '', fichier)
 					});
 		const defaireLEditeur = cablerLEditeur(formulaire, {
 			...(editeur === null ? {} : { editeur: () => editeur.document() })
