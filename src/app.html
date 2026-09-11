@@ -98,16 +98,14 @@
 			`asset/logo.png`, recadré sur son contenu puis réduit. Aucun trait n'est
 			redessiné.
 
-			`favicon.ico` PORTE TROIS TAILLES — 16, 32 et 48 — parce que c'est
-			l'adresse que tout navigateur demande de lui-même, sans qu'on la déclare :
-			elle doit suffire seule. Le PNG de 32 et l'icône Apple de 180 sont là pour
-			les clients qui préfèrent les lire dans la déclaration.
+			Le PNG de 32 est déclaré seul comme favicon afin que tous les navigateurs
+			rendent exactement la même vignette que le site de présentation. L'icône
+			Apple de 180 reste dédiée aux raccourcis sur l'écran d'accueil.
 
 			LE CARRÉ D'APPLE EST APLATI SUR LE VERT DE LA VIGNETTE : le système ignore
 			la transparence et arrondit lui-même. Des coins transparents y donneraient
 			un liseré noir, et un coin déjà rogné un double arrondi.
 		-->
-		<link rel="icon" href="%sveltekit.assets%/favicon.ico" sizes="any" />
 		<link rel="icon" type="image/png" sizes="32x32" href="%sveltekit.assets%/favicon-32.png" />
 		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
 		%sveltekit.head%
