@@ -25,7 +25,7 @@
 	 * fichier figure à l'ensemble clos du gel.
 	 */
 	import { getContext } from 'svelte';
-	import { resolve } from '$app/paths';
+	import { base as racineDesAssets, resolve } from '$app/paths';
 	import type { Note } from '../../seeds/corpus';
 	import { adresseNonResolue } from '$lib/public/adresse-non-resolue';
 	import { chercher, nombreFr, notesPubliques, segmenter } from '$lib/public/recherche';
@@ -175,7 +175,13 @@
 <div class="public app" id="app">
 	<header class="chapeau">
 		<a class="marque" href={resolve('/')} aria-label="Codicillus — accueil public">
-			<span class="marque__sceau" aria-hidden="true">C</span>
+			<img
+				class="marque__sceau"
+				src={`${racineDesAssets}/logo.png`}
+				alt=""
+				width="26"
+				height="26"
+			/>
 			<span class="marque__nom">Codicillus</span>
 		</a>
 		<!-- Accès connexion : discret, pour les personnes qui ont déjà un compte. -->
