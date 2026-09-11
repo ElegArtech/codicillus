@@ -14,12 +14,12 @@
 	 * la capture — page en haut, l'en-tête de la note occupant toute la bande —
 	 * aucun titre du corps n'y est entré. LE GEL NE POSE DONC L'ATTRIBUT SUR
 	 * AUCUNE ENTRÉE, et ce composant non plus. Ce n'est pas une supposition :
-	 * la règle `.sommaire a[aria-current="true"]` change la teinte du libellé,
-	 * du numéro et de la bordure ; les 51 couples sortent à zéro pixel, sur les
+	 * la règle `.sommaire a[aria-current="true"]` change la teinte du libellé et
+	 * de la bordure ; les 51 couples sortent à zéro pixel, sur les
 	 * quatre fenêtres de V-14 comprises.
 	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI (P-1, ADR-002) : `.sommaire`,
-	 * `.sommaire__liste` et `.sommaire__num` viennent de la feuille de la vue.
+	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI (P-1, ADR-002) : `.sommaire` et
+	 * `.sommaire__liste` viennent de la feuille de la vue.
 	 */
 	import { sommaireRendu, type EntreeDeSommaire } from './note-de-demonstration';
 
@@ -57,10 +57,7 @@
 	<ul class="sommaire__liste" id="sommaire">{#each lignes as ligne (ligne.ancre)}<li
 			class="n{ligne.profondeur}"
 			class:sommaire__detail={ligne.niveau > 2}
-		><a href="#{ligne.ancre}"
-			>{#if ligne.numero}<span class="sommaire__num">{ligne.numero}</span>{/if}<span
-				>{ligne.libelle}</span
-			></a
+		><a href="#{ligne.ancre}"><span>{ligne.libelle}</span></a
 		></li>{:else}<li class="n1"><span>Aucun titre dans cette note</span></li>{/each}</ul>
 	{#if porteDuDetail}
 		<button
