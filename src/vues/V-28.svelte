@@ -390,7 +390,11 @@
 		const saisie: SaisieDeDomaine = {
 			nom,
 			description: fDescription,
-			univers: fUnivers,
+			/* Une ouverture pilotée par l'adresse (clic droit sur un univers) affiche
+			   `universInitial` sans appeler `ouvrirForm()`. Le sélecteur porte donc la
+			   bonne valeur alors que `fUnivers` est encore vide : soumettre la valeur
+			   effectivement choisie évite que la page abandonne avant l'action. */
+			univers: universChoisi,
 			couleur: fCouleur,
 			modules: fModules
 		};
