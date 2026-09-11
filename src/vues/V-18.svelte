@@ -293,6 +293,9 @@
 					</button>
 				</div>
 				<div class="oz">
+					<button class="ob ob--txt" type="button" data-bloc="h1" title="Titre de niveau 1"
+						>H1</button
+					>
 					<button class="ob ob--txt" type="button" data-bloc="h2" title="Titre de niveau 2"
 						>H2</button
 					>

@@ -64,7 +64,7 @@ interface Rendu extends OptionsDeRendu {
 }
 
 /**
- * Les ancres des titres de niveau 2 et 3, dérivées du texte quand le document n'en porte pas
+ * Les ancres des titres de niveau 1 à 6, dérivées du texte quand le document n'en porte pas
  * — et c'est ce qui rend le sommaire d'une note écrite dans le produit : l'éditeur ne pose
  * JAMAIS d'ancre, et le sommaire écartait donc tout titre sans ancre en disant « aucun titre
  * dans cette note » au-dessus d'un article qui en portait six.
@@ -73,14 +73,13 @@ interface Rendu extends OptionsDeRendu {
  * sérialise les ATTRIBUTS d'un nœud, de sorte que poser une ancre ferait capturer une version
  * au premier ré-enregistrement de CHAQUE note, sans une frappe.
  *
- * BORNÉE AUX NIVEAUX 2 ET 3, comme le sommaire. Une ancre écrite dans le document l'emporte,
+ * TOUS LES NIVEAUX ALIMENTENT LE SOMMAIRE. Une ancre écrite dans le document l'emporte,
  * et entre dans le décompte d'unicité : deux titres ne partagent jamais une ancre.
  */
 export function ancresDuDocument(document: Document): ReadonlyMap<Titre, string> {
 	const ancres = new Map<Titre, string>();
 	const prises = new Set<string>();
 	for (const titre of titres(document)) {
-		if (titre.attrs.level !== 2 && titre.attrs.level !== 3) continue;
 		const souche = titre.attrs.ancre ?? ancreDeriveeDuTexte(titre);
 		let candidate = souche;
 		let rang = 2;

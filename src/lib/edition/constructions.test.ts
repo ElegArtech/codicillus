@@ -107,10 +107,9 @@ function toutCeQueLEditeurInsere(): Document {
 			'A précède B, qui précède C — la restitution exploitable sans le graphique'
 		).content
 	);
-	/* Les niveaux 1, 5 et 6 : le schéma les porte, la barre gelée n'offre que
-	   H2, H3 et H4 (V-17:1516-1518). Le fait est du gel, il est déclaré au
-	   rapport, et il est ÉPROUVÉ ici plutôt que supposé. */
-	for (const level of [1, 5, 6] as const) {
+	/* Les niveaux 4, 5 et 6 restent portés par le schéma et le sommaire détaillé,
+	   même si la barre privilégie les trois premiers niveaux. */
+	for (const level of [4, 5, 6] as const) {
 		blocs.push({
 			type: 'heading',
 			attrs: { level, ancre: null },
@@ -147,7 +146,7 @@ describe('les quinze constructions de M04.6, porteur par porteur', () => {
 		});
 	}
 
-	it('les six niveaux de titre sont produits, alors que la barre n’en offre que trois', () => {
+	it('les six niveaux de titre sont produits, alors que la barre privilégie les trois premiers', () => {
 		const niveaux = new Set(
 			TOUT.content.filter((b) => b.type === 'heading').map((b) => b.attrs.level)
 		);

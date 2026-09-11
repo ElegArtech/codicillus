@@ -31,12 +31,19 @@ export type Debranchement = () => void;
  * paragraphe vide. Les titres sont repris À LEUR NIVEAU — un plan aplati n'est plus
  * un plan.
  */
-const NIVEAUX: Readonly<Record<string, Titre['attrs']['level']>> = { H2: 2, H3: 3, H4: 4 };
+const NIVEAUX: Readonly<Record<string, Titre['attrs']['level']>> = {
+	H1: 1,
+	H2: 2,
+	H3: 3,
+	H4: 4,
+	H5: 5,
+	H6: 6
+};
 
 export function planDeLaReference(corps: Element | null): Document | null {
 	if (corps === null) return null;
 	const blocs: Bloc[] = [];
-	for (const titre of Array.from(corps.querySelectorAll('h2, h3, h4'))) {
+	for (const titre of Array.from(corps.querySelectorAll('h1, h2, h3, h4, h5, h6'))) {
 		const texte = (titre.textContent ?? '').trim();
 		const level = NIVEAUX[titre.tagName];
 		if (texte === '' || level === undefined) continue;
