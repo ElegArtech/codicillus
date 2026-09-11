@@ -564,6 +564,10 @@ export interface DemandeDeCreation {
 	readonly cible: CibleDeCreation;
 	readonly identite: Identite;
 	readonly maintenant: Date;
+	/** Corps définitif quand son adresse dépend de l'identifiant choisi. */
+	readonly corpsPourIdentifiant?: (identifiant: string) => unknown;
+	/** Termine les ressources qui dépendent de l'identifiant, avant l'indexation. */
+	readonly avantIndexation?: (identifiant: string) => Promise<void>;
 	/**
 	 * L'adresse curatée, quand la note créée est un SIGNET. Un signet n'est pas un
 	 * objet séparé : c'est une note de type « Signet » qui porte une adresse, le
@@ -647,11 +651,15 @@ export async function creerUneNote(
 
 	/* LE CORPS EST VALIDÉ AVANT LA PREMIÈRE TRANSACTION : un Markdown illisible ne
 	   doit pas coûter un aller-retour en base, ni un identifiant consommé. */
-	const corps = corpsDeLaSaisie(demande.saisie.corps, demande.saisie.corpsDocument);
+	const corpsInitial = corpsDeLaSaisie(demande.saisie.corps, demande.saisie.corpsDocument);
 	const candidat = identifiantDeNote(demande.saisie.titre);
 
 	for (let essai = 1; ; essai += 1) {
 		const identifiant = identifiantSuivant(candidat, essai);
+		const corps =
+			demande.corpsPourIdentifiant === undefined
+				? corpsInitial
+				: corpsDeLaSaisie('', demande.corpsPourIdentifiant(identifiant));
 		try {
 			await base.transaction(async (tx) => {
 				const inseres = await tx
@@ -737,6 +745,7 @@ export async function creerUneNote(
 			});
 
 			/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. */
+			await demande.avantIndexation?.(identifiant);
 			await entretenirLIndex(base, client, [identifiant]);
 			return { trouve: true, ressource: { identifiant, essais: essai } };
 		} catch (cause) {

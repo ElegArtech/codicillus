@@ -25,6 +25,7 @@
 	import '../../../vues/V-17.css';
 	import { cablerLEditeur } from '$lib/cablage/formulaires';
 	import { monterLEditeur } from '$lib/edition/editeur-client';
+	import { creerDepotDImagesEnAttente } from '$lib/edition/images-en-attente-client';
 	import {
 		cablerLesGestesDEdition,
 		resolveurDuCorpusServi,
@@ -155,6 +156,7 @@
 	 * `corps-markdown` : les deux chemins existent, ils ne se mélangent pas (`P-35`).
 	 */
 	onMount(() => {
+		const depotDImages = creerDepotDImagesEnAttente();
 		/* `?titre=` — LE QUATRIÈME PARAMÈTRE DE `docs/routes.md:287`, LU ICI.
 		   TROIS ÉCRANS L'ÉMETTAIENT DÉJÀ, ET PERSONNE NE LE LISAIT : la recherche
 		   sans résultat (`V-08:659`), la page d'adresse non résolue
@@ -187,15 +189,13 @@
 							gestes?.signalerUneModification();
 							brouillon?.signaler();
 						},
-						preparerPourUneImage: () => {
-							const statutBrouillon = Array.from(
-								formulaire.querySelectorAll<HTMLButtonElement>('#m-statut button')
-							).find((bouton) => bouton.dataset['val'] === 'Brouillon');
-							statutBrouillon?.click();
-							formulaire.action = '?ajouter=image';
-							formulaire.querySelector<HTMLButtonElement>('#enregistrer')?.click();
-						}
+						deposerImage: depotDImages.deposer
 					});
+		const ajouterLesImages = (evenement: FormDataEvent): void => {
+			if (editeur !== null)
+				depotDImages.ajouterAuFormulaire(evenement.formData, editeur.document());
+		};
+		formulaire.addEventListener('formdata', ajouterLesImages);
 		const defaire = cablerLEditeur(formulaire, {
 			/**
 			 * CHANGER DE DOMAINE RECHARGE — les dossiers, les types de fiche et les
@@ -271,6 +271,8 @@
 		});
 
 		return () => {
+			formulaire.removeEventListener('formdata', ajouterLesImages);
+			depotDImages.liberer();
 			choix.defaire();
 			defaireLesDoublons();
 			brouillon?.defaire();
@@ -289,7 +291,13 @@
      obligatoire ne pouvait pas être « signalé à l'endroit du champ »
      (`BRIEF-VUES.md:973`) : le champ n'existait plus. Avec elle, la soumission
      part en arrière-plan, le document reste, et le refus se peint dessus. -->
-<form method="POST" use:enhance={surEnvoi} bind:this={formulaire} style="display:contents">
+<form
+	method="POST"
+	enctype="multipart/form-data"
+	use:enhance={surEnvoi}
+	bind:this={formulaire}
+	style="display:contents"
+>
 	<!-- `domaines` vient du GABARIT RACINE, qui les lit en base : la propriété de
 	     la vue retombe sinon sur `DOMAINES` du jeu de semence, et le sélecteur
 	     proposait des domaines inexistants — mesuré sur une instance neuve, il

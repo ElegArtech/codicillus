@@ -19,6 +19,7 @@
  * (`RG-M03-03`). V-17 ne porte ni `method`, ni `action`, ni attribut de nom — la
  * soumission est composée par la ROUTE (`ARB-063`).
  */
+import { env } from '$env/dynamic/private';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { adresseApresEnregistrement } from '$lib/donnees/traitement-differe';
 import { basePartagee } from '$lib/base/acces';
@@ -32,12 +33,88 @@ import {
 	resoudreLaCreationDeNote
 } from '$lib/donnees/edition';
 import { lireSeuils } from '$lib/donnees/lecture';
+import {
+	deposerUnePieceJointe,
+	NomDePieceDejaPris,
+	NomDePieceVide,
+	PieceTropVolumineuse
+} from '$lib/donnees/pieces';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import { empreinteDeCompte } from '$lib/edition/brouillon';
 import { MOTIF_DE_PROPRIETE_OBLIGATOIRE } from '$lib/edition/gestes';
-import { adresseDeNote } from '$lib/rangement/adresses';
+import { ImageRefusee, lireImage, type ImageLue } from '$lib/edition/images-serveur';
+import { racineDesFichiers } from '$lib/fichiers/entrepot';
+import { adresseDeNote, adresseDePieceJointe } from '$lib/rangement/adresses';
 import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
+
+interface ImageEnAttente {
+	readonly marque: string;
+	readonly champ: string;
+}
+
+function lireLesImagesEnAttente(formulaire: FormData): readonly ImageEnAttente[] {
+	const brut = formulaire.get('images-en-attente');
+	if (typeof brut !== 'string' || brut === '') return [];
+	let valeur: unknown;
+	try {
+		valeur = JSON.parse(brut);
+	} catch {
+		throw new ImageRefusee('images en attente illisibles');
+	}
+	if (!Array.isArray(valeur)) throw new ImageRefusee('images en attente illisibles');
+	const vues = new Set<string>();
+	return valeur.map((element) => {
+		if (typeof element !== 'object' || element === null) {
+			throw new ImageRefusee('image en attente illisible');
+		}
+		const { marque, champ } = element as Record<string, unknown>;
+		if (
+			typeof marque !== 'string' ||
+			!/^image-en-attente:\d+$/.test(marque) ||
+			typeof champ !== 'string' ||
+			!/^image-en-attente-\d+$/.test(champ) ||
+			vues.has(marque) ||
+			vues.has(champ)
+		) {
+			throw new ImageRefusee('image en attente illisible');
+		}
+		vues.add(marque);
+		vues.add(champ);
+		return { marque, champ };
+	});
+}
+
+function nomUnique(nom: string, dejaPris: Set<string>): string {
+	if (!dejaPris.has(nom)) {
+		dejaPris.add(nom);
+		return nom;
+	}
+	const point = nom.lastIndexOf('.');
+	const base = point > 0 ? nom.slice(0, point) : nom;
+	const extension = point > 0 ? nom.slice(point) : '';
+	let numero = 2;
+	while (dejaPris.has(`${base} (${String(numero)})${extension}`)) numero += 1;
+	const retenu = `${base} (${String(numero)})${extension}`;
+	dejaPris.add(retenu);
+	return retenu;
+}
+
+function remplacerLesSources(valeur: unknown, adresses: ReadonlyMap<string, string>): unknown {
+	if (Array.isArray(valeur)) return valeur.map((element) => remplacerLesSources(element, adresses));
+	if (typeof valeur !== 'object' || valeur === null) return valeur;
+	const objet = valeur as Record<string, unknown>;
+	const copie = Object.fromEntries(
+		Object.entries(objet).map(([cle, contenu]) => [cle, remplacerLesSources(contenu, adresses)])
+	);
+	if (objet['type'] === 'image' && typeof copie['attrs'] === 'object' && copie['attrs'] !== null) {
+		const attrs = copie['attrs'] as Record<string, unknown>;
+		if (typeof attrs['src'] === 'string' && adresses.has(attrs['src'])) {
+			copie['attrs'] = { ...attrs, src: adresses.get(attrs['src']) };
+		}
+	}
+	return copie;
+}
 
 /** L'instant de référence est pris ICI, une fois : voir `/notes/{identifiant}`. */
 async function contexte() {
@@ -105,7 +182,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ locals, request, url }) => {
+	default: async ({ locals, request }) => {
 		const { base, contexte: lecture } = await contexte();
 		/* PORTE 1 — le refus est le MÊME que celui du chargeur, et il vient du même
 		   appel : il n'existe pas une règle de droit pour lire et une autre pour
@@ -113,8 +190,21 @@ export const actions: Actions = {
 		const acces = await resoudreLaCreationDeNote(base, locals.identite, lecture);
 		if (!acces.trouve) error(404, await refusDEcriture(base, locals.identite));
 
-		const lue = lireLaSaisie(await request.formData());
+		const formulaire = await request.formData();
+		const lue = lireLaSaisie(formulaire);
 		if (!lue.ok) return fail(400, { motif: lue.motif });
+		let images: readonly { readonly description: ImageEnAttente; readonly image: ImageLue }[];
+		try {
+			images = await Promise.all(
+				lireLesImagesEnAttente(formulaire).map(async (description) => ({
+					description,
+					image: await lireImage(formulaire.get(description.champ))
+				}))
+			);
+		} catch (cause) {
+			if (cause instanceof ImageRefusee) return fail(400, { motif: cause.message });
+			throw cause;
+		}
 
 		/* PORTE 2 — la cible, puis le droit SUR ELLE. Les deux refus sont un seul
 		   octet : une cible qui n'existe pas et une cible interdite ne se
@@ -150,11 +240,39 @@ export const actions: Actions = {
 
 		let identifiant: string;
 		try {
+			const noms = new Set<string>();
+			const imagesNommees = images.map(({ description, image }) => ({
+				description,
+				image,
+				nom: nomUnique(image.nom, noms)
+			}));
 			const fait = await creerUneNote(base, moteurPartage(), {
 				saisie: lue.saisie,
 				cible,
 				identite: locals.identite,
-				maintenant: lecture.maintenant
+				maintenant: lecture.maintenant,
+				corpsPourIdentifiant: (identifiantCree) =>
+					remplacerLesSources(
+						lue.saisie.corpsDocument,
+						new Map(
+							imagesNommees.map(({ description, nom }) => [
+								description.marque,
+								adresseDePieceJointe(identifiantCree, nom)
+							])
+						)
+					),
+				avantIndexation: async (identifiantCree) => {
+					for (const { image, nom } of imagesNommees) {
+						const depot = await deposerUnePieceJointe(base, racineDesFichiers(env), {
+							note: identifiantCree,
+							nom,
+							typeMedia: image.typeMedia,
+							octets: image.octets,
+							identite: locals.identite
+						});
+						if (!depot.trouve) error(404, MESSAGE_INTROUVABLE);
+					}
+				}
 			});
 			if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
 			identifiant = fait.ressource.identifiant;
@@ -172,6 +290,14 @@ export const actions: Actions = {
 			if (cause instanceof MarkdownInvalide) {
 				return fail(422, { motif: 'markdown refusé', manquements: [cause.message] });
 			}
+			if (
+				cause instanceof ImageRefusee ||
+				cause instanceof PieceTropVolumineuse ||
+				cause instanceof NomDePieceDejaPris ||
+				cause instanceof NomDePieceVide
+			) {
+				return fail(400, { motif: cause.message });
+			}
 			throw cause;
 		}
 
@@ -182,11 +308,6 @@ export const actions: Actions = {
 		   ELLE PORTE LE DRAPEAU D'ENREGISTREMENT — `RG-NF-03` : l'indexation de
 		   recherche est SOUMISE et non attendue (`ARB-060`), et la note n'est donc pas
 		   trouvable à la seconde où cette page s'affiche. La lecture, elle, l'est. */
-		redirect(
-			303,
-			url.searchParams.get('ajouter') === 'image'
-				? `${adresseDeNote(identifiant)}/modifier?ajouter=image`
-				: adresseApresEnregistrement(adresseDeNote(identifiant))
-		);
+		redirect(303, adresseApresEnregistrement(adresseDeNote(identifiant)));
 	}
 };
