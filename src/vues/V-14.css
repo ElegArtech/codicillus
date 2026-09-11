@@ -35,6 +35,11 @@
   padding: var(--e-5) 0 96px clamp(20px, 3.5vw, 64px);
   width: 100%;
 }
+.app[data-contexte-replie="oui"] .lecture {
+  grid-template-columns: var(--l-sommaire) minmax(0, 1fr);
+  padding-right: clamp(20px, 3.5vw, 64px);
+}
+.app[data-contexte-replie="oui"] .contexte { display: none; }
 
 /* AUCUNE DE CES DEUX RÈGLES NE DÉCLARE `display` : le socle escamote les
    colonnes par `display:none` à égalité de spécificité, et une déclaration
@@ -261,6 +266,33 @@
 }
 .app[data-tiroir="contexte"] .contexte__fermer { display: grid; }
 .contexte__fermer:hover { background: var(--c-fond-creux); color: var(--c-encre); }
+
+/* Sur grand écran, la colonne rend sa largeur au document. Le petit bouton qui
+   demeure au bord droit est le chemin inverse ; sous 1180 px, le tiroir du socle
+   reprend seul ces deux gestes. */
+.contexte__replier,
+.contexte-replie__ouvrir {
+  width: 32px; height: 32px; border: 1px solid var(--c-trait);
+  border-radius: var(--r-2); background: var(--c-papier); color: var(--c-encre-3);
+  cursor: pointer; place-items: center;
+}
+.contexte__replier {
+  display: grid; margin: -12px 0 var(--e-3) auto;
+}
+.contexte-replie__ouvrir {
+  display: none; position: fixed; z-index: 20;
+  top: calc(var(--h-entete) + var(--e-4)); right: var(--e-3);
+  box-shadow: var(--o-pose);
+}
+.contexte__replier:hover,
+.contexte-replie__ouvrir:hover {
+  border-color: var(--c-trait-fort); color: var(--c-accent);
+}
+.contexte__replier:focus-visible,
+.contexte-replie__ouvrir:focus-visible {
+  outline: 2px solid var(--c-accent); outline-offset: 2px;
+}
+.app[data-contexte-replie="oui"] .contexte-replie__ouvrir { display: grid; }
 
 .zone + .zone,
 .carte-vivacite { margin-top: 22px; }
@@ -605,6 +637,12 @@ blockquote.prose-cit footer { font-style: normal; font-size: var(--t-petit); col
   padding: var(--e-4); cursor: zoom-in; display: block; width: 100%; text-align: left;
 }
 .figure__cadre:hover { border-color: var(--c-trait-fort); }
+.prose img {
+  display: block; max-width: 100%; height: auto;
+}
+.figure__cadre img {
+  width: 100%; object-fit: contain;
+}
 .figure figcaption {
   font-family: var(--f-ui); font-size: var(--t-mini); color: var(--c-encre-3);
   margin-top: var(--e-2); display: flex; gap: var(--e-2);
@@ -847,10 +885,14 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
    laisseraient une piste vide de 190 px à l'écran. */
 @media (max-width: 1379.98px) {
   .lecture { grid-template-columns: minmax(0, 1fr) var(--l-panneaux); }
+  .app[data-contexte-replie="oui"] .lecture { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 1179.98px) {
   .lecture { grid-template-columns: minmax(0, 1fr); padding-right: clamp(20px, 3.5vw, 64px); }
   .ouvrir-contexte { display: inline-flex; }
+	.app[data-contexte-replie="oui"] .contexte-replie__ouvrir,
+	.contexte__replier { display: none; }
+	.app[data-contexte-replie="oui"][data-tiroir="contexte"] .contexte { display: block; }
   /* En tiroir, la colonne reprend son propre défilement et sa croix. */
   .app[data-tiroir="contexte"] .contexte { padding-top: var(--e-4); }
 }
@@ -907,6 +949,9 @@ body[data-numerote="non"] .prose h2 { gap: 0; }
 
 @media (min-width: 1180px) {
   .lecture--sans-sommaire { grid-template-columns: minmax(0, 1fr) var(--l-panneaux); }
+  .app[data-contexte-replie="oui"] .lecture--sans-sommaire {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 }
