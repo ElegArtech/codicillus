@@ -105,7 +105,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ locals, request }) => {
+	default: async ({ locals, request, url }) => {
 		const { base, contexte: lecture } = await contexte();
 		/* PORTE 1 — le refus est le MÊME que celui du chargeur, et il vient du même
 		   appel : il n'existe pas une règle de droit pour lire et une autre pour
@@ -182,6 +182,11 @@ export const actions: Actions = {
 		   ELLE PORTE LE DRAPEAU D'ENREGISTREMENT — `RG-NF-03` : l'indexation de
 		   recherche est SOUMISE et non attendue (`ARB-060`), et la note n'est donc pas
 		   trouvable à la seconde où cette page s'affiche. La lecture, elle, l'est. */
-		redirect(303, adresseApresEnregistrement(adresseDeNote(identifiant)));
+		redirect(
+			303,
+			url.searchParams.get('ajouter') === 'image'
+				? `${adresseDeNote(identifiant)}/modifier?ajouter=image`
+				: adresseApresEnregistrement(adresseDeNote(identifiant))
+		);
 	}
 };

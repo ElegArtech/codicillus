@@ -23,6 +23,7 @@
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { cablerLEditeur } from '$lib/cablage/formulaires';
 	import { monterLEditeur } from '$lib/edition/editeur-client';
+	import { deposerImageDansLaNote } from '$lib/edition/images-client';
 	import {
 		cablerLesGestesDEdition,
 		resolveurDuCorpusServi,
@@ -99,7 +100,9 @@
 						surChangement: () => {
 							gestes?.signalerUneModification();
 							brouillon?.signaler();
-						}
+						},
+						deposerImage: (fichier) =>
+							deposerImageDansLaNote(page.params['identifiant'] ?? '', fichier)
 					});
 		/* PAS DE `rechargerSurDomaine` ICI, ET C'EST VOULU. Changer de domaine doit
 		   refaire l'arbre des dossiers — sans quoi déplacer une note est impossible
@@ -147,6 +150,7 @@
 			adresse: (id) => adresseDeNote(id),
 			exclure: String(data.noteModifiee.id)
 		});
+		if (page.url.searchParams.get('ajouter') === 'image') editeur?.ajouterUneImage();
 
 		return () => {
 			defaireLesDoublons();
