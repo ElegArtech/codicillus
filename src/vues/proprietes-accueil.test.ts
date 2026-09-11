@@ -186,10 +186,10 @@ describe('V-07 — accueil connecté', () => {
 			'dans les 3 prochains jours'
 		);
 
-		// Les deux listes de consultation, et leur sous-ligne propre.
+		// Les deux listes de découverte, et leur sous-ligne propre.
 		const listes = await corps('V-07', {
 			vivacites: VIVACITES,
-			recemment: [{ identifiant: 'ctrl-a', titre: 'Contrôle T-07 — à jour', minutes: 12 }],
+			recemmentCreees: [{ identifiant: 'ctrl-a', titre: 'Contrôle T-07 — à jour', minutes: 12 }],
 			plusConsultees: [
 				{ identifiant: 'ctrl-c', titre: 'Contrôle T-07 — obsolète', consultations: 412 }
 			]

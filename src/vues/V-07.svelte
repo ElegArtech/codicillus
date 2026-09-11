@@ -4,7 +4,7 @@
 	 *
 	 * Cinq blocs, dans cet ordre : la salutation et le chiffre de la bibliothèque, le
 	 * grand champ de recherche, la carte « À surveiller », les deux cartes de
-	 * consultation, le tableau des univers. C'est la composition du prototype validé
+	 * découverte, le tableau des univers. C'est la composition du prototype validé
 	 * (`design_handoff_refonte_codicillus/captures/01-accueil.png`).
 	 *
 	 * AUCUN ÉTAT DE VIVACITÉ N'EST CALCULÉ ICI (`P-01`, `ADR-005`). Le chargeur passe
@@ -53,7 +53,7 @@
 		readonly reste: number;
 	}
 
-	interface NoteRecemmentConsultee {
+	interface NoteRecemmentCreee {
 		readonly identifiant: string;
 		readonly titre: string;
 		readonly minutes: number;
@@ -79,7 +79,7 @@
 		compte: IdentiteAffichee | undefined;
 		/** L'état de vivacité de chaque note lisible. Vide : bibliothèque vide. */
 		vivacites: readonly EtatDeNote[] | undefined;
-		recemment: readonly NoteRecemmentConsultee[] | undefined;
+		recemmentCreees: readonly NoteRecemmentCreee[] | undefined;
 		plusConsultees: readonly NoteLaPlusConsultee[] | undefined;
 		/** Le seuil « bientôt », en jours — configurable en console. */
 		seuilBientot: number | undefined;
@@ -106,7 +106,7 @@
 		domaines = [],
 		compte: moi = SANS_IDENTITE,
 		vivacites = [],
-		recemment = [],
+		recemmentCreees = [],
 		plusConsultees = [],
 		seuilBientot = 0,
 		surveiller = null,
@@ -218,7 +218,7 @@
 	}
 
 	/**
-	 * LE DÉLAI DEPUIS LA DERNIÈRE OUVERTURE. Ce n'est pas une information de
+	 * LE DÉLAI DEPUIS LA CRÉATION. Ce n'est pas une information de
 	 * vivacité : la fabrique n'a rien à en dire, et cette forme n'existe que sur cet
 	 * écran. Les paliers sont ceux du prototype — minutes, heures, puis jours.
 	 */
@@ -491,31 +491,25 @@
 			</section>
 		{/if}
 
-		<!-- ═══ 4. LES DEUX CARTES DE CONSULTATION ══════════════════════════════ -->
+		<!-- ═══ 4. LES DEUX CARTES DE DÉCOUVERTE ═════════════════════════════════ -->
 		<div class="duo">
-			<section class="carte" aria-labelledby="t-recemment">
+			<section class="carte" aria-labelledby="t-creees">
 				<div class="carte__tete">
-					<span class="etiq" id="t-recemment">Récemment consultées</span>
-					<span class="carte__periode">7 derniers jours</span>
+					<span class="etiq" id="t-creees">Récemment créées</span>
+					<span class="carte__periode">5 dernières</span>
 				</div>
 				<div class="carte__corps carte__corps--lignes">
-					{#if recemment.length === 0}
-						<p class="vide__txt">
-							{total === 0
-								? 'Rien à consulter pour l’instant : la bibliothèque est vide.'
-								: 'Vous n’avez ouvert aucune note cette semaine. Les notes que vous lisez apparaissent ici.'}
-						</p>
+					{#if recemmentCreees.length === 0}
+						<p class="vide__txt">Aucune note n’a encore été créée dans votre bibliothèque.</p>
 					{:else}
-						{#each recemment as note (note.identifiant)}
+						{#each recemmentCreees as note (note.identifiant)}
 							{@render ligneDeNote(note.identifiant, note.titre, delai(note.minutes), ICONE_NOTE)}
 						{/each}
 					{/if}
 				</div>
-				{#if recemment.length > 0}
+				{#if recemmentCreees.length > 0}
 					<div class="carte__pied">
-						<a class="carte__action" href="{RECHERCHE}?tri=consultations"
-							>→ Voir toutes les consultations</a
-						>
+						<a class="carte__action" href={RECHERCHE}>→ Voir toutes les notes</a>
 					</div>
 				{/if}
 			</section>
