@@ -51,9 +51,12 @@ import { creerUnDomaine } from '$lib/donnees/administration';
 import { lireUnivers } from '$lib/donnees/lecture';
 import {
 	droitEffectif,
+	dossiersDuDomaine,
+	lireDomaineParIdentifiants,
 	lireNotesLisibles,
 	ouvrirLAcces,
 	peutEcrireDansLUn,
+	resoudreLeChemin,
 	type AccesAuRangement
 } from '$lib/donnees/rangement';
 import { moteurPartage } from '$lib/recherche/acces';
@@ -349,6 +352,32 @@ async function destinationDuLot(
 	  }
 > {
 	if (demande.scenario !== SCENARIO_DE_DOMAINE) {
+		const universCible = String(demande.champs.get('cible-univers') ?? '');
+		const domaineCible = String(demande.champs.get('cible-domaine') ?? '');
+		if (universCible !== '' && domaineCible !== '') {
+			const domaine = await lireDomaineParIdentifiants(base, universCible, domaineCible);
+			if (domaine === null) return { refus: fail(400, { issue: 'domaine-inconnu' }) };
+			const lignes = dossiersDuDomaine(acces, domaine.id);
+			const chemin = String(demande.champs.get('cible-chemin') ?? '')
+				.split('/')
+				.filter((segment) => segment !== '');
+			const racine = lignes.find((d) => d.parentId === null) ?? null;
+			const dossier = chemin.length === 0 ? racine : resoudreLeChemin(lignes, chemin);
+			if (dossier === null) return { refus: fail(400, { issue: 'dossier-inconnu' }) };
+			if (!capacites(droitEffectif(acces, dossier.id)).ecrireDesNotes) {
+				return { refus: fail(403, { issue: 'sans-droit-sur-la-cible' }) };
+			}
+			return {
+				cible: {
+					id: dossier.id,
+					domaineId: domaine.id,
+					profondeur: dossier.profondeur,
+					adresse: adresseDeDomaine(universCible, domaineCible)
+				},
+				profondeur: dossier.profondeur,
+				domaine: domaine.nom
+			};
+		}
 		const nomDuDomaine = String(demande.champs.get('domaine-cible') ?? '');
 		const racine = await racineDuDomaine(base, nomDuDomaine);
 		if (racine === null) return { refus: fail(400, { issue: 'domaine-inconnu' }) };
