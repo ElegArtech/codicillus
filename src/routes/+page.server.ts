@@ -67,7 +67,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			? await lireLeTableauDeVivacite(
 					base,
 					accueil.notes.map((n) => n.id),
-					locals.identite.compteId,
 					maintenant,
 					seuilsDeVivacite
 				)
@@ -97,7 +96,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		   et ce quelque part est cette même adresse : un chevron qui n'ouvre rien est
 		   un geste promis et mort. Toute autre valeur est ignorée, jamais refusée. */
 		surveiller: surveillanceDemandee(url.searchParams.get('surveiller')),
-		recemment: tableau?.recemment ?? [],
+		recemmentCreees: tableau?.recemmentCreees ?? [],
 		plusConsultees: tableau?.plusConsultees ?? [],
 		portail: config.portailAssistance
 	};

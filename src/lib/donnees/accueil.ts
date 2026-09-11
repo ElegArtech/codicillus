@@ -15,7 +15,7 @@
  * qu'elle-même. Rien n'est comblé : les sources que la base ne porte pas sont nommées par
  * `SANS_CONTREPARTIE_EN_BASE`.
  */
-import { and, count, desc, eq, gte, inArray, lt, ne, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, lt, ne } from 'drizzle-orm';
 import type { Base } from '../base/acces';
 import {
 	comptes,
@@ -633,8 +633,8 @@ export async function lireAccueil(
    LE TABLEAU DE VIVACITÉ DE L'ACCUEIL — ce que V-07 met sous les yeux.
 
    Cinq blocs le lisent : la salutation (« N notes, dont M à jour »), la carte
-   « À surveiller » (deux alertes, cinq compteurs, un bilan), les deux listes de
-   consultation, et le tableau des univers. Ils comptent TOUS LA MÊME CHOSE —
+	 « À surveiller » (deux alertes, cinq compteurs, un bilan), les deux listes de
+	 découverte, et le tableau des univers. Ils comptent TOUS LA MÊME CHOSE —
    l'état de vivacité du registre Référence de chaque note lisible — et c'est
    pourquoi il n'y a ici qu'une lecture : deux comptages concurrents finiraient
    par se contredire à l'écran, comme `RG-M01-02` le dit déjà des révisions.
@@ -665,11 +665,11 @@ export interface EtatDeNoteALAccueil {
 	readonly reste: number;
 }
 
-/** Une note de la liste « Récemment consultées » — les sept derniers jours. */
-export interface NoteRecemmentConsultee {
+/** Une des cinq dernières notes créées dans le périmètre lisible. */
+export interface NoteRecemmentCreee {
 	readonly identifiant: string;
 	readonly titre: string;
-	/** L'ancienneté de la dernière ouverture, en minutes entières. */
+	/** L'ancienneté de la création, en minutes entières. */
 	readonly minutes: number;
 }
 
@@ -685,12 +685,10 @@ export interface NoteLaPlusConsultee {
 export interface TableauDeVivacite {
 	/** Toutes les notes lisibles, une ligne par note. Les signets n'en sont pas. */
 	readonly notes: readonly EtatDeNoteALAccueil[];
-	readonly recemment: readonly NoteRecemmentConsultee[];
+	readonly recemmentCreees: readonly NoteRecemmentCreee[];
 	readonly plusConsultees: readonly NoteLaPlusConsultee[];
 }
 
-/** La fenêtre de « Récemment consultées », en jours — le libellé de la carte. */
-const JOURS_RECEMMENT = 7;
 /** La fenêtre de « Les plus consultées », en jours — le libellé de la carte. */
 const JOURS_PLUS_CONSULTEES = 30;
 /** Cinq lignes par carte, comme le rail en porte cinq dans « Récents ». */
@@ -777,43 +775,30 @@ async function lireLesEtatsDeVivacite(
 }
 
 /**
- * LES NOTES QUE CE COMPTE A ROUVERTES CETTE SEMAINE — jamais celles des autres.
- * Servir les lectures de tout le monde annoncerait à chacun ce que ses collègues
- * consultent ; `recentsDuCompte()` du gabarit racine filtre déjà de même.
+ * LES CINQ DERNIÈRES NOTES CRÉÉES dans le périmètre déjà résolu. Contrairement à
+ * une fenêtre glissante, cette liste reste utile quand le corpus évolue peu.
  */
-async function lireLesNotesRecemmentConsultees(
+async function lireLesNotesRecemmentCreees(
 	base: Base,
 	identifiants: readonly string[],
-	compteId: string,
 	maintenant: Date
-): Promise<readonly NoteRecemmentConsultee[]> {
+): Promise<readonly NoteRecemmentCreee[]> {
 	if (identifiants.length === 0) return [];
 	const lignes = await base
 		.select({
 			identifiant: notes.identifiant,
 			titre: notes.titre,
-			derniere: sql<Date>`max(${consultations.le})`
+			creeLe: notes.creeLe
 		})
-		.from(consultations)
-		.innerJoin(notes, eq(notes.id, consultations.noteId))
-		.where(
-			and(
-				inArray(notes.identifiant, [...identifiants]),
-				eq(consultations.compteId, compteId),
-				gte(consultations.le, debutDeFenetre(maintenant, JOURS_RECEMMENT))
-			)
-		)
-		.groupBy(notes.identifiant, notes.titre)
-		.orderBy(desc(sql`max(${consultations.le})`))
+		.from(notes)
+		.where(inArray(notes.identifiant, [...identifiants]))
+		.orderBy(desc(notes.creeLe))
 		.limit(LIGNES_PAR_CARTE);
 
 	return lignes.map((l) => ({
 		identifiant: l.identifiant,
 		titre: l.titre,
-		minutes: Math.max(
-			0,
-			Math.floor((maintenant.getTime() - new Date(l.derniere).getTime()) / 60_000)
-		)
+		minutes: Math.max(0, Math.floor((maintenant.getTime() - new Date(l.creeLe).getTime()) / 60_000))
 	}));
 }
 
@@ -866,14 +851,13 @@ async function lireLesNotesLesPlusConsultees(
 export async function lireLeTableauDeVivacite(
 	base: Base,
 	identifiants: readonly string[],
-	compteId: string,
 	maintenant: Date,
 	seuils: SeuilsDeVivacite = SEUILS_DE_VIVACITE
 ): Promise<TableauDeVivacite> {
-	const [notesEvaluees, recemment, plusConsultees] = await Promise.all([
+	const [notesEvaluees, recemmentCreees, plusConsultees] = await Promise.all([
 		lireLesEtatsDeVivacite(base, identifiants, maintenant, seuils),
-		lireLesNotesRecemmentConsultees(base, identifiants, compteId, maintenant),
+		lireLesNotesRecemmentCreees(base, identifiants, maintenant),
 		lireLesNotesLesPlusConsultees(base, identifiants, maintenant)
 	]);
-	return { notes: notesEvaluees, recemment, plusConsultees };
+	return { notes: notesEvaluees, recemmentCreees, plusConsultees };
 }
