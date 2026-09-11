@@ -318,9 +318,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .rail__sceau {
   width: 36px; height: 36px; flex: none; border-radius: var(--r-3);
-  background: var(--c-accent); color: var(--c-papier);
-  display: grid; place-items: center;
-  font-family: var(--f-lecture); font-size: 20px; font-weight: var(--g-fort);
+  display: block; object-fit: contain;
 }
 .rail__identite { display: flex; flex-direction: column; min-width: 0; }
 .rail__nom {

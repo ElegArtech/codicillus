@@ -16,7 +16,7 @@
 	 * console, et le produit n'a pas à deviner la raison d'une intervention. Sans
 	 * message, l'activation est refusée — le cas n'existe donc pas.
 	 */
-	import { resolve } from '$app/paths';
+	import { base as racineDesAssets, resolve } from '$app/paths';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -28,6 +28,13 @@
 
 <main class="indispo">
 	<div class="indispo__boite">
+		<img
+			class="indispo__logo"
+			src={`${racineDesAssets}/logo.png`}
+			alt="Codicillus"
+			width="48"
+			height="48"
+		/>
 		<div class="indispo__marque" aria-hidden="true">
 			<svg
 				width="28"
@@ -86,6 +93,14 @@
 
 	.indispo__marque {
 		color: var(--c-accent);
+	}
+
+	.indispo__logo {
+		display: block;
+		width: 48px;
+		height: 48px;
+		margin: 0 auto var(--e-3);
+		object-fit: contain;
 	}
 
 	.indispo__titre {

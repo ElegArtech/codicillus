@@ -33,7 +33,7 @@
 	 * reproduits figurent tous à l'ensemble clos du gel.
 	 */
 	import { getContext } from 'svelte';
-	import { resolve } from '$app/paths';
+	import { base as racineDesAssets, resolve } from '$app/paths';
 	import type { NiveauFraicheur } from '../../seeds/corpus';
 	import { temoinFraicheur } from '$lib/fraicheur';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
@@ -185,7 +185,13 @@
 <div class="public app" id="app" data-registre="reference">
 	<header class="chapeau">
 		<a class="marque" href={resolve('/')} aria-label="Codicillus — accueil public">
-			<span class="marque__sceau" aria-hidden="true">C</span>
+			<img
+				class="marque__sceau"
+				src={`${racineDesAssets}/logo.png`}
+				alt=""
+				width="26"
+				height="26"
+			/>
 			<span class="marque__nom">Codicillus</span>
 		</a>
 		<!-- Accès connexion : discret, pour les personnes qui ont déjà un compte. -->

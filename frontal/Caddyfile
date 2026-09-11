@@ -96,7 +96,7 @@ http://127.0.0.1 {
 
 	# La marque de l'onglet : demandée à chaque ouverture, et elle peut changer.
 	# Un jour borne la traîne sans la redemander à chaque page.
-	@marque path /favicon.ico /favicon-32.png /apple-touch-icon.png
+	@marque path /logo.png /favicon.ico /favicon-32.png /apple-touch-icon.png
 	handle @marque {
 		header Cache-Control "public, max-age=86400"
 		reverse_proxy app:3000
