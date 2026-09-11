@@ -17,7 +17,7 @@
 	 * fichier figure à l'ensemble clos du gel.
 	 */
 	import { getContext } from 'svelte';
-	import { resolve } from '$app/paths';
+	import { base as racineDesAssets, resolve } from '$app/paths';
 	import type { Note } from '../../seeds/corpus';
 	import { chercher, nombreFr, notesPubliques, segmenter } from '$lib/public/recherche';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
@@ -169,7 +169,13 @@
 <div class="public app" id="app" data-etat={donneeEtat} data-guides={donneeGuides}>
 	<header class="chapeau">
 		<div class="marque">
-			<div class="marque__sceau" aria-hidden="true">C</div>
+			<img
+				class="marque__sceau"
+				src={`${racineDesAssets}/logo.png`}
+				alt=""
+				width="26"
+				height="26"
+			/>
 			<div class="marque__nom">Codicillus</div>
 		</div>
 		<!-- Accès connexion : discret, pour les personnes qui ont déjà un compte. -->

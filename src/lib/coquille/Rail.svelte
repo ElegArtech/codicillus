@@ -22,7 +22,7 @@
 	import { getContext, tick } from 'svelte';
 	import { deserialize } from '$app/forms';
 	import { goto, invalidateAll } from '$app/navigation';
-	import { resolve } from '$app/paths';
+	import { base as racineDesAssets, resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Pictogramme from '$lib/console/Pictogramme.svelte';
 	import { CHAMP_DOMAINE_CIBLE, CHAMP_NOM, CHAMP_UNIVERS_CIBLE } from '$lib/console/structure';
@@ -719,7 +719,7 @@
 		></button
 	>
 	<a class="rail__marque" href={accueilCourant ? '#' : resolve('/')}>
-		<span class="rail__sceau" aria-hidden="true">C</span>
+		<img class="rail__sceau" src={`${racineDesAssets}/logo.png`} alt="" width="36" height="36" />
 		<span class="rail__identite">
 			<span class="rail__nom">Codicillus</span>
 			<span class="rail__accroche">Vos connaissances. Vivantes.</span>
