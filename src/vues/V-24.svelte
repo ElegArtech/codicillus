@@ -551,11 +551,18 @@
 		return [...niveau].sort((a, b) => (a.nom < b.nom ? -1 : a.nom > b.nom ? 1 : 0));
 	}
 
-	const parFormat = $derived(
-		[...resume.formats]
-			.sort((a, b) => b[1] - a[1])
-			.map(([f, n]) => [n, formatsImport[f] ?? f] as const)
-	);
+	const parFormat = $derived.by(() => {
+		const regroupes: [string, number][] = [];
+		for (const [format, nombre] of resume.formats) {
+			const libelle = formatsImport[format] ?? format;
+			const deja = regroupes.find((entree) => entree[0] === libelle);
+			if (deja === undefined) regroupes.push([libelle, nombre]);
+			else deja[1] += nombre;
+		}
+		return regroupes
+			.map(([libelle, nombre]) => [nombre, libelle] as const)
+			.sort((a, b) => b[0] - a[0]);
+	});
 
 	/** La structure annoncée. Seul `UC-M12-02` crée un domaine, et seulement quand
 	    il n'en existe pas déjà un de ce nom — un réimport le réécrit. */
