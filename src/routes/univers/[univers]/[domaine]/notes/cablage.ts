@@ -18,7 +18,7 @@
 
 export type Debranchement = () => void;
 
-const ADRESSE_DE_LIMPORT = '/importer?scenario=notes';
+const ADRESSE_DE_LIMPORT = '/importer';
 const ADRESSE_DE_LA_NOUVELLE_NOTE = '/notes/nouvelle';
 
 export interface OptionsDeLaListe {

@@ -149,8 +149,8 @@ const SOCLE_V24: Proprietes = {
 	domaineParDefaut: DOMAINES[0]!.nom
 };
 
-/** Les quatre étapes du parcours, telles que la clé d'état les nomme. */
-const VECTEURS: readonly (Proprietes | null)[] = [null, { et: '2' }, { et: '3' }, { et: '4' }];
+/** Les trois étapes du parcours, telles que la clé d'état les nomme. */
+const VECTEURS: readonly (Proprietes | null)[] = [null, { et: '2' }, { et: '3' }];
 
 /* ══════════════════════════════════════════════════════════════════════════
    LA COPIE DU JEU EST LIÉE À SON ORIGINE
@@ -177,13 +177,15 @@ describe('les libellés de format — le jeu de démonstration recopie le produi
 	});
 });
 
-describe('V-24 — la console a déjà choisi le geste', () => {
-	it('ne répète aucun choix de scénario avant le dépôt', () => {
+describe('V-24 — dépôt et destination sur la même page', () => {
+	it('ouvre directement le dépôt avec les deux choix visibles', () => {
 		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
-		expect(rendu).toContain('Importer une note');
+		expect(rendu).toContain('Une note');
+		expect(rendu).toContain('Un dossier');
+		expect(rendu).toContain('Fichier de la note');
 		expect(rendu).not.toContain('Qu’avez-vous à importer');
 		expect(rendu).not.toContain('Type d’import');
-		expect(rendu).not.toContain('<section class="etape" data-etape="1"');
+		expect(rendu).not.toContain('Importer un domaine');
 	});
 
 	it('n’a plus aucun scénario en retrait', () => {
@@ -222,16 +224,16 @@ describe('V-24 — la console a déjà choisi le geste', () => {
 	});
 
 	it('ne mélange pas le parcours note avec la qualification d’un dossier', () => {
-		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
-		expect(rendu).toContain('La note sera rangée dans un domaine ou un dossier existant');
+		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
+		expect(rendu).toContain('Où ranger cette note');
 		expect(rendu).not.toContain('Emplacement parent');
 		expect(rendu).toContain('Choisissez la destination pour voir exactement ce qui sera créé');
 	});
 
 	it('demande un seul fichier pour une note', () => {
-		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
-		expect(rendu).toContain('Glissez une note ici');
-		expect(rendu).toContain('Choisir une note');
+		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
+		expect(rendu).toContain('Fichier de la note');
+		expect(rendu).toContain('Choisir un fichier');
 	});
 
 	it('ouvre directement l’univers et annonce le rangement automatique des fichiers racine', () => {
@@ -240,11 +242,29 @@ describe('V-24 — la console a déjà choisi le geste', () => {
 			scenarioInitial: SCENARIO_D_UNIVERS,
 			vecteur: null
 		});
-		expect(rendu).toContain('Importer un univers');
-		expect(rendu).toContain('Un univers complet sera créé');
-		expect(rendu).toContain('fichiers Markdown placés à la racine');
+		expect(rendu).toContain('Un dossier');
+		expect(rendu).toContain('Créer un univers à partir de ce dossier');
+		expect(rendu).toContain('Nom de l’univers');
+		expect(rendu).toContain('notes placées à la racine');
 		expect(rendu).toContain('domaine portant le même nom que l’univers');
 		expect(rendu).not.toContain('Quel sera son parent');
+	});
+
+	it('sur une instance vide, la note explique le manque et le dossier peut créer le premier univers', () => {
+		const baseVide = {
+			...SOCLE_V24,
+			domaines: [],
+			destinationsOuEcrire: [],
+			universOuCreerUnDomaine: [],
+			peutCreerUnUnivers: true,
+			vecteur: null
+		};
+		const note = corps('V-24', baseVide);
+		expect(note).toContain('Aucun emplacement ne peut encore recevoir cette note');
+		const dossier = corps('V-24', { ...baseVide, scenarioInitial: SCENARIO_D_UNIVERS });
+		expect(dossier).toContain('Créer un univers à partir de ce dossier');
+		expect(dossier).not.toContain('Importer dans un emplacement existant');
+		expect(dossier).not.toContain('Créer un domaine à partir de ce dossier');
 	});
 
 	it('le scénario livré reste celui de l’étape 2 de la planche', () => {
@@ -391,22 +411,18 @@ describe('V-35 — le journal dit ce qu’il conserve', () => {
 		expect(corps('V-35', { journalEnregistre: true })).toBe(corps('V-35'));
 	});
 
-	it('offre les quatre accès directs, puisque l’import exécute les quatre', () => {
+	it('offre un seul accès au dépôt sans écran de scénarios', () => {
 		const rendu = corps('V-35');
-		expect(rendu).toContain('Importer une note');
-		expect(rendu).toContain('Importer un domaine');
-		expect(rendu).toContain('Importer un univers');
-		expect(rendu).toContain('Restaurer un corpus préparé');
-		expect(rendu).not.toContain('Déposez un dossier');
+		expect(rendu).toContain('Nouvel import');
+		expect(rendu).not.toContain('Importer un domaine');
+		expect(rendu).not.toContain('Importer un univers');
+		expect(rendu).not.toContain('Restaurer un corpus préparé');
 	});
 
-	it('sur une instance vide, propose directement l’univers et explique les choix impossibles', () => {
-		const rendu = corps('V-35', { aDesUnivers: false, aDesDomaines: false });
-		expect(rendu).toContain('Importer un univers');
-		expect(rendu).toContain('Créez d’abord un univers ou importez-en un');
-		expect(rendu).toContain('Créez d’abord un domaine ou importez-en un');
-		const cartesDesactivees = rendu.match(/<button class="sc" type="button" disabled/gu) ?? [];
-		expect(cartesDesactivees).toHaveLength(3);
+	it('sur une instance vide, mène au même dépôt autonome', () => {
+		const rendu = corps('V-35');
+		expect(rendu).toContain('Nouvel import');
+		expect(rendu).not.toContain('id="scenarios"');
 	});
 
 	it('annonce son vide quand aucun lot n’a eu lieu, et nomme le geste', () => {

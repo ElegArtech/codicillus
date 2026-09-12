@@ -299,6 +299,9 @@ async function preparerLeLot(
 
 	const deposesBruts = await deposes(champs);
 	if (deposesBruts.length === 0) return { refus: fail(400, { issue: 'lot-vide' }) } as const;
+	if (scenario === SCENARIO_LIVRE && deposesBruts.length !== 1) {
+		return { refus: fail(400, { issue: 'une-note-attendue' }) } as const;
+	}
 
 	/* LA SOURCE EST CELLE DES FICHIERS, jamais celle de la destination : c'est elle
 	   que `RG-M12-09` fait inscrire au journal, et elle se lit sur les chemins
@@ -634,7 +637,9 @@ export const actions: Actions = {
 							o: 0,
 							s: ligne.sort,
 							...(ligne.motif === null ? {} : { m: ligne.motif }),
-							...(estUneMiseAJour(ligne, partie.contenu.notes) ? { maj: true } : {})
+							...(estUneMiseAJour(ligne, partie.contenu.notes) ? { maj: true } : {}),
+							...(ligne.titre === null ? {} : { titre: ligne.titre }),
+							ou: [partie.nom, ...ligne.segments].join(' › ')
 						}))
 					)
 				},
@@ -663,7 +668,9 @@ export const actions: Actions = {
 					o: 0,
 					s: l.sort,
 					...(l.motif === null ? {} : { m: l.motif }),
-					...(estUneMiseAJour(l, prepare.contenuDeLaCible.notes) ? { maj: true } : {})
+					...(estUneMiseAJour(l, prepare.contenuDeLaCible.notes) ? { maj: true } : {}),
+					...(l.titre === null ? {} : { titre: l.titre }),
+					ou: l.segments.join(' › ')
 				}))
 			},
 			dossiersExistants: prepare.contenuDeLaCible.dossiers,
@@ -813,6 +820,9 @@ export const actions: Actions = {
 				adresseDuDomaine: prepare.adresseDuDomaine,
 				enEchec: rapport.lignes
 					.filter((l) => l.sort === 'echec')
+					.map((l) => ({ chemin: l.chemin, motif: l.motif ?? '' })),
+				ignoresDetail: rapport.lignes
+					.filter((l) => l.sort === 'ignore')
 					.map((l) => ({ chemin: l.chemin, motif: l.motif ?? '' })),
 				renvoisNonResolus: rapport.lignes
 					.filter((l) => l.renvoisNonResolus.length > 0)
@@ -1047,6 +1057,14 @@ function rapportDUnivers(
 		enEchec: rapports.flatMap(({ partie, rapport }) =>
 			rapport.lignes
 				.filter((ligne) => ligne.sort === 'echec')
+				.map((ligne) => ({
+					chemin: `${partie.nom}/${ligne.chemin}`,
+					motif: ligne.motif ?? ''
+				}))
+		),
+		ignoresDetail: rapports.flatMap(({ partie, rapport }) =>
+			rapport.lignes
+				.filter((ligne) => ligne.sort === 'ignore')
 				.map((ligne) => ({
 					chemin: `${partie.nom}/${ligne.chemin}`,
 					motif: ligne.motif ?? ''

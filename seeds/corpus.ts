@@ -430,6 +430,9 @@ export interface FichierDuLot {
 	 * « création », ce que le gel rend déjà.
 	 */
 	readonly maj?: boolean;
+	/** Titre et emplacement calculés par le même plan que l'import, pour l'aperçu. */
+	readonly titre?: string;
+	readonly ou?: string;
 }
 
 export interface LotDImport {

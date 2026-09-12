@@ -18,7 +18,6 @@
 	import { resolve } from '$app/paths';
 	import { adresseDeDomaine } from '$lib/rangement/adresses';
 	import type { PageData } from './$types';
-	import type { ScenarioDImport } from '$lib/donnees/scenarios-d-import';
 
 	const { data }: { data: PageData } = $props();
 </script>
@@ -32,8 +31,6 @@
 	notes={data.notes}
 	journalImports={data.journalImports}
 	journalEnregistre={data.journalEnregistre}
-	aDesUnivers={data.aDesUnivers}
-	aDesDomaines={data.aDesDomaines}
 	onOuvrirLeRapport={(lot) => {
 		/* LE RAPPORT D'UN LOT EST UNE ADRESSE — `/console/imports/{lot}`
 		   (`docs/routes.md`) : « un objet identifié et consultable indéfiniment est
@@ -63,12 +60,7 @@
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		void goto(adresseDeDomaine(canonique.univers, canonique.domaine));
 	}}
-	onScenario={(scenario: ScenarioDImport) => {
-		/* La console est l'unique choix du scénario. Le parcours s'ouvre donc
-		   directement au dépôt, avec le geste choisi dans son adresse. */
-		// eslint-disable-next-line svelte/no-navigation-without-resolve
-		void goto(`${resolve('/importer')}?scenario=${encodeURIComponent(scenario)}`);
-	}}
+	onNouvelImport={() => void goto(resolve('/importer'))}
 />
 
 <!--
