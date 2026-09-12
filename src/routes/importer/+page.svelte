@@ -239,6 +239,7 @@
 	destinationsOuEcrire={data.destinationsOuEcrire}
 	universOuCreerUnDomaine={data.universOuCreerUnDomaine}
 	peutCreerUnUnivers={data.peutCreerUnUnivers}
+	scenarioInitial={data.scenarioInitial}
 	lotImport={data.lotImport}
 	formatsImport={data.formatsImport}
 	domaineParDefaut={data.domaineParDefaut}
