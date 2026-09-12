@@ -1,6 +1,6 @@
 /**
  * LES SCÉNARIOS D'IMPORT, ET CE QUE LE PRODUIT EXÉCUTE DE CHACUN. `V-24` en dessine
- * TROIS ; les trois sont livrés.
+ * TROIS ; le produit ajoute le quatrième niveau que le rangement exige : l'univers.
  *
  * L'HISTOIRE DE CE MODULE EST CELLE D'UN ÉCRAN QUI PROMETTAIT PLUS QUE L'IMPORT NE
  * FAISAIT : le scénario n'était TRANSMIS NULLE PART — qui choisissait « Importer un
@@ -17,7 +17,7 @@
  */
 
 /** L'identifiant d'un scénario — celui des vignettes du gel de V-24. */
-export type ScenarioDImport = 'notes' | 'domaine' | 'prepare';
+export type ScenarioDImport = 'notes' | 'domaine' | 'univers' | 'prepare';
 
 /**
  * LE SCÉNARIO DE BASE — `UC-M12-01`, des notes dans un domaine existant. C'est aussi la
@@ -32,6 +32,13 @@ export const SCENARIO_LIVRE: ScenarioDImport = 'notes';
  * l'univers d'accueil.
  */
 export const SCENARIO_DE_DOMAINE: ScenarioDImport = 'domaine';
+
+/**
+ * Reprendre une arborescence entière : le premier niveau devient l'univers et chacun
+ * de ses dossiers directs devient un domaine. Ce scénario est réservé à
+ * l'administrateur, puisque lui seul peut créer ces deux niveaux de rangement.
+ */
+export const SCENARIO_D_UNIVERS: ScenarioDImport = 'univers';
 
 /**
  * `UC-M12-03` — un corpus déjà muni de ses métadonnées. Les dix membres d'en-tête
@@ -54,9 +61,14 @@ export function scenarioEstLivre(scenario: string): boolean {
 	return !SCENARIOS_NON_LIVRES.some((s) => s.id === scenario) && estUnScenario(scenario);
 }
 
-/** Les trois scénarios que le gel dessine, et rien d'autre. */
+/** Les trois scénarios du gel et l'import d'un univers complet. */
 function estUnScenario(scenario: string): scenario is ScenarioDImport {
-	return scenario === 'notes' || scenario === 'domaine' || scenario === 'prepare';
+	return (
+		scenario === 'notes' ||
+		scenario === 'domaine' ||
+		scenario === 'univers' ||
+		scenario === 'prepare'
+	);
 }
 
 /**
@@ -67,6 +79,7 @@ function estUnScenario(scenario: string): scenario is ScenarioDImport {
 export const LIBELLE_DE_SCENARIO: Readonly<Record<ScenarioDImport, string>> = {
 	notes: 'Notes dans un domaine existant',
 	domaine: 'Domaine complet',
+	univers: 'Univers complet',
 	prepare: 'Corpus préparé'
 };
 
