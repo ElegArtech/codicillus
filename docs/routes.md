@@ -172,7 +172,7 @@ Toutes ces routes exigent le rôle **administrateur**. Un utilisateur non admini
 | Route | Vue | États | Exigences | Source de l'adresse |
 |---|---|---|---|---|
 | `/console` | *(redirection 308 → `/console/univers`)* | — | — | S4 rail `Gestion › Console` → `data-vers="Console — vue V-27"` : l'entrée unique du rail désigne V-27 comme section d'atterrissage |
-| `/console/univers` | **V-27** Univers | 6 — Formulaire : fermé · création · édition ; Suppression : refusée (contient des domaines) · refusée (univers système) · possible (univers vide) | UC-M14-01, RG-M14-01, RG-STR-01, RG-M18-05 | S3 `fil: ["Accueil","Console","Univers"]` (`V-27:3901`) |
+| `/console/univers` | **V-27** Univers | 5 — Formulaire : fermé · création · édition ; Suppression : refusée (univers système) · possible avec confirmation et destruction du contenu | UC-M14-01, RG-M14-01, RG-STR-01, RG-M18-05 | S3 `fil: ["Accueil","Console","Univers"]` (`V-27:3901`) |
 | `/console/domaines` | **V-28** Domaines | 5 — Formulaire : fermé · création · édition ; Suppression : domaine peuplé · domaine vide | UC-M14-02, UC-M14-03, RG-M14-02…05, RG-STR-06, RG-M18-05 | S3 `fil: [...,"Console","Domaines"]` (`V-28:3532`) |
 | `/console/types-de-fiches` | **V-29** Types de fiches | 5 — Formulaire : fermé · création · édition ; Suppression : refusée (type utilisé) · possible | UC-M14-04, RG-M14-06, UC-M08-01, RG-M08-02 | S3 `fil: [...,"Console","Types de fiches"]` (`V-29:3773`) |
 | `/console/types-de-relations` | **V-30** Types de relations | 5 — Formulaire : fermé · création · édition ; Suppression : type utilisé · type inutilisé | UC-M14-05, RG-M08-06, RG-M08-07 | S3 `fil: [...,"Console","Types de relations"]` (`V-30:3505`) |

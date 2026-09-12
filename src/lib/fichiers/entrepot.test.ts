@@ -39,6 +39,7 @@ import {
 	dossierDUneNote,
 	ecrireLesOctets,
 	effacerLesOctets,
+	effacerLesOctetsDUneNote,
 	EntrepotNonConfigureErreur,
 	lireLesOctets,
 	OCTETS_PAR_MO,
@@ -141,6 +142,21 @@ describe('les octets font l’aller-retour sans perte', () => {
 		expect(await lireLesOctets(racine, NOTE, jamaisEcrite)).toBeNull();
 		expect(await tailleSurDisque(racine, NOTE, jamaisEcrite)).toBeNull();
 		expect(await lireLesOctets(racine, NOTE, PIECE)).not.toBeNull();
+	});
+
+	it('efface seulement le répertoire UUID de la note et toutes ses pièces', async () => {
+		const noteAEffacer = '10000000-0000-4000-8000-000000000010';
+		const autreNote = '20000000-0000-4000-8000-000000000020';
+		const pieceA = '30000000-0000-4000-8000-000000000030';
+		const pieceB = '40000000-0000-4000-8000-000000000040';
+		const octets = engendrerDesOctets(64);
+		await ecrireLesOctets(racine, noteAEffacer, pieceA, octets);
+		await ecrireLesOctets(racine, autreNote, pieceB, octets);
+
+		await effacerLesOctetsDUneNote(racine, noteAEffacer);
+
+		expect(await tailleSurDisque(racine, noteAEffacer, pieceA)).toBeNull();
+		expect(await tailleSurDisque(racine, autreNote, pieceB)).toBe(octets.length);
 	});
 
 	it('l’effacement rend vrai une fois, faux ensuite', async () => {

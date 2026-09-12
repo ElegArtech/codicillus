@@ -6,7 +6,7 @@
  * `possible`. `P-09` : « une action interdite n'est pas affichée » ne dispense JAMAIS de la
  * refuser côté serveur.
  */
-import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import {
@@ -34,6 +34,7 @@ import { identifiantLisible } from '../rangement/adresses';
 import { accord } from '../vocabulaire';
 import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
 import type { Identite } from '../droits/resolution';
+import { effacerLesOctetsDUneNote } from '../fichiers/entrepot';
 
 /* 1. Les décomptes — comptés en base au moment du geste, jamais supposés. */
 
@@ -80,13 +81,6 @@ export interface DecompteDUnTypeDeFiche {
 export const MOTIF_UNIVERS_SYSTEME =
 	'C’est l’univers de repli du produit : quand un domaine perd son rattachement, il atterrit ici plutôt que de disparaître de la navigation. Sans lui, un domaine orphelin deviendrait invisible sans être supprimé. Vous pouvez en revanche changer sa couleur et son rang.';
 
-/**
- * `V-27:3566` — la sortie proposée, seconde moitié de `RG-M14-01`. Le refus seul
- * ne tiendrait pas la règle.
- */
-export const SORTIE_RATTACHER_LES_DOMAINES =
-	'Un univers ne se supprime que vide, pour qu’aucun contenu ne disparaisse par ricochet. Rattachez d’abord ses domaines ailleurs — « Non classé » convient si aucune destination ne s’impose.';
-
 /** `V-28:1406` — `RG-M14-03`, « définitive : il n'y a pas de corbeille ». */
 export const AVERTISSEMENT_DEFINITIF =
 	'La suppression est définitive. Il n’y a pas de corbeille : rien de ce qui précède ne pourra être récupéré, ni par vous, ni par un administrateur.';
@@ -110,7 +104,7 @@ export const MOTIF_DERNIER_ADMINISTRATEUR =
 export const MOTIF_DERNIER_ADMINISTRATEUR_DESACTIVATION =
 	'est le seul administrateur actif. Désactiver ce compte rendrait la console inaccessible et sans recours. Nommez un second administrateur avant de revenir ici.';
 
-/* 3. `RG-M14-01` — un univers qui contient des domaines ne se supprime pas. */
+/* 3. La suppression d'un univers emporte son contenu. */
 
 export interface EtatDUnUnivers {
 	/** `RG-STR-01` — « Non classé » existe par défaut et ne se supprime pas. */
@@ -121,30 +115,15 @@ export interface EtatDUnUnivers {
 /** Le verdict d'une suppression d'univers — trois issues, celles de `V-27`. */
 export type VerdictDUnUnivers =
 	| { readonly issue: 'univers-systeme'; readonly motif: string }
-	| {
-			readonly issue: 'univers-non-vide';
-			readonly decompte: DecompteDUnUnivers;
-			readonly sortie: string;
-	  }
-	| { readonly issue: 'possible' };
+	| { readonly issue: 'possible'; readonly decompte: DecompteDUnUnivers };
 
 /**
- * `RG-M14-01` (`CDC:1131`) — « un univers contenant des domaines ne peut être supprimé. Le
- * produit propose de rattacher ses domaines ailleurs. » `ON DELETE RESTRICT` ne porte que la
- * moitié de la règle : il refuse par une erreur de contrainte, sans décompte et sans sortie.
- * L'ORDRE DES DEUX REFUS EST CELUI DU GEL : un univers système peuplé se voit refuser pour CE
- * motif-là.
+ * L'univers système reste le seul univers indestructible. Pour tout autre univers, le verdict
+ * porte le décompte que l'interface annonce avant la destruction récursive.
  */
 export function verdictDeSuppressionDUnUnivers(etat: EtatDUnUnivers): VerdictDUnUnivers {
 	if (etat.systeme) return { issue: 'univers-systeme', motif: MOTIF_UNIVERS_SYSTEME };
-	if (etat.decompte.domaines > 0) {
-		return {
-			issue: 'univers-non-vide',
-			decompte: etat.decompte,
-			sortie: SORTIE_RATTACHER_LES_DOMAINES
-		};
-	}
-	return { issue: 'possible' };
+	return { issue: 'possible', decompte: etat.decompte };
 }
 
 /* 4. `RG-M14-02` — le décompte exact, et la saisie du nom exact. */
@@ -575,6 +554,8 @@ interface UniversEnBase extends EtatDUnUnivers {
 	readonly id: string;
 	/** Le nom d'affichage — ce que la trace de `RG-NF-05` inscrit en désignation. */
 	readonly nom: string;
+	readonly domaineIds: readonly string[];
+	readonly notesAOublier: readonly { readonly id: string; readonly identifiant: string }[];
 }
 
 /**
@@ -592,20 +573,26 @@ export async function mesurerUnUnivers(
 		.limit(1);
 	if (ligne === undefined) return null;
 
-	const [mesure] = await base
-		.select({
-			domaines: sql<number>`count(distinct ${domaines.id})::int`,
-			notes: sql<number>`count(${notes.id})::int`
-		})
+	const domainesPortes = await base
+		.select({ id: domaines.id })
 		.from(domaines)
-		.leftJoin(notes, eq(notes.domaineId, domaines.id))
 		.where(eq(domaines.universId, ligne.id));
+	const domaineIds = domainesPortes.map((d) => d.id);
+	const notesPortees =
+		domaineIds.length === 0
+			? []
+			: await base
+					.select({ id: notes.id, identifiant: notes.identifiant })
+					.from(notes)
+					.where(inArray(notes.domaineId, domaineIds));
 
 	return {
 		id: ligne.id,
 		nom: ligne.nom,
 		systeme: ligne.systeme,
-		decompte: { domaines: mesure?.domaines ?? 0, notes: mesure?.notes ?? 0 }
+		domaineIds,
+		notesAOublier: notesPortees,
+		decompte: { domaines: domaineIds.length, notes: notesPortees.length }
 	};
 }
 
@@ -620,7 +607,7 @@ const NOM_DU_TYPE_SIGNET = 'Signet';
 interface DomaineEnBase extends EtatDUnDomaine {
 	readonly id: string;
 	/** Les identifiants lisibles des notes à retirer de l'index — `RG-M14-05`. */
-	readonly notesAOublier: readonly string[];
+	readonly notesAOublier: readonly { readonly id: string; readonly identifiant: string }[];
 }
 
 /**
@@ -642,7 +629,7 @@ export async function mesurerUnDomaine(
 	if (ligne === undefined) return null;
 
 	const portees = await base
-		.select({ identifiant: notes.identifiant, typeDeNote: typesDeNote.nom })
+		.select({ id: notes.id, identifiant: notes.identifiant, typeDeNote: typesDeNote.nom })
 		.from(notes)
 		.innerJoin(typesDeNote, eq(notes.typeDeNoteId, typesDeNote.id))
 		.where(eq(notes.domaineId, ligne.id));
@@ -660,7 +647,7 @@ export async function mesurerUnDomaine(
 	return {
 		id: ligne.id,
 		nom: ligne.nom,
-		notesAOublier: portees.map((n) => n.identifiant),
+		notesAOublier: portees.map((n) => ({ id: n.id, identifiant: n.identifiant })),
 		decompte: {
 			notes: portees.length,
 			fichesTypees: portees.filter((n) => n.typeDeNote === NOM_DU_TYPE_FICHE).length,
@@ -795,12 +782,14 @@ function detailDuTypeDeNote(notesPortees: number, templatesPortes: number): stri
 }
 
 /**
- * Supprimer un univers — `RG-M14-01`. Une seule écriture, aucune transaction : `ON DELETE
- * RESTRICT` fait de cette suppression un geste atomique par nature. Le verdict la refuse
- * avant, la contrainte reste le dernier mot — l'une des deux gardes est une course.
+ * Supprimer un univers et tout son contenu. Les notes partent avant les domaines, puis
+ * l'univers, dans une seule transaction. Les cascades du schéma emportent dossiers, relations,
+ * versions et droits ; les comptes rattachés aux domaines sont conservés et détachés.
  */
 export async function supprimerUnUnivers(
 	base: Base,
+	client: Meilisearch,
+	racineFichiers: string | null,
 	identifiant: string,
 	identite: Identite
 ): Promise<IssueDUnGeste<VerdictDUnUnivers>> {
@@ -818,13 +807,16 @@ export async function supprimerUnUnivers(
 	   renumérotation, un trou survit au geste et le rang « Position 3 » du
 	   sélecteur ne désigne plus le troisième univers. */
 	await base.transaction(async (tx) => {
+		if (etat.domaineIds.length > 0) {
+			await tx.delete(notes).where(inArray(notes.domaineId, etat.domaineIds));
+			await tx.delete(domaines).where(inArray(domaines.id, etat.domaineIds));
+		}
 		await tx.delete(univers).where(eq(univers.id, etat.id));
-		/* La trace partage la transaction de la destruction — `RG-NF-05`. Un univers
-		   ne se supprime que VIDE : il n'y a rien à détailler. */
 		await tracerUneSuppression(tx, {
 			objet: 'univers',
 			reference: identifiant,
 			designation: etat.nom,
+			detail: `${String(etat.decompte.domaines)} ${accord(etat.decompte.domaines, 'domaine')}, ${String(etat.decompte.notes)} ${accord(etat.decompte.notes, 'note')}`,
 			auteur
 		});
 		const restants = await tx.select({ id: univers.id }).from(univers).orderBy(univers.ordre);
@@ -833,6 +825,16 @@ export async function supprimerUnUnivers(
 			restants.map((u) => u.id)
 		);
 	});
+	if (racineFichiers !== null) {
+		await Promise.all(
+			etat.notesAOublier.map((n) => effacerLesOctetsDUneNote(racineFichiers, n.id))
+		);
+	}
+	await entretenirLIndex(
+		base,
+		client,
+		etat.notesAOublier.map((n) => n.identifiant)
+	);
 	return verdict;
 }
 
@@ -853,6 +855,7 @@ export async function supprimerUnUnivers(
 export async function supprimerUnDomaine(
 	base: Base,
 	client: Meilisearch,
+	racineFichiers: string | null,
 	demande: {
 		readonly univers: string;
 		readonly domaine: string;
@@ -883,8 +886,17 @@ export async function supprimerUnDomaine(
 		});
 	});
 
+	if (racineFichiers !== null) {
+		await Promise.all(
+			etat.notesAOublier.map((n) => effacerLesOctetsDUneNote(racineFichiers, n.id))
+		);
+	}
 	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. */
-	await entretenirLIndex(base, client, etat.notesAOublier);
+	await entretenirLIndex(
+		base,
+		client,
+		etat.notesAOublier.map((n) => n.identifiant)
+	);
 
 	return verdict;
 }

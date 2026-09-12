@@ -61,12 +61,6 @@
 		 */
 		onSupprimer?: (univers: string) => void;
 		/**
-		 * LA SORTIE PROPOSÉE PAR LE REFUS — « Rattacher ces domaines à un autre
-		 * univers ». Le gel y attache un geste (`V-27:3591`) ; la vue ne décide pas
-		 * où il mène, la page le sait.
-		 */
-		onRattacher?: (univers: string) => void;
-		/**
 		 * CE QUE LA VUE FAIT QUAND LE PANNEAU EST VALIDÉ. Même partage : la vue tient
 		 * l'état du panneau, comme `ouvrirForm(u)` au gel (`V-27:3436`). `onEnregistrer`
 		 * reçoit d'abord le nom ACTUEL de l'univers : c'est la clé par laquelle la page
@@ -91,7 +85,6 @@
 		domaines: tousLesDomaines,
 		compte,
 		onSupprimer,
-		onRattacher,
 		onCreer,
 		onEnregistrer,
 		onReordonner,
@@ -382,21 +375,12 @@
 	);
 	const dialogueOuvert = $derived(aSupprimer !== null);
 
-	/** LES TROIS BRANCHES DE `demanderSuppression(u)` — `V-27:3524-3606`. La
-	    transcription précédente n'en portait que deux ; la troisième — l'univers qui
-	    porte des domaines — n'était pas atteignable par la planche, et l'écran disait
-	    « Production ne contient aucun domaine » à un univers qui en porte trois. */
+	/** L'univers système est protégé ; tout autre univers peut être supprimé avec son contenu. */
 	const domainesDeLUnivers = $derived(aSupprimer === null ? [] : domaines(aSupprimer.nom));
 	const notesDeLUnivers = $derived(aSupprimer === null ? 0 : compteDeNotes(aSupprimer.nom));
-	/** `u.systeme` d'abord, `doms.length` ensuite, le reste sinon — l'ordre du gel. */
+	/** `u.systeme` d'abord, le reste est une suppression possible. */
 	const branche = $derived(
-		aSupprimer === null
-			? 'aucune'
-			: aSupprimer.systeme
-				? 'systeme'
-				: domainesDeLUnivers.length
-					? 'peuple'
-					: 'possible'
+		aSupprimer === null ? 'aucune' : aSupprimer.systeme ? 'systeme' : 'possible'
 	);
 
 	/** `valider.hidden` et `annuler.textContent`, tels que le gel les pose. */
@@ -406,20 +390,10 @@
 	 * Les deux lignes du refus, accordées comme le gel les accorde
 	 * (`V-27:3552-3554`).
 	 */
-	const refusPeuple = $derived([
-		[
-			domainesDeLUnivers.length,
-			accord(domainesDeLUnivers.length, 'domaine rattaché', 'domaines rattachés')
-		],
-		[
-			notesDeLUnivers,
-			accord(notesDeLUnivers, "note qu'ils contiennent", "notes qu'ils contiennent")
-		]
+	const contenuSupprime = $derived([
+		[domainesDeLUnivers.length, accord(domainesDeLUnivers.length, 'domaine', 'domaines')],
+		[notesDeLUnivers, accord(notesDeLUnivers, 'note', 'notes')]
 	] as [number, string][]);
-
-	function notesDuDomaine(nom: string): number {
-		return notes.filter((n) => n.domaine === nom).length;
-	}
 
 	/** `showModal()` — voir `V-28.svelte` : l'attribut `open` n'obtient pas la modalité. */
 	$effect(() => {
@@ -732,16 +706,7 @@
 						><div class="refus__titre">« {aSupprimer.nom} » ne peut pas être supprimé</div
 						><div class="refus__sortie">C'est l'univers de repli du produit : quand un domaine perd son rattachement, il atterrit ici plutôt que de disparaître de la navigation. Sans lui, un domaine orphelin deviendrait invisible sans être supprimé. Vous pouvez en revanche changer sa couleur et son rang.</div
 					></div
-					>{:else if aSupprimer && branche === 'peuple'}<div class="refus"
-						><div class="refus__titre">Suppression refusée : cet univers n'est pas vide</div
-						><ul
-							>{#each refusPeuple as [combien, mot] (mot)}<li><b>{combien}</b>{mot}</li>{/each}</ul
-						><div class="refus__sortie">Un univers ne se supprime que vide, pour qu'aucun contenu ne disparaisse par ricochet. Rattachez d'abord ses domaines ailleurs — « Non classé » convient si aucune destination ne s'impose.</div
-					></div
-					><div style="display:flex;flex-direction:column;gap:var(--e-1)"
-						>{#each domainesDeLUnivers as d (d.nom)}<div style="display:flex;align-items:center;gap:var(--e-2);padding:var(--e-2);border:1px solid var(--c-trait);border-radius:var(--r-2);font-size:var(--t-petit)"><span class="tg__puce" style="background:{d.couleur}"></span><span style="flex:1">{d.nom}</span><span class="tg__n">{notesDuDomaine(d.nom)} {accord(notesDuDomaine(d.nom), 'note')}</span></div>{/each}</div
-					><button class="btn btn--principal" style="width:100%" type="button" onclick={() => aSupprimer && onRattacher?.(aSupprimer.nom)}>Rattacher ces domaines à un autre univers</button
-					>{:else if aSupprimer}<p class="dlg__texte">« {aSupprimer.nom} » ne contient aucun domaine : sa suppression ne détruit aucun contenu. Il disparaîtra de la navigation latérale de tous les utilisateurs.</p>{/if}</div
+					>{:else if aSupprimer}<div class="decompte"><div class="decompte__titre">{domainesDeLUnivers.length === 0 ? 'Cet univers est vide' : 'Ce qui sera détruit'}</div><ul>{#each contenuSupprime as [combien, mot] (mot)}<li><b>{combien}</b>{mot}</li>{/each}</ul><div class="decompte__note">La suppression est définitive : tous les domaines, dossiers, sous-dossiers et notes contenus dans cet univers disparaîtront. Il n'y a pas de corbeille.</div></div>{/if}</div
 				>
 				<div class="dlg__pied">
 					<button class="btn" data-fermer id="sup-annuler" onclick={() => (demande = null)}

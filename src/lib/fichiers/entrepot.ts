@@ -195,6 +195,17 @@ export async function effacerLesOctets(
 	return true;
 }
 
+/**
+ * Efface le répertoire borné d'une note et toutes ses pièces jointes.
+ *
+ * Le segment passe par la même validation UUID que chaque fichier individuel. La racine de
+ * l'entrepôt ne peut donc jamais devenir la cible de cette suppression récursive. L'absence du
+ * répertoire est nominale : une note sans pièce jointe n'en a jamais créé.
+ */
+export async function effacerLesOctetsDUneNote(racine: string, noteId: string): Promise<void> {
+	await rm(dossierDUneNote(racine, noteId), { recursive: true, force: true });
+}
+
 function estAbsence(cause: unknown): boolean {
 	return (
 		typeof cause === 'object' &&

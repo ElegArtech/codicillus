@@ -37,6 +37,8 @@ import {
 } from '$lib/donnees/consoles';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import { moteurPartage } from '$lib/recherche/acces';
+import { env } from '$env/dynamic/private';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
@@ -89,6 +91,8 @@ export const actions: Actions = {
 		   détruit quoi. `consoleOuverte()` a déjà refusé tout appelant sans droit. */
 		const resultat = await supprimerUnUnivers(
 			basePartagee(),
+			moteurPartage(),
+			env.RACINE_FICHIERS?.trim() || null,
 			String(champs.get('univers') ?? ''),
 			locals.identite
 		);

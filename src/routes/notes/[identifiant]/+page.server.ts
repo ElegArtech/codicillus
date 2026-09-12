@@ -1214,11 +1214,16 @@ export const actions: Actions = {
 	 */
 	supprimer: async ({ params, locals }) => {
 		const { base, contexte } = await contexteDUnGeste();
-		const fait = await supprimerUneNote(base, moteurPartage(), {
-			identifiant: params.identifiant,
-			identite: locals.identite,
-			contexte
-		});
+		const fait = await supprimerUneNote(
+			base,
+			moteurPartage(),
+			env.RACINE_FICHIERS?.trim() || null,
+			{
+				identifiant: params.identifiant,
+				identite: locals.identite,
+				contexte
+			}
+		);
 		if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
 		redirect(303, fait.ressource.adresseDeRetour);
 	},

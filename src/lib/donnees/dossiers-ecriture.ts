@@ -36,6 +36,7 @@ import { initialesDuNom } from './accueil';
 import { identifiantLisible } from '../rangement/adresses';
 import { entretenirLIndex } from '../recherche/entretien';
 import { PROFONDEUR_MAX, segmentsAffiches, type LigneDeDossier } from './rangement';
+import { effacerLesOctetsDUneNote } from '../fichiers/entrepot';
 
 /**
  * Le sous-arbre d'un dossier — lui-même d'abord, puis ses descendants. Fonction PURE.
@@ -552,12 +553,12 @@ export interface SuppressionDeDossierFaite {
  * L'INDEX SUIT LA TRANSACTION, JAMAIS DEDANS : `entretenirLIndex()` DÉDUIT de la base
  * ce qui a disparu, et rien ici ne lui dit quoi oublier.
  *
- * CE QU'ELLE NE FAIT PAS : les OCTETS des pièces jointes restent sur le disque. La
- * cascade emporte les lignes, pas les fichiers.
+ * Les octets des pièces jointes sont retirés après validation de la transaction.
  */
 export async function supprimerUnDossier(
 	base: Base,
 	client: Meilisearch,
+	racineFichiers: string | null,
 	demande: DemandeDeSuppressionDeDossier
 ): Promise<SuppressionDeDossierFaite | RefusDEcriture> {
 	const parId = new Map(demande.lignes.map((d) => [d.id, d]));
@@ -569,7 +570,7 @@ export async function supprimerUnDossier(
 	const branche = sousArbre(demande.lignes, dossier.id);
 	const identifiantsDeDossier = branche.map((d) => d.id);
 	const detruites = await base
-		.select({ identifiant: notes.identifiant })
+		.select({ id: notes.id, identifiant: notes.identifiant })
 		.from(notes)
 		.where(inArray(notes.dossierId, identifiantsDeDossier));
 
@@ -591,6 +592,9 @@ export async function supprimerUnDossier(
 		});
 	});
 
+	if (racineFichiers !== null) {
+		await Promise.all(detruites.map((n) => effacerLesOctetsDUneNote(racineFichiers, n.id)));
+	}
 	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. */
 	if (detruites.length > 0) {
 		await entretenirLIndex(
