@@ -1,4 +1,4 @@
-# Exécution à partir d'images locales, y compris sans accès à Internet.
+# Installation depuis les images publiées ; MODE_IMAGES=never pour une instance hors ligne.
 # La construction est définie séparément dans compose.construction.yaml.
 name: ${NOM_PROJET:-codicillus}
 
@@ -16,7 +16,7 @@ x-environnement: &environnement
 services:
   frontal:
     image: caddy:2.11.4-alpine
-    pull_policy: never
+    pull_policy: ${MODE_IMAGES:-missing}
     restart: unless-stopped
     environment:
       ADRESSE_SITE: ${ADRESSE_SITE:?renseigner ADRESSE_SITE dans .env}
@@ -41,11 +41,33 @@ services:
         condition: service_healthy
     networks: [codicillus, acces]
 
+  initialisation:
+    image: ${REGISTRE_CODICILLUS:-ghcr.io/elegartech}/codicillus-gestion:${VERSION_CODICILLUS:-1.0.0-rc.2}
+    pull_policy: ${MODE_IMAGES:-missing}
+    restart: 'no'
+    command: ['base:initialiser']
+    environment:
+      <<: *environnement
+      ADMIN_IDENTIFIANT: ${ADMIN_IDENTIFIANT:-}
+      ADMIN_NOM: ${ADMIN_NOM:-}
+      ADMIN_COURRIEL: ${ADMIN_COURRIEL:-}
+      MDP_ADMINISTRATEUR: ${MDP_ADMINISTRATEUR:-}
+    volumes:
+      - fichiers:/var/lib/codicillus/fichiers
+    depends_on:
+      db:
+        condition: service_healthy
+      recherche:
+        condition: service_healthy
+    networks: [codicillus]
+
   app:
-    image: codicillus/app:${VERSION_CODICILLUS:-1.0.0-rc.1}
-    pull_policy: never
+    image: ${REGISTRE_CODICILLUS:-ghcr.io/elegartech}/codicillus:${VERSION_CODICILLUS:-1.0.0-rc.2}
+    pull_policy: ${MODE_IMAGES:-missing}
     restart: unless-stopped
     depends_on:
+      initialisation:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       recherche:
@@ -61,8 +83,6 @@ services:
       BODY_SIZE_LIMIT: 128M
     volumes:
       - fichiers:/var/lib/codicillus/fichiers
-    ports:
-      - '127.0.0.1:${PORT_APP:-19300}:3000'
     healthcheck:
       test:
         [
@@ -78,8 +98,8 @@ services:
     networks: [codicillus]
 
   gestion:
-    image: codicillus/gestion:${VERSION_CODICILLUS:-1.0.0-rc.1}
-    pull_policy: never
+    image: ${REGISTRE_CODICILLUS:-ghcr.io/elegartech}/codicillus-gestion:${VERSION_CODICILLUS:-1.0.0-rc.2}
+    pull_policy: ${MODE_IMAGES:-missing}
     profiles: [gestion]
     environment:
       <<: *environnement
@@ -98,7 +118,7 @@ services:
 
   db:
     image: pgvector/pgvector:pg18
-    pull_policy: never
+    pull_policy: ${MODE_IMAGES:-missing}
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${UTILISATEUR_POSTGRES:-codicillus}
@@ -107,8 +127,6 @@ services:
       POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C.UTF-8'
     volumes:
       - db_donnees:/var/lib/postgresql
-    ports:
-      - '127.0.0.1:${PORT_DB:-19432}:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 5s
@@ -118,7 +136,7 @@ services:
 
   recherche:
     image: getmeili/meilisearch:v1.53.1
-    pull_policy: never
+    pull_policy: ${MODE_IMAGES:-missing}
     restart: unless-stopped
     environment:
       MEILI_MASTER_KEY: ${CLE_MAITRE_RECHERCHE:?renseigner CLE_MAITRE_RECHERCHE dans .env}
@@ -126,8 +144,6 @@ services:
       MEILI_NO_ANALYTICS: 'true'
     volumes:
       - recherche_donnees:/meili_data
-    ports:
-      - '127.0.0.1:${PORT_RECHERCHE:-19700}:7700'
     healthcheck:
       test: ['CMD', 'curl', '--fail', '--silent', 'http://127.0.0.1:7700/health']
       interval: 5s
@@ -136,14 +152,12 @@ services:
     networks: [codicillus]
 
   conversion:
-    image: codicillus/conversion:${VERSION_CODICILLUS:-1.0.0-rc.1}
-    pull_policy: never
+    image: ${REGISTRE_CODICILLUS:-ghcr.io/elegartech}/codicillus-conversion:${VERSION_CODICILLUS:-1.0.0-rc.2}
+    pull_policy: ${MODE_IMAGES:-missing}
     profiles: [conversion]
     restart: unless-stopped
     environment:
       DELAI_MAX_CONVERSION: ${DELAI_MAX_CONVERSION:-120}
-    ports:
-      - '127.0.0.1:${PORT_CONVERSION:-19800}:8000'
     networks: [codicillus]
 
 networks:

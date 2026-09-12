@@ -21,6 +21,9 @@ RUN pnpm exec svelte-kit sync && pnpm run build
 # Commandes ponctuelles : migrations, premier compte, réindexation.
 # Vite exécute le TypeScript ; aucun paquet n'est installé au démarrage.
 FROM constructeur AS gestion
+LABEL org.opencontainers.image.source="https://github.com/ElegArtech/codicillus" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.title="Codicillus"
 ENV RACINE_FICHIERS=/var/lib/codicillus/fichiers
 RUN mkdir -p "$RACINE_FICHIERS" \
     && chown -R node:node /application "$RACINE_FICHIERS"
@@ -33,6 +36,9 @@ RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # Serveur : uniquement la construction et les dépendances d'exécution.
 FROM node:24.19.0-bookworm-slim AS execution
+LABEL org.opencontainers.image.source="https://github.com/ElegArtech/codicillus" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.title="Codicillus"
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000 \
