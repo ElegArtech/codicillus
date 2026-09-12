@@ -37,6 +37,7 @@ import {
 	formatDuChemin,
 	identifiantsPris,
 	libellesDeFormat,
+	repartirLesFichiersDeRacine,
 	repartirLesFichiersDUnivers,
 	sansLePremierNiveau,
 	sonderLeServiceDeConversion,
@@ -47,6 +48,7 @@ import {
 } from '$lib/donnees/import';
 import {
 	SCENARIO_DE_DOMAINE,
+	SCENARIO_DE_RACINE,
 	SCENARIO_D_UNIVERS,
 	SCENARIO_LIVRE,
 	scenarioEstLivre
@@ -506,6 +508,98 @@ interface PartieDUnivers {
 	readonly contenu: Awaited<ReturnType<typeof contenuDeLaCible>>;
 }
 
+interface UniversPrepare {
+	readonly nomUnivers: string;
+	readonly universIdentifiant: string;
+	readonly universACreer: string;
+	readonly domainesACreer: readonly string[];
+	readonly parties: readonly PartieDUnivers[];
+}
+
+async function preparerUnUnivers(
+	contexte: {
+		readonly base: Base;
+		readonly acces: AccesAuRangement;
+		readonly fetch: typeof globalThis.fetch;
+		readonly ecrire: boolean;
+		readonly service: Awaited<ReturnType<typeof sonderLeServiceDeConversion>>;
+		readonly pris: Set<string>;
+		readonly source: string;
+	},
+	nomUnivers: string,
+	fichiers: readonly FichierDepose[]
+): Promise<UniversPrepare | null> {
+	const { base, acces, fetch, ecrire, service, pris, source } = contexte;
+	let universCible = await universParNom(base, nomUnivers);
+	const universACreer = universCible === null ? nomUnivers : '';
+	if (universCible === null && ecrire) {
+		const verdict = await creerUnUnivers(base, {
+			nom: nomUnivers,
+			description: '',
+			couleur: COULEUR_DUNIVERS_IMPORTE,
+			glyphe: GLYPHE_DUNIVERS_IMPORTE,
+			ordre: Number.POSITIVE_INFINITY
+		});
+		if (verdict.issue !== 'possible') return null;
+		universCible = await universParNom(base, nomUnivers);
+	}
+	const groupes = repartirLesFichiersDUnivers(nomUnivers, fichiers);
+	if (groupes === null || groupes.size === 0) return null;
+
+	const parties: PartieDUnivers[] = [];
+	const domainesACreer: string[] = [];
+	for (const [nomDomaine, fichiersDuDomaine] of groupes) {
+		let cible =
+			universCible === null
+				? null
+				: await racineDuDomaineDansUnivers(base, universCible.identifiant, nomDomaine);
+		const domaineManquant = cible === null;
+		if (cible === null && ecrire && universCible !== null) {
+			const verdict = await creerUnDomaine(base, {
+				nom: nomDomaine,
+				description: '',
+				univers: universCible.identifiant,
+				couleur: COULEUR_DE_DOMAINE_IMPORTE,
+				modules: ['notes', 'dossiers']
+			});
+			if (verdict.issue !== 'possible') return null;
+			cible = await racineDuDomaineDansUnivers(base, universCible.identifiant, nomDomaine);
+		}
+		if (domaineManquant) domainesACreer.push(nomDomaine);
+		const contenu =
+			cible === null
+				? {
+						notes: new Map<string, string>(),
+						notesParPlaceEtTitre: new Map<string, string>(),
+						dossiers: []
+					}
+				: await contenuDeLaCible(base, acces, cible.id);
+		const conversions = await convertirLeLot(
+			fetch,
+			env['URL_CONVERSION'],
+			fichiersDuDomaine,
+			service
+		);
+		const plan = classerLeLot(source, fichiersDuDomaine, {
+			service,
+			conversions,
+			identifiantsPris: pris,
+			notesDeLaCible: contenu.notes,
+			notesParPlaceEtTitre: contenu.notesParPlaceEtTitre,
+			profondeurDeDepart: cible?.profondeur ?? 1
+		});
+		for (const ligne of plan.lignes) if (ligne.identifiant !== null) pris.add(ligne.identifiant);
+		parties.push({ nom: nomDomaine, plan, fichiers: fichiersDuDomaine, cible, contenu });
+	}
+	return {
+		nomUnivers,
+		universIdentifiant: universCible?.identifiant ?? '',
+		universACreer,
+		domainesACreer,
+		parties
+	};
+}
+
 /**
  * Préparer un univers complet. La forme attendue est volontairement simple : un dossier
  * racine pour l'univers, puis un dossier direct par domaine. Les fichiers directement
@@ -533,85 +627,127 @@ async function preparerLUnivers(
 	}
 	const nomSaisi = String(champs.get('nom-univers') ?? '').trim();
 	const nomUnivers = nomSaisi || source;
-	let universCible = await universParNom(base, nomUnivers);
-	const universACreer = universCible === null ? nomUnivers : '';
-	if (universCible === null && ecrire) {
-		const verdict = await creerUnUnivers(base, {
-			nom: nomUnivers,
-			description: '',
-			couleur: COULEUR_DUNIVERS_IMPORTE,
-			glyphe: GLYPHE_DUNIVERS_IMPORTE,
-			ordre: Number.POSITIVE_INFINITY
-		});
-		if (verdict.issue !== 'possible') {
-			return { refus: fail(400, { issue: 'univers-deja-present' }) } as const;
-		}
-		universCible = await universParNom(base, nomUnivers);
-	}
-
 	const sousLaRacine = sansLePremierNiveau(deposesBruts);
-	const groupes = repartirLesFichiersDUnivers(nomUnivers, sousLaRacine);
-	if (groupes === null || groupes.size === 0) {
-		return { refus: fail(400, { issue: 'structure-univers-invalide' }) } as const;
-	}
-
 	const service = await sonderLeServiceDeConversion(fetch, env['URL_CONVERSION']);
 	const pris = new Set(await identifiantsPris(base));
-	const parties: PartieDUnivers[] = [];
-	const domainesACreer: string[] = [];
-	for (const [nomDomaine, fichiers] of groupes) {
-		let cible =
-			universCible === null
-				? null
-				: await racineDuDomaineDansUnivers(base, universCible.identifiant, nomDomaine);
-		const domaineManquant = cible === null;
-		if (cible === null && ecrire && universCible !== null) {
-			const verdict = await creerUnDomaine(base, {
-				nom: nomDomaine,
-				description: '',
-				univers: universCible.identifiant,
-				couleur: COULEUR_DE_DOMAINE_IMPORTE,
-				modules: ['notes', 'dossiers']
-			});
-			if (verdict.issue !== 'possible') {
-				return { refus: fail(400, { issue: 'domaine-deja-present' }) } as const;
-			}
-			cible = await racineDuDomaineDansUnivers(base, universCible.identifiant, nomDomaine);
-		}
-		if (domaineManquant) domainesACreer.push(nomDomaine);
-		const contenu =
-			cible === null
-				? {
-						notes: new Map<string, string>(),
-						notesParPlaceEtTitre: new Map<string, string>(),
-						dossiers: []
-					}
-				: await contenuDeLaCible(base, acces, cible.id);
-		const conversions = await convertirLeLot(fetch, env['URL_CONVERSION'], fichiers, service);
-		const plan = classerLeLot(source, fichiers, {
-			service,
-			conversions,
-			identifiantsPris: pris,
-			notesDeLaCible: contenu.notes,
-			notesParPlaceEtTitre: contenu.notesParPlaceEtTitre,
-			profondeurDeDepart: cible?.profondeur ?? 1
-		});
-		for (const ligne of plan.lignes) if (ligne.identifiant !== null) pris.add(ligne.identifiant);
-		parties.push({ nom: nomDomaine, plan, fichiers, cible, contenu });
-	}
+	const universPrepare = await preparerUnUnivers(
+		{ base, acces, fetch, ecrire, service, pris, source },
+		nomUnivers,
+		sousLaRacine
+	);
+	if (universPrepare === null)
+		return { refus: fail(400, { issue: 'structure-univers-invalide' }) } as const;
 
 	return {
 		base,
 		compteId,
 		source,
-		nomUnivers,
-		universIdentifiant: universCible?.identifiant ?? '',
-		universACreer,
-		domainesACreer,
-		parties,
+		...universPrepare,
 		simulation,
 		strict
 	} as const;
+}
+
+async function preparerLaRacine(
+	locals: App.Locals,
+	request: Request,
+	fetch: typeof globalThis.fetch,
+	ecrire: boolean
+) {
+	const { base, acces, compteId, peutCreerUnDomaine } = await importateur(locals);
+	if (!peutCreerUnDomaine)
+		return { refus: fail(403, { issue: 'sans-droit-sur-la-cible' }) } as const;
+	const champs = await request.formData();
+	const simulation = champs.get('simulation') !== null;
+	const strict = champs.get('strict') !== null;
+	const deposesBruts = await deposes(champs);
+	if (deposesBruts.length === 0) return { refus: fail(400, { issue: 'lot-vide' }) } as const;
+	const source = sourceDuLot(deposesBruts);
+	if (source === SOURCE_SANS_DOSSIER)
+		return { refus: fail(400, { issue: 'structure-racine-invalide' }) } as const;
+	const repartition = repartirLesFichiersDeRacine(sansLePremierNiveau(deposesBruts));
+	if (repartition === null || repartition.univers.size === 0)
+		return { refus: fail(400, { issue: 'structure-racine-invalide' }) } as const;
+	const service = await sonderLeServiceDeConversion(fetch, env['URL_CONVERSION']);
+	const pris = new Set(await identifiantsPris(base));
+	const universPrepares: UniversPrepare[] = [];
+	for (const [nomUnivers, fichiers] of repartition.univers) {
+		const prepare = await preparerUnUnivers(
+			{ base, acces, fetch, ecrire, service, pris, source },
+			nomUnivers,
+			fichiers
+		);
+		if (prepare === null)
+			return { refus: fail(400, { issue: 'structure-racine-invalide' }) } as const;
+		universPrepares.push(prepare);
+	}
+	return {
+		base,
+		compteId,
+		source,
+		univers: universPrepares,
+		ignoresRacine: repartition.ignores,
+		simulation,
+		strict
+	} as const;
+}
+
+async function executerLesUnivers(
+	prepare: {
+		readonly base: Base;
+		readonly compteId: string;
+		readonly simulation: boolean;
+		readonly strict: boolean;
+	},
+	universPrepares: readonly UniversPrepare[],
+	scenario: string
+) {
+	const debut = Date.now();
+	const rapports: { univers: UniversPrepare; partie: PartieDUnivers; rapport: RapportDImport }[] =
+		[];
+	for (const universPrepare of universPrepares) {
+		for (const partie of universPrepare.parties) {
+			if (partie.cible === null) return { refus: fail(400, { issue: 'domaine-inconnu' }) } as const;
+			const octetsParChemin = new Map(
+				partie.fichiers
+					.filter((f) => f.binaire !== null)
+					.map((f) => [f.chemin, f.binaire as Uint8Array])
+			);
+			const rapport = await executerLImport(
+				prepare.base,
+				moteurPartage(),
+				{
+					domaineId: partie.cible.domaineId,
+					dossierId: partie.cible.id,
+					auteurId: prepare.compteId
+				},
+				partie.plan,
+				{
+					simulation: prepare.simulation,
+					profondeurDeDepart: partie.cible.profondeur,
+					strict: prepare.strict,
+					domaineCible: partie.nom,
+					octetsParChemin,
+					racineDesFichiers: racineDesFichiers(env)
+				}
+			);
+			rapports.push({ univers: universPrepare, partie, rapport });
+			await enregistrerLeLot(
+				prepare.base,
+				entreeDeJournal(
+					{
+						domaineId: partie.cible.domaineId,
+						dossierId: partie.cible.id,
+						auteurId: prepare.compteId
+					},
+					rapport,
+					new Date(),
+					{ scenario, domaine: partie.nom, dureeMs: Date.now() - debut }
+				)
+			);
+		}
+	}
+	return { rapports } as const;
 }
 
 export const actions: Actions = {
@@ -623,6 +759,58 @@ export const actions: Actions = {
 	 */
 	analyser: async ({ locals, request, fetch }) => {
 		const scenario = String((await request.clone().formData()).get('scenario') ?? SCENARIO_LIVRE);
+		if (scenario === SCENARIO_DE_RACINE) {
+			const prepare = await preparerLaRacine(locals, request, fetch, false);
+			if ('refus' in prepare) return prepare.refus;
+			return {
+				issue: 'lot-analyse',
+				lot: {
+					source: prepare.source,
+					fichiers: [
+						...prepare.univers.flatMap((universPrepare) =>
+							universPrepare.parties.flatMap((partie) =>
+								partie.plan.lignes.map((ligne) => ({
+									c: `${universPrepare.nomUnivers}/${partie.nom}/${ligne.chemin}`,
+									f: ligne.format ?? extensionDe(ligne.chemin),
+									o: 0,
+									s: ligne.sort,
+									...(ligne.motif === null ? {} : { m: ligne.motif }),
+									...(estUneMiseAJour(ligne, partie.contenu.notes) ? { maj: true } : {}),
+									...(ligne.titre === null ? {} : { titre: ligne.titre }),
+									ou: [universPrepare.nomUnivers, partie.nom, ...ligne.segments].join(' › ')
+								}))
+							)
+						),
+						...prepare.ignoresRacine.map((fichier) => ({
+							c: fichier.chemin,
+							f: extensionDe(fichier.chemin),
+							o: fichier.octets,
+							s: 'ignore' as const,
+							m: 'racine-sans-univers'
+						}))
+					]
+				},
+				dossiersExistants: prepare.univers.flatMap((universPrepare) =>
+					universPrepare.parties.flatMap((partie) =>
+						partie.cible === null
+							? []
+							: partie.contenu.dossiers.map(
+									(chemin) => `${universPrepare.nomUnivers}/${partie.nom}/${chemin}`
+								)
+					)
+				),
+				domaineACreer: '',
+				universACreer: prepare.univers
+					.filter((universPrepare) => universPrepare.universACreer !== '')
+					.map((universPrepare) => universPrepare.nomUnivers)
+					.join(', '),
+				domainesACreer: prepare.univers.flatMap((universPrepare) =>
+					universPrepare.domainesACreer.map(
+						(nomDomaine) => `${universPrepare.nomUnivers} › ${nomDomaine}`
+					)
+				)
+			};
+		}
 		if (scenario === SCENARIO_D_UNIVERS) {
 			const prepare = await preparerLUnivers(locals, request, fetch, false);
 			if ('refus' in prepare) return prepare.refus;
@@ -689,58 +877,24 @@ export const actions: Actions = {
 	 */
 	importer: async ({ locals, request, fetch }) => {
 		const scenario = String((await request.clone().formData()).get('scenario') ?? SCENARIO_LIVRE);
+		if (scenario === SCENARIO_DE_RACINE) {
+			const prepare = await preparerLaRacine(locals, request, fetch, true);
+			if ('refus' in prepare) return prepare.refus;
+			const execution = await executerLesUnivers(prepare, prepare.univers, scenario);
+			if ('refus' in execution) return execution.refus;
+			return {
+				issue: 'lot-traite',
+				rapport: rapportDeRacine(prepare, execution.rapports)
+			};
+		}
 		if (scenario === SCENARIO_D_UNIVERS) {
 			const prepare = await preparerLUnivers(locals, request, fetch, true);
 			if ('refus' in prepare) return prepare.refus;
-			const debut = Date.now();
-			const rapports: { partie: PartieDUnivers; rapport: RapportDImport }[] = [];
-			for (const partie of prepare.parties) {
-				if (partie.cible === null) return fail(400, { issue: 'domaine-inconnu' });
-				const octetsParChemin = new Map(
-					partie.fichiers
-						.filter((f) => f.binaire !== null)
-						.map((f) => [f.chemin, f.binaire as Uint8Array])
-				);
-				const rapport = await executerLImport(
-					prepare.base,
-					moteurPartage(),
-					{
-						domaineId: partie.cible.domaineId,
-						dossierId: partie.cible.id,
-						auteurId: prepare.compteId
-					},
-					partie.plan,
-					{
-						simulation: prepare.simulation,
-						profondeurDeDepart: partie.cible.profondeur,
-						strict: prepare.strict,
-						domaineCible: partie.nom,
-						octetsParChemin,
-						racineDesFichiers: racineDesFichiers(env)
-					}
-				);
-				rapports.push({ partie, rapport });
-				await enregistrerLeLot(
-					prepare.base,
-					entreeDeJournal(
-						{
-							domaineId: partie.cible.domaineId,
-							dossierId: partie.cible.id,
-							auteurId: prepare.compteId
-						},
-						rapport,
-						new Date(),
-						{
-							scenario,
-							domaine: partie.nom,
-							dureeMs: Date.now() - debut
-						}
-					)
-				);
-			}
+			const execution = await executerLesUnivers(prepare, [prepare], scenario);
+			if ('refus' in execution) return execution.refus;
 			return {
 				issue: 'lot-traite',
-				rapport: rapportDUnivers(prepare, rapports)
+				rapport: rapportDUnivers(prepare, execution.rapports)
 			};
 		}
 		const prepare = await preparerLeLot(locals, request, fetch, true);
@@ -813,6 +967,7 @@ export const actions: Actions = {
 				domaine: prepare.domaine,
 				destination: 'domaine' as const,
 				universCree: false,
+				universCrees: 0,
 				domainesCrees: 0,
 				/* L'ADRESSE VIENT D'ICI, ET DE NULLE PART AILLEURS : un domaine que
 				   `UC-M12-02` vient de créer n'est dans aucune liste servie à
@@ -1052,6 +1207,7 @@ function rapportDUnivers(
 		domaine: prepare.nomUnivers,
 		destination: 'univers' as const,
 		universCree: prepare.universACreer !== '',
+		universCrees: prepare.universACreer === '' ? 0 : 1,
 		domainesCrees: prepare.domainesACreer.length,
 		adresseDuDomaine: adresseDUnivers(prepare.universIdentifiant),
 		enEchec: rapports.flatMap(({ partie, rapport }) =>
@@ -1079,5 +1235,74 @@ function rapportDUnivers(
 				}))
 		),
 		ecrites
+	};
+}
+
+function rapportDeRacine(
+	prepare: {
+		readonly simulation: boolean;
+		readonly source: string;
+		readonly univers: readonly UniversPrepare[];
+		readonly ignoresRacine: readonly FichierDepose[];
+	},
+	rapports: readonly {
+		readonly univers: UniversPrepare;
+		readonly partie: PartieDUnivers;
+		readonly rapport: RapportDImport;
+	}[]
+) {
+	const syntheses = prepare.univers.map((universPrepare) => {
+		const synthese = rapportDUnivers(
+			{ ...universPrepare, simulation: prepare.simulation },
+			rapports.filter((entree) => entree.univers === universPrepare)
+		);
+		return {
+			...synthese,
+			enEchec: synthese.enEchec.map((ligne) => ({
+				...ligne,
+				chemin: `${universPrepare.nomUnivers}/${ligne.chemin}`
+			})),
+			ignoresDetail: synthese.ignoresDetail.map((ligne) => ({
+				...ligne,
+				chemin: `${universPrepare.nomUnivers}/${ligne.chemin}`
+			})),
+			renvoisNonResolus: synthese.renvoisNonResolus.map((ligne) => ({
+				...ligne,
+				chemin: `${universPrepare.nomUnivers}/${ligne.chemin}`
+			})),
+			ecrites: synthese.ecrites.map((ligne) => ({
+				...ligne,
+				ou: `${universPrepare.nomUnivers} › ${ligne.ou}`
+			}))
+		};
+	});
+	const somme = (lire: (synthese: (typeof syntheses)[number]) => number): number =>
+		syntheses.reduce((total, synthese) => total + lire(synthese), 0);
+	return {
+		simulation: prepare.simulation,
+		refuseEnBloc: syntheses.some((synthese) => synthese.refuseEnBloc),
+		total: somme((synthese) => synthese.total) + prepare.ignoresRacine.length,
+		notesCreees: somme((synthese) => synthese.notesCreees),
+		notesMisesAJour: somme((synthese) => synthese.notesMisesAJour),
+		ignores: somme((synthese) => synthese.ignores) + prepare.ignoresRacine.length,
+		echecs: somme((synthese) => synthese.echecs),
+		dossiersCrees: somme((synthese) => synthese.dossiersCrees),
+		relationsCreees: somme((synthese) => synthese.relationsCreees),
+		domaine: prepare.source,
+		destination: 'racine' as const,
+		universCree: false,
+		universCrees: somme((synthese) => synthese.universCrees),
+		domainesCrees: somme((synthese) => synthese.domainesCrees),
+		adresseDuDomaine: '/',
+		enEchec: syntheses.flatMap((synthese) => synthese.enEchec),
+		ignoresDetail: [
+			...prepare.ignoresRacine.map((fichier) => ({
+				chemin: fichier.chemin,
+				motif: 'racine-sans-univers'
+			})),
+			...syntheses.flatMap((synthese) => synthese.ignoresDetail)
+		],
+		renvoisNonResolus: syntheses.flatMap((synthese) => synthese.renvoisNonResolus),
+		ecrites: syntheses.flatMap((synthese) => synthese.ecrites)
 	};
 }

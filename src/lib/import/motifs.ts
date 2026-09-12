@@ -27,7 +27,9 @@ export const LIBELLE_DU_MOTIF: Readonly<Record<string, string>> = {
 	'fichier-endommage': "La structure interne du fichier ne s'ouvre pas : il est endommagé.",
 	'delai-de-conversion-depasse': 'La conversion a dépassé le délai accordé et a été interrompue.',
 	'conversion-absente': "Ce fichier n'a pas été soumis à la conversion.",
-	'contenu-illisible': "Le contenu n'a pas pu être lu comme un document."
+	'contenu-illisible': "Le contenu n'a pas pu être lu comme un document.",
+	'racine-sans-univers':
+		'Fichier placé directement dans le dossier racine, sans univers de destination.'
 };
 
 /**

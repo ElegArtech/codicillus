@@ -758,6 +758,33 @@ export function repartirLesFichiersDUnivers(
 	return groupes;
 }
 
+/**
+ * LES UNIVERS D'UNE RACINE D'APPLICATION. Le dossier maître a déjà été retiré :
+ * chacun de ses dossiers directs porte le nom d'un univers. Les fichiers restés
+ * directement sous cette racine n'ont volontairement aucune destination.
+ */
+export function repartirLesFichiersDeRacine(fichiers: readonly FichierDepose[]): {
+	readonly univers: ReadonlyMap<string, readonly FichierDepose[]>;
+	readonly ignores: readonly FichierDepose[];
+} | null {
+	const univers = new Map<string, FichierDepose[]>();
+	const ignores: FichierDepose[] = [];
+	for (const fichier of fichiers) {
+		const coupe = fichier.chemin.indexOf('/');
+		if (coupe === -1) {
+			ignores.push(fichier);
+			continue;
+		}
+		if (coupe === 0 || coupe === fichier.chemin.length - 1) return null;
+		const nomUnivers = fichier.chemin.slice(0, coupe).trim();
+		if (nomUnivers === '') return null;
+		const groupe = univers.get(nomUnivers) ?? [];
+		groupe.push({ ...fichier, chemin: fichier.chemin.slice(coupe + 1) });
+		univers.set(nomUnivers, groupe);
+	}
+	return { univers, ignores };
+}
+
 export interface LigneDePlan {
 	readonly chemin: string;
 	readonly format: FormatDImport | null;
