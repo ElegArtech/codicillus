@@ -17,7 +17,7 @@
  */
 
 /** L'identifiant d'un scénario — celui des vignettes du gel de V-24. */
-export type ScenarioDImport = 'notes' | 'domaine' | 'univers' | 'prepare';
+export type ScenarioDImport = 'notes' | 'domaine' | 'univers' | 'racine' | 'prepare';
 
 /**
  * LE SCÉNARIO DE BASE — `UC-M12-01`, des notes dans un domaine existant. C'est aussi la
@@ -39,6 +39,9 @@ export const SCENARIO_DE_DOMAINE: ScenarioDImport = 'domaine';
  * l'administrateur, puisque lui seul peut créer ces deux niveaux de rangement.
  */
 export const SCENARIO_D_UNIVERS: ScenarioDImport = 'univers';
+
+/** Un dossier maître dont chaque dossier direct représente un univers. */
+export const SCENARIO_DE_RACINE: ScenarioDImport = 'racine';
 
 /**
  * `UC-M12-03` — un corpus déjà muni de ses métadonnées. Les dix membres d'en-tête
@@ -67,6 +70,7 @@ function estUnScenario(scenario: string): scenario is ScenarioDImport {
 		scenario === 'notes' ||
 		scenario === 'domaine' ||
 		scenario === 'univers' ||
+		scenario === 'racine' ||
 		scenario === 'prepare'
 	);
 }
@@ -80,6 +84,7 @@ export const LIBELLE_DE_SCENARIO: Readonly<Record<ScenarioDImport, string>> = {
 	notes: 'Notes dans un domaine existant',
 	domaine: 'Domaine complet',
 	univers: 'Univers complet',
+	racine: 'Racine de l’application',
 	prepare: 'Dossier dans un emplacement existant'
 };
 
@@ -103,6 +108,11 @@ export const CHOIX_D_IMPORT: readonly {
 		id: SCENARIO_D_UNIVERS,
 		nom: 'Importer un univers',
 		sous: 'Le dossier choisi deviendra un univers ; ses dossiers directs deviendront des domaines.'
+	},
+	{
+		id: SCENARIO_DE_RACINE,
+		nom: 'Importer une racine',
+		sous: 'Chaque dossier direct du dossier choisi sera importé comme un univers.'
 	},
 	{
 		id: SCENARIO_PREPARE,
