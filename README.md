@@ -23,24 +23,39 @@ la console, puis les utilisateurs ajoutent leurs notes.
 
 ## Installer
 
-L'installation utilise Docker Engine et Docker Compose v2 sur Linux. Node.js, PostgreSQL,
-Meilisearch et les outils de conversion sont inclus dans les images.
+Docker Engine et Docker Compose v2.24 ou ultérieur doivent être installés et accessibles.
+Les images fournies sont prévues pour Linux x86-64.
 
-Le [paquet prêt à installer pour Linux x86-64](https://github.com/ElegArtech/codicillus/releases/tag/v1.0.0-rc.1)
-contient les six images Docker et les fichiers nécessaires à une installation hors ligne.
+[![Télécharger Codicillus](docs/telecharger.svg)](https://github.com/ElegArtech/codicillus/releases/download/v1.0.0-rc.2/codicillus-1.0.0-rc.2-compose.tar.gz)
 
-- **[Installation](docs/installation.md)** : configuration, démarrage et premier administrateur.
-- **[Installation hors ligne](docs/hors-ligne.md)** : télécharger le paquet ou préparer les images,
-  les transférer et installer sans accès aux registres ni aux gestionnaires de paquets.
+Le kit contient Compose, la configuration, les outils d'installation et les guides.
+Les images de l'application et de ses services sont téléchargées automatiquement depuis les registres publics.
+
+**Pour être guidé, une seule ligne dans un terminal :**
+
+```sh
+curl -fL https://github.com/ElegArtech/codicillus/releases/download/v1.0.0-rc.2/installer-codicillus.sh -o installer-codicillus.sh && bash installer-codicillus.sh
+```
+
+L'assistant demande l'adresse du site et les informations du premier administrateur, génère les
+secrets techniques, puis démarre les services. Les migrations et la recherche sont préparées
+automatiquement. L'installation est placée dans un nouveau dossier `codicillus/`.
+
+Pour configurer le kit vous-même : extraire l'archive, copier `.env.example` en `.env`, renseigner
+les valeurs indiquées, puis lancer `docker compose up -d --wait`. Aucune construction ni installation
+de Node, Python ou PostgreSQL sur l'hôte n'est nécessaire.
+
+- **[Installation et configuration](docs/installation.md)** : démarrage, HTTPS et construction depuis les sources.
+- **[Installation hors ligne](docs/hors-ligne.md)** : [archive complète avec les images](https://github.com/ElegArtech/codicillus/releases/download/v1.0.0-rc.2/codicillus-1.0.0-rc.2-linux-amd64.tar.gz) pour les serveurs sans Internet.
 - **[Utilisation](docs/utilisation.md)** : organiser le corpus, rédiger et vérifier les notes.
 - **[Exploitation](docs/exploitation.md)** : mises à jour, sauvegardes, restauration et diagnostic.
 
-Le service de conversion bureautique est optionnel. Sans lui, l'import Markdown et texte reste
-accessible. La recherche sémantique n'est pas disponible dans cette version.
+La conversion bureautique est optionnelle. Sans elle, les imports Markdown et texte restent
+accessibles. La recherche sémantique n'est pas disponible dans cette version.
 
 ## État de la version
 
-La version `1.0.0-rc.1` est une préversion de la première version stable. Elle permet d'évaluer
+La version `1.0.0-rc.2` est une préversion de la première version stable. Elle permet d'évaluer
 l'installation et les usages avant une mise en production. La documentation décrit les
 fonctionnalités présentes ; elle ne constitue pas un engagement de support ou de disponibilité.
 

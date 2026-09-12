@@ -11,70 +11,84 @@
 Sur un serveur sans cet accès, suivre [l'installation hors ligne](hors-ligne.md).
 Aucun runtime Node ou Python n'est requis sur le serveur : ils sont embarqués dans les images.
 
-## Installation depuis les sources
+## Installation guidée
 
 ```sh
-git clone https://github.com/ElegArtech/codicillus.git
-cd codicillus
-cp .env.example .env
+curl -fL https://github.com/ElegArtech/codicillus/releases/download/v1.0.0-rc.2/installer-codicillus.sh -o installer-codicillus.sh && bash installer-codicillus.sh
 ```
 
-Configurer `.env` avant de construire ou de démarrer les services. Le fichier utilise le format
-Docker Compose, et n'est pas un script shell : ne pas l'exécuter avec `source`.
+Le script télécharge le kit de cette version, vérifie son empreinte et l'extrait dans un nouveau
+dossier `codicillus/`. Il demande l'adresse du site, les informations du premier administrateur
+et l'activation éventuelle de la conversion bureautique. Les secrets PostgreSQL et Meilisearch
+sont générés localement ; le mot de passe du compte n'est pas affiché pendant la saisie.
+
+Docker doit déjà être installé : le script ne modifie pas les paquets système ni les droits de
+votre compte. Il ne remplace pas une installation existante. Un autre dossier peut être donné :
+`bash installer-codicillus.sh /chemin/vers/codicillus`.
+
+## Installation avec le kit Compose
+
+Le [kit Compose](https://github.com/ElegArtech/codicillus/releases/download/v1.0.0-rc.2/codicillus-1.0.0-rc.2-compose.tar.gz)
+contient tous les fichiers d'installation, sans les images. Il est également possible de télécharger
+son fichier `.sha256` depuis la release, puis de le vérifier avec `sha256sum --check`.
+
+```sh
+tar -xzf codicillus-1.0.0-rc.2-compose.tar.gz
+cd codicillus-1.0.0-rc.2-compose
+bash outils/configurer.sh
+```
+
+Pour gérer la configuration manuellement, remplacer la dernière commande par :
+
+```sh
+cp .env.example .env
+# Renseigner .env, puis :
+docker compose up -d --wait
+```
+
+Le fichier `.env` utilise le format Docker Compose : ne pas l'exécuter avec `source`.
 
 | Variable | Usage |
 |---|---|
-| `MDP_POSTGRES` | Mot de passe du compte PostgreSQL, sans valeur fournie par défaut |
+| `MDP_POSTGRES` | Mot de passe PostgreSQL, sans valeur par défaut |
 | `CLE_MAITRE_RECHERCHE` | Clé Meilisearch, au moins 16 octets |
 | `ADMIN_IDENTIFIANT` | Identifiant du premier administrateur |
 | `ADMIN_NOM` | Nom affiché du premier administrateur |
 | `ADMIN_COURRIEL` | Courriel du premier administrateur |
 | `MDP_ADMINISTRATEUR` | Mot de passe du premier administrateur, au moins 12 caractères |
 | `ADRESSE_SITE` | Adresse du site écoutée par Caddy |
-| `ORIGINE_PUBLIQUE` | Origine exacte vue par le navigateur, avec le port s'il n'est pas standard |
+| `ORIGINE_PUBLIQUE` | Origine exacte vue par le navigateur, avec le port éventuel |
+| `COMPOSE_PROFILES` | `conversion` pour activer la conversion bureautique ; vide sinon |
 
-Générer deux secrets distincts pour PostgreSQL et Meilisearch, par exemple avec
-`openssl rand -hex 32`. Utiliser des guillemets simples autour d'une valeur contenant `$`, `#`,
-un espace ou un antislash. Ne jamais versionner `.env`.
+Générer deux secrets distincts pour PostgreSQL et Meilisearch, par exemple avec `openssl rand -hex 32`.
+Les valeurs d'exemple ouvrent `http://localhost:19080`. Pour un accès depuis un autre poste,
+configurer le nom ou l'adresse du serveur dans `ADRESSE_SITE` et `ORIGINE_PUBLIQUE` ; pour un usage
+sur le réseau, configurer HTTPS selon la section suivante. Ne jamais versionner `.env`.
 
-Les valeurs d'adressage fournies ouvrent `http://localhost:19080`, depuis la machine qui héberge
-Docker. Cet accès HTTP local permet un premier essai. Pour un usage sur le réseau, configurer
-HTTPS selon la section suivante.
+Les images versionnées sont publiques sur GitHub Container Registry. Ni compte GitHub ni connexion
+à un registre ne sont nécessaires pour les télécharger. `MODE_IMAGES=missing` télécharge une image
+absente ; `MODE_IMAGES=never` interdit tout téléchargement pour le parcours hors ligne.
 
-Construire les trois images du projet et charger les trois images de services :
+## Premier démarrage
 
-```sh
-docker compose -f compose.yaml -f compose.construction.yaml build app gestion conversion
-docker compose pull --policy always db recherche frontal
-```
+`docker compose up -d --wait` démarre PostgreSQL et Meilisearch, puis le service ponctuel
+`initialisation`. Celui-ci applique les migrations, crée le premier administrateur si aucun compte
+n'existe et prépare l'index. L'application démarre seulement après son succès.
 
-Le fichier `compose.yaml` exécute uniquement des images déjà présentes. Les téléchargements
-ci-dessus sont explicites ; un démarrage ordinaire ne télécharge et ne construit aucune image.
+Une installation neuve ne contient aucun univers, domaine ou contenu de démonstration.
+Ouvrir l'adresse publique, se connecter, puis suivre [les premiers pas](utilisation.md).
 
-## Initialiser une instance vide
+Retirer `ADMIN_IDENTIFIANT`, `ADMIN_NOM`, `ADMIN_COURRIEL` et `MDP_ADMINISTRATEUR` de `.env`
+après le premier démarrage. Les démarrages suivants conservent les comptes et leurs mots de passe,
+même si ces variables ont changé. Les comptes suivants se créent dans **Console → Comptes**.
 
-```sh
-docker compose up -d --wait db recherche
-docker compose run --rm gestion base:migrer
-docker compose run --rm gestion base:administrateur
-docker compose run --rm gestion base:reindexer
-docker compose --profile conversion up -d --wait
-```
-
-Pour démarrer sans conversion bureautique, utiliser `docker compose up -d --wait` à la dernière
-étape. Le profil `gestion` sert uniquement aux commandes ponctuelles ; il ne lance pas un service
-permanent.
-
-Ouvrir l'adresse indiquée par `ORIGINE_PUBLIQUE`, se connecter avec le compte créé, puis suivre
-[les premiers pas](utilisation.md). Aucun univers, domaine ou contenu de démonstration n'a été ajouté.
-
-Retirer les quatre variables `ADMIN_*` et `MDP_ADMINISTRATEUR` de `.env` après la création du compte.
-La commande de création refuse une instance qui possède déjà un compte. Les comptes suivants
-se créent dans **Console → Comptes**.
+Si l'initialisation échoue, lire `docker compose logs initialisation`, corriger `.env`, puis
+relancer `docker compose up -d --wait`. Le service `initialisation` terminé avec un code 0 est
+normal : il ne s'agit pas d'un serveur permanent.
 
 ## HTTPS
 
-Caddy termine HTTPS. L'application est exposée directement uniquement sur la boucle locale.
+Caddy termine HTTPS. Seuls les ports du frontal sont publiés ; les autres services restent dans le réseau Docker.
 L'adresse publique doit correspondre exactement à `ORIGINE_PUBLIQUE`, faute de quoi les envois
 de formulaires peuvent être refusés.
 
@@ -128,6 +142,25 @@ L'adresse Caddy et l'origine du navigateur sont distinctes lorsque le port de l'
 par exemple `ADRESSE_SITE=https://notes.example.org`, `PORT_HTTPS=19443` et
 `ORIGINE_PUBLIQUE=https://notes.example.org:19443`.
 
+## Construire les images depuis les sources
+
+Ce parcours sert au développement ou à une construction personnalisée. L'installation standard
+utilise directement les images publiées.
+
+```sh
+git clone https://github.com/ElegArtech/codicillus.git
+cd codicillus
+cp .env.example .env
+# Renseigner .env, puis :
+docker compose -f compose.yaml -f compose.construction.yaml build app gestion conversion
+docker compose up -d --wait
+```
+
+La construction requiert Git et l'accès aux registres Docker, npm, PyPI, aux dépôts Debian et à GitHub.
+`bash outils/preparer-compose.sh` produit un kit sans images ; `bash outils/preparer-hors-ligne.sh`
+exporte les images publiées. Ajouter `--construire` à cette dernière commande pour construire les
+images depuis les sources locales avant de les exporter.
+
 ## Exécution locale avec Node
 
 Pour travailler sur les sources, utiliser Node 24.19 ou ultérieur dans la branche 24 et pnpm 11.22.0.
@@ -135,13 +168,12 @@ Les services PostgreSQL et Meilisearch restent nécessaires.
 
 ```sh
 pnpm install --frozen-lockfile
-docker compose up -d --wait db recherche
-pnpm base:migrer
-pnpm base:administrateur
-pnpm base:reindexer
+docker compose -f compose.yaml -f compose.developpement.yaml up -d --wait db recherche
+pnpm base:initialiser
 pnpm dev
 ```
 
+Le fichier `compose.developpement.yaml` publie les ports des services sur la boucle locale.
 Le fichier `.env` fournit aussi les paramètres du développement local. `RACINE_FICHIERS` désigne
 un dossier inscriptible, distinct du volume Docker. Ouvrir l'adresse imprimée par Vite, par défaut
 `http://localhost:5173`. La conversion nécessite le service `conversion` et `URL_CONVERSION`.

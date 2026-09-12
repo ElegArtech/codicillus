@@ -12,20 +12,20 @@ paquet système ou de l'image système autorisés dans votre organisation.
 
 ### Télécharger le paquet prêt à installer
 
-Depuis la [préversion v1.0.0-rc.1](https://github.com/ElegArtech/codicillus/releases/tag/v1.0.0-rc.1),
+Depuis la [préversion v1.0.0-rc.2](https://github.com/ElegArtech/codicillus/releases/tag/v1.0.0-rc.2),
 télécharger ces deux fichiers dans le même dossier :
 
-- `codicillus-1.0.0-rc.1-linux-amd64.tar.gz` : le paquet complet pour Linux x86-64 ;
-- `codicillus-1.0.0-rc.1-linux-amd64.tar.gz.sha256` : son empreinte SHA-256.
+- `codicillus-1.0.0-rc.2-linux-amd64.tar.gz` : le paquet complet pour Linux x86-64 ;
+- `codicillus-1.0.0-rc.2-linux-amd64.tar.gz.sha256` : son empreinte SHA-256.
 
 Vérifier puis extraire l'archive :
 
 ```sh
-sha256sum --check codicillus-1.0.0-rc.1-linux-amd64.tar.gz.sha256
-tar -xzf codicillus-1.0.0-rc.1-linux-amd64.tar.gz
+sha256sum --check codicillus-1.0.0-rc.2-linux-amd64.tar.gz.sha256
+tar -xzf codicillus-1.0.0-rc.2-linux-amd64.tar.gz
 ```
 
-Le dossier `codicillus-1.0.0-rc.1/` est prêt à transférer. Continuer à l'étape 2 :
+Le dossier `codicillus-1.0.0-rc.2/` est prêt à transférer. Continuer à l'étape 2 :
 aucune construction d'image n'est nécessaire.
 
 ### Ou construire le paquet depuis les sources
@@ -36,9 +36,9 @@ Cloner les sources de la version voulue, puis exécuter :
 bash outils/preparer-hors-ligne.sh
 ```
 
-Le script construit les images de Codicillus, de gestion et de conversion, récupère PostgreSQL,
+Le script récupère les images publiées de Codicillus, de gestion, de conversion, PostgreSQL,
 Meilisearch et Caddy, puis exporte les six images dans
-`dist/codicillus-1.0.0-rc.1/images.tar`. Il ne copie ni `.env`, ni les données de votre instance.
+`dist/codicillus-1.0.0-rc.2/images.tar`. Il ne copie ni `.env`, ni les données de votre instance.
 
 Le dossier contient aussi Compose, les fichiers de configuration nécessaires, les guides,
 les scripts d'exploitation, les notices de licence et les sources de la version de Pandoc livrée.
@@ -55,7 +55,8 @@ Un autre dossier de sortie peut être donné en argument :
 bash outils/preparer-hors-ligne.sh /chemin/vers/un-nouveau-paquet
 ```
 
-Le script utilise les paramètres d'exemple pour la construction, indépendamment des secrets locaux.
+Ajouter `--construire` pour construire les images depuis les sources locales. Le script utilise
+les paramètres d'exemple, indépendamment des secrets locaux.
 Si la machine connectée utilise elle-même un proxy, configurer le proxy du daemon Docker et
 celui des constructions selon la politique de l'organisation. Ne pas intégrer d'identifiants de
 proxy dans les images ni dans le paquet transféré.
@@ -76,10 +77,13 @@ cp .env.example .env
 ```
 
 Le chargement vérifie les empreintes puis exécute `docker image load`. Il ne contacte aucun registre.
-Pour générer les deux secrets sans installer OpenSSL ou Node sur le serveur :
+Pour une configuration guidée, exécuter `bash outils/configurer.sh` après le chargement des images,
+au lieu de copier et remplir `.env` manuellement.
+
+Pour générer les deux secrets manuellement sans installer OpenSSL ou Node sur le serveur :
 
 ```sh
-docker run --rm --pull never --network none --entrypoint node   codicillus/app:1.0.0-rc.1   -e "const c=require('node:crypto'); console.log(c.randomBytes(32).toString('hex')); console.log(c.randomBytes(32).toString('hex'))"
+docker run --rm --pull never --network none --entrypoint node   ghcr.io/elegartech/codicillus:1.0.0-rc.2   -e "const c=require('node:crypto'); console.log(c.randomBytes(32).toString('hex')); console.log(c.randomBytes(32).toString('hex'))"
 ```
 
 Reporter les valeurs dans `MDP_POSTGRES` et `CLE_MAITRE_RECHERCHE`, puis remplir les paramètres du
@@ -96,15 +100,11 @@ des services internes ne sont pas publiés : utiliser `docker compose exec` pour
 ## 4. Initialiser et démarrer
 
 ```sh
-docker compose up -d --wait db recherche
-docker compose run --rm gestion base:migrer
-docker compose run --rm gestion base:administrateur
-docker compose run --rm gestion base:reindexer
 docker compose --profile conversion up -d --wait
 ```
 
-La composition ne contient aucune instruction de construction et chaque service utilise
-`pull_policy: never`. Une image manquante provoque une erreur locale ; Compose ne tente pas de
+La composition ne contient aucune instruction de construction et le paquet configure
+`MODE_IMAGES=never`. Une image manquante provoque une erreur locale ; Compose ne tente pas de
 la télécharger. Les commandes de gestion utilisent les paquets déjà inclus dans leur image.
 
 Ouvrir le site, se connecter, puis créer le premier univers et le premier domaine dans la console.
