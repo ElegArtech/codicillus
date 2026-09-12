@@ -1,14 +1,34 @@
 # Installation sans accès à Internet
 
-L'installation se fait en deux étapes : préparer les images sur une machine connectée, puis
-transférer le paquet complet sur le serveur cible. Ce serveur n'a besoin ni d'un accès à npm ou
+L'installation se fait en deux étapes : télécharger le paquet ou construire les images sur une
+machine connectée, puis transférer le paquet complet sur le serveur cible. Ce serveur n'a besoin ni d'un accès à npm ou
 PyPI, ni d'un accès à Docker Hub, ni de Node ou Python installés sur l'hôte.
 
 Docker Engine, Docker Compose v2.24 ou ultérieur, Bash, tar et les outils GNU usuels, dont
 `sha256sum`, doivent déjà être installés sur la machine cible. Leur installation relève du
 paquet système ou de l'image système autorisés dans votre organisation.
 
-## 1. Préparer sur la machine connectée
+## 1. Obtenir le paquet sur la machine connectée
+
+### Télécharger le paquet prêt à installer
+
+Depuis la [préversion v1.0.0-rc.1](https://github.com/ElegArtech/codicillus/releases/tag/v1.0.0-rc.1),
+télécharger ces deux fichiers dans le même dossier :
+
+- `codicillus-1.0.0-rc.1-linux-amd64.tar.gz` : le paquet complet pour Linux x86-64 ;
+- `codicillus-1.0.0-rc.1-linux-amd64.tar.gz.sha256` : son empreinte SHA-256.
+
+Vérifier puis extraire l'archive :
+
+```sh
+sha256sum --check codicillus-1.0.0-rc.1-linux-amd64.tar.gz.sha256
+tar -xzf codicillus-1.0.0-rc.1-linux-amd64.tar.gz
+```
+
+Le dossier `codicillus-1.0.0-rc.1/` est prêt à transférer. Continuer à l'étape 2 :
+aucune construction d'image n'est nécessaire.
+
+### Ou construire le paquet depuis les sources
 
 Cloner les sources de la version voulue, puis exécuter :
 
