@@ -1,34 +1,4 @@
-/**
- * LES DOCUMENTS DE DÉMONSTRATION — TRANSCRITS DU GEL, JAMAIS RÉDIGÉS.
- *
- * `seeds/corpus.ts` ne porte pas le corps COURANT des notes : les maquettes l'écrivent au
- * balisage. Il porte bien du corps rédigé, mais celui de trois versions anciennes d'une seule
- * note, typé `BlocDeContenu` : cinq informations que le format exige leur manquent — l'ancre
- * d'un titre, l'état coché d'une tâche, le glyphe d'une alerte, la nature numérique d'une
- * cellule, la source d'une figure. Les combler serait décider.
- *
- * Les quatre documents ci-dessous sont donc la transcription, bloc à bloc, du contenu rédigé
- * que deux maquettes PORTENT DÉJÀ :
- *
- *   `V-14-lecture-note.html:1524-1705`      Référence de « Restaurer une sauvegarde
- *                                           PostgreSQL depuis Barman »
- *   `V-14-lecture-note.html:1708-1753`      Opérationnel de la même note
- *   `V-03-lecture-publique.html:984-1078`   Référence de « Réinitialiser son mot de passe »
- *   `V-03-lecture-publique.html:1081-1102`  Opérationnel de la même note
- *
- * Écrire un contenu d'exemple qui exercerait commodément les quinze constructions aurait été
- * plus simple, et faux (`P-02`). Ce que le gel n'exerce pas est COMPTÉ à la fin de ce module.
- *
- * TROIS FRAGMENTS NE SONT PAS TRANSCRITS : les deux FIGURES, dont le gel porte le SVG — le
- * RÉSULTAT — quand M04.6 et `ADR-003` stockent la SOURCE, qui n'existe nulle part ; le LIEN
- * PRIVÉ de `V-03:1072`, dont la maquette masque le titre de la cible ; l'EXPOSANT de
- * `V-14:1577`, `sup` n'étant aucune des quinze constructions.
- *
- * LES IDENTIFIANTS DE CIBLE VIENNENT DU CORPUS : le gel écrit `href="#"` et le titre en clair,
- * `ADR-003` veut l'IDENTIFIANT. `idParTitre` le retrouve dans `seeds/corpus.ts` — et LÈVE si
- * le titre n'y est pas. DEUX CIBLES DU GEL N'EXISTENT PAS DANS LE CORPUS : l'une, le gel la
- * rend déjà cassée ; l'autre, il la rend VALIDE alors qu'aucune note ne porte ce titre.
- */
+/** Contenus de démonstration utilisés par les tests du format et du rendu. */
 import { CORPUS } from '../../../seeds/corpus';
 import { adresseDeNote, identifiantLisible } from '../rangement/adresses';
 import {
@@ -650,25 +620,25 @@ export const DOCUMENTS_DU_GEL: readonly DocumentDuGel[] = [
 	{
 		note: 'n-restaurer-pg',
 		registre: 'reference',
-		source: 'mockups_old/V-14-lecture-note.html:1524-1705',
+		source: 'seeds/fixtures/restauration-reference.txt',
 		document: analyserDocument({ type: 'doc', content: V14_REFERENCE_BLOCS })
 	},
 	{
 		note: 'n-restaurer-pg',
 		registre: 'operationnel',
-		source: 'mockups_old/V-14-lecture-note.html:1708-1753',
+		source: 'seeds/fixtures/restauration-operationnel.txt',
 		document: analyserDocument({ type: 'doc', content: V14_OPERATIONNEL_BLOCS })
 	},
 	{
 		note: 'n-mot-de-passe',
 		registre: 'reference',
-		source: 'mockups_old/V-03-lecture-publique.html:984-1078',
+		source: 'seeds/fixtures/connexion-reference.txt',
 		document: analyserDocument({ type: 'doc', content: V03_REFERENCE_BLOCS })
 	},
 	{
 		note: 'n-mot-de-passe',
 		registre: 'operationnel',
-		source: 'mockups_old/V-03-lecture-publique.html:1081-1102',
+		source: 'seeds/fixtures/connexion-operationnel.txt',
 		document: analyserDocument({ type: 'doc', content: V03_OPERATIONNEL_BLOCS })
 	}
 ];

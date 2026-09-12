@@ -1,1 +1,0 @@
-import {readdir,unlink} from 'node:fs/promises';import {fermerInstance} from '../preparer.mjs';for(const f of await readdir('/tmp/codicillus_recette9_mtv40vd1'))if(/^l3_p.*\.json$/.test(f)){try{await fermerInstance('/tmp/codicillus_recette9_mtv40vd1/'+f);}catch(e){console.log(f,e.message.split('\n')[0]);}await unlink('/tmp/codicillus_recette9_mtv40vd1/'+f);}

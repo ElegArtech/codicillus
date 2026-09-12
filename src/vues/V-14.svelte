@@ -1,36 +1,4 @@
 <script lang="ts">
-	/**
-	 * V-14 — LECTURE D'UNE NOTE. Route `/notes/{identifiant}`.
-	 *
-	 * L'ÉCRAN CŒUR DU PRODUIT, refondu sur le prototype validé du 5 septembre 2026
-	 * (`design_handoff_refonte_codicillus/`, § 5 et `SPEC-vivacite.md`).
-	 *
-	 * L'ORDRE VERTICAL DU DOCUMENT NE SE DISCUTE PAS : sélecteur de registre, ligne
-	 * de vivacité, titre, étiquettes, métadonnées, résumé, sections. À gauche le
-	 * sommaire, à droite la colonne de contexte ; sous les seuils du socle, l'un
-	 * disparaît et l'autre devient un tiroir — la vue ne mesure aucune largeur, elle
-	 * marque ses deux colonnes et laisse `src/socle.css` décider.
-	 *
-	 * ELLE NE CALCULE AUCUNE VIVACITÉ. L'état, les deux libellés, la position sur la
-	 * frise, le rappel : tout sort de `vivacite()` (`$lib/fraicheur.ts`), appelée par
-	 * le chargeur pour CHAQUE registre. Écrire ici « dans 67 jours » serait le second
-	 * calcul que `P-01` interdit.
-	 *
-	 * LE REGISTRE EST UN ÉTAT D'ADRESSE, PAS UN ÉTAT LOCAL. Les deux onglets sont des
-	 * LIENS vers `?registre=…` : le serveur sert alors le bon corps, le bon sommaire
-	 * ET la bonne vivacité, et « tout ce qui parle de vivacité parle du registre
-	 * affiché » est vrai sans une ligne de script. Sans JavaScript, la bascule marche.
-	 *
-	 * LES GESTES SONT CÂBLÉS DEPUIS LA ROUTE (`ARB-063`,
-	 * `src/routes/notes/{identifiant}/cablage.ts`). NE RENOMME NI NE RETIRE ce que ces
-	 * câblages visent : `#btn-verifier`, `#btn-reviser`, `#btn-lever`, les libellés
-	 * « Modifier la référence », « Modifier l'opérationnel », « Exporter »,
-	 * « Imprimer », « Supprimer ». Renommer débranche le geste sans erreur de
-	 * compilation.
-	 *
-	 * AUCUNE RÈGLE DE STYLE N'EST ÉCRITE ICI (P-1, ADR-002) : `src/socle.css` et
-	 * `src/vues/V-14.css`.
-	 */
 	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import type { Notification } from '$lib/coquille/notifications';

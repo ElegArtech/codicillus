@@ -1,9 +1,0 @@
-{
-  "id": "PAR-054",
-  "aiguilles": 111,
-  "textes": 10,
-  "instantanes_dom": 111,
-  "trouvees": [],
-  "trace": "docs/traces/recette-personas/PAR-054/fr-FR/reprise-finale/trace.zip",
-  "mesure": "Texte des captures et instantanés DOM enregistrés, hors contenu des balises script/style."
-}

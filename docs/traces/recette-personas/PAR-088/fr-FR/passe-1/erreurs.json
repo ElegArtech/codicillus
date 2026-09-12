@@ -1,7 +1,0 @@
-[
-  {
-    "type": "requestfailed",
-    "url": "http://127.0.0.1:5588/notes/recette-interne/historique/__data.json?comparer=1&x-sveltekit-invalidated=01",
-    "texte": "net::ERR_ABORTED"
-  }
-]

@@ -1,24 +1,4 @@
 <script lang="ts">
-	/**
-	 * PileDeNotifications — la famille A-8, UN SEUL composant, DEUX ÉTATS GELÉS.
-	 *
-	 * POURQUOI CE COMPOSANT EXISTE — ARB-028. Un seul des 409 états des 41 maquettes rend
-	 * une bulle hors de V-38 : `V-06 · cpt-inconnu`, gelée AVANT la refonte `flex` →
-	 * `grid`. L'ordre de préséance — Maquettes > CDC > Brief > Pile > Plan — tranche : V-06
-	 * RÉGIT V-06. Ce que la décision N'AUTORISE PAS, et c'est la moitié qui compte : DEUX
-	 * composants — `docs/DESIGN.md` §3.7 point 7 reste entier.
-	 *
-	 * CE QUI DIVERGE : les deux socles en ligne ne diffèrent QUE par leur section 9. V-06
-	 * ne connaît que `.notifs`, `.notif` et `.notif--succes` — ni `max-width`, ni
-	 * `pointer-events`, ni grille, ni aucun `.notif__*`. LES RÈGLES SONT REMPLACÉES, PAS
-	 * ÉTENDUES, alors que `docs/DESIGN.md` §0.2 dit le socle « strictement plus riche » et
-	 * « emboîté » : c'est faux pour CETTE famille. Le balisage diverge autant — le
-	 * `notifier()` de V-06 fait `n.textContent = txt` et s'arrête là.
-	 *
-	 * CE QUE LA VARIANTE NE FAIT PAS : elle ne surcharge pas le socle (P-6.2 interdirait de
-	 * redéclarer `.notif`), et elle ne s'ouvre pas — une troisième valeur exigerait une
-	 * troisième maquette.
-	 */
 	import type { Notification, TypeNotification, VarianteDeNotification } from './notifications';
 
 	const {

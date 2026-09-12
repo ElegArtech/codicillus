@@ -93,16 +93,7 @@
 	const AU_BALISAGE = ARRIVEES['protegee'] as Contexte;
 
 	const arrivee = $derived(typeof vecteur?.arrivee === 'string' ? vecteur.arrivee : 'protegee');
-	/**
-	 * LE REFUS L'EMPORTE SUR L'ARRIVÉE, et il fallait qu'il l'emporte : une
-	 * identification refusée rendait `401`, la page se réaffichait à l'identique,
-	 * les champs vidés, et RIEN ne le disait. Le gel a les deux messages —
-	 * `mockups/V-05-connexion.html:697` et `:712` — et il les écrit dans ce même
-	 * bloc de contexte.
-	 *
-	 * Les mots sont ceux du gel, à la lettre. `RG-ACC-04` tient : un seul message
-	 * quelle que soit la cause, et aucun marquage d'un champ plutôt que de l'autre.
-	 */
+
 	const contexte = $derived(refus ?? ARRIVEES[arrivee] ?? null);
 	/** Masqué, mais toujours présent, et avec le contenu que le balisage porte. */
 	const affiche = $derived(contexte ?? AU_BALISAGE);

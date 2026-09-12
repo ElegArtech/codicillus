@@ -15,22 +15,6 @@
  */
 import type { TraitDePictogramme } from '../console/sections';
 
-/**
- * LES TRENTE-DEUX GLYPHES D'UNIVERS, dans la boîte de vue 24.
- *
- * CE FICHIER EST LE SEUL CATALOGUE. Le sélecteur de la console (V-27) en tenait
- * une COPIE, et les deux dessins d'`engrenage` avaient divergé : le rail et la
- * page d'univers rendaient une ROUE DENTÉE que la console ne proposait nulle part
- * — elle y offrait un soleil à branches (`mockups/V-27-console-univers.html:3248`).
- * Un univers portait donc une icône introuvable dans le formulaire qui l'avait
- * posée. La roue dentée est retenue, parce que c'est elle qui est PORTÉE PAR DES
- * UNIVERS EXISTANTS : la changer les repeindrait tous. V-27 lit cette table.
- *
- * Les six premières restent celles d'origine. Les vingt-six suivantes couvrent
- * l'infrastructure, le travail et la vie courante. Chacune doit se distinguer des
- * autres À 19 PIXELS, la taille du sélecteur : c'est là que deux silhouettes
- * voisines deviennent le même dessin.
- */
 export const GLYPHES_DUNIVERS: Readonly<Record<string, readonly TraitDePictogramme[]>> = {
 	pile: [
 		{ forme: 'rect', x: '3', y: '4', largeur: '18', hauteur: '5', rx: '1.5' },

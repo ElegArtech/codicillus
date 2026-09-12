@@ -1,20 +1,3 @@
-/**
- * LE JEU DE CONFORMITÉ — les données du prototype validé, et rien d'autre.
- *
- * Les neuf captures de `design_handoff_refonte_codicillus/captures/` montrent un corpus précis :
- * six univers, soixante-dix-sept notes, une répartition d'états qui donne « 77 notes dans votre
- * bibliothèque, dont 65 sont actuellement à jour ». Sans ces données en base, un écran du produit
- * et sa capture ne sont pas comparables : on mesurerait des écarts de contenu en croyant mesurer
- * des écarts de dessin.
- *
- * CE N'EST PAS LA VÉRITÉ DU PRODUIT. C'est un jeu de démonstration de plus, au même titre que
- * `corpus.ts` et `demonstration.ts` — aucune de ses valeurs ne doit finir servie comme un fait de
- * l'instance. Le produit commence VIDE, et chaque écran se vérifie aussi à zéro donnée.
- *
- * Extrait de `design_handoff_refonte_codicillus/reference/logique-prototype.js` : `ARBRE`,
- * `REPARTITION`, `IC_UNIVERS`, `DESCRIPTIONS`, `DESC_DOMAINES`.
- */
-
 /** Les cinq états, dans l'ordre des compteurs. */
 export type EtatSeme = 'ajour' | 'bientot' | 'averifier' | 'arevoir' | 'obsolete';
 

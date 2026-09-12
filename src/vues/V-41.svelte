@@ -1,44 +1,4 @@
 <script lang="ts">
-	/**
-	 * V-41 — Bibliothèque de composants. La planche de référence du système visuel,
-	 * et la seule vue qui montre l'inventaire fermé de `docs/DESIGN.md` §2 sur une
-	 * page réelle.
-	 *
-	 * L'ENVELOPPE VIENT DU GABARIT (`ARB-023`) : `div.biblio` est une grille
-	 * `208px minmax(0,1fr)` (`V-41:1460`) dont la première cellule est le sommaire
-	 * et la seconde `<main class="corps-b" id="corps">`. Sans elle, `main` passe de
-	 * 456 / 984 à 248 / 1060. `cibleEvitement` n'est PAS passée : `#corps` est
-	 * l'identifiant du `<main>` de cette vue, seul le libellé lui est propre.
-	 *
-	 * LA FRAÎCHEUR VIENT DE L'IMPLÉMENTATION UNIQUE — `$lib/fraicheur.ts`
-	 * (`ADR-005`) : aucune comparaison de seuil, aucun libellé, aucun décompte de
-	 * barres n'est écrit ici.
-	 *
-	 * LES ÉCHANTILLONS TYPOGRAPHIQUES NE COÏNCIDENT PLUS AVEC LE CORPUS : quatre
-	 * fragments illustrent un rendu et non une donnée, et portaient les noms du jeu
-	 * de démonstration. Ce sont des exemples, comme « lorem ipsum » — ils disent
-	 * désormais ce qu'ils sont (`Domaine`, `Sous-dossier`, `srv-exemple-01`).
-	 *
-	 * TOUTES LES DONNÉES VIENNENT DU CHARGEUR : les trois notes d'exemple sont les
-	 * PREMIÈRES de chaque niveau dans l'ordre reçu, la barre de répartition compte
-	 * les notes du premier domaine servi, l'arborescence se déduit de leur
-	 * rangement, la chronologie lit le flux d'activité servi. Exception faite des
-	 * trois indicateurs chiffrés, littéraux dans la maquette gelée.
-	 *
-	 * LA PAGE RESTE SERVIE EN PRODUCTION, et c'est le point (`STACK-TECHNIQUE.md`
-	 * §4.1, risque `R-06`) : une planche sortie du produit construit cesse d'être
-	 * une référence.
-	 *
-	 * Le style est dans `src/socle.css` et `src/vues/V-41.css` ; les quatre-vingt-neuf
-	 * valeurs de `style` reproduites appartiennent à l'ensemble clos du gel.
-	 *
-	 * LES RÉGIONS SONT SOUSTRAITES AU FORMATEUR : la maquette construit tout le
-	 * corps en script, et le DOM de référence ne porte AUCUN nœud d'espacement
-	 * entre éléments. Un blanc réintroduit se lit dans le `textContent` sur lequel
-	 * le nom accessible se construit, et se voit au pixel entre deux éléments en
-	 * ligne. Chaque `section.famille` est donc précédée de la directive du
-	 * formateur, dans la forme exacte qu'il reconnaît.
-	 */
 	import type {
 		Domaine,
 		EtatDInstance,

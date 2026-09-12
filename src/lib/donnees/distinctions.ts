@@ -41,13 +41,6 @@ import { formaterDateCourteFr } from '../dates';
 import { compterLesVerifications } from './profil';
 import type { Distinction, MesureDeDistinction } from '../../../seeds/corpus';
 
-/**
- * LES SIX PALIERS, tels que `mockups/V-25-profil.html:2506` les dessine. Le barème est
- * repris du gel et n'est pas rouvert ici : ce module le SERT, il ne le décide pas.
- *
- * Le type vient de `seeds/corpus.ts` — un type, jamais une valeur (`eslint.config.js`) :
- * `seeds/` porte les formes du domaine, et c'est sa donnée qui est de la démonstration.
- */
 export const BAREME_DES_DISTINCTIONS: readonly Distinction[] = [
 	{
 		id: 'premier',
