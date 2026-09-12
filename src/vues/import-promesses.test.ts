@@ -110,6 +110,26 @@ function borneServie(
  */
 const SOCLE_V24: Proprietes = {
 	domaines: DOMAINES,
+	destinationsOuEcrire: [
+		{
+			univers: 'zone-q',
+			universNom: 'Zone Q',
+			domaine: 'contrats',
+			domaineNom: 'Contrats',
+			chemin: '',
+			libelle: 'Zone Q › Contrats',
+			niveau: 'domaine'
+		},
+		{
+			univers: 'zone-q',
+			universNom: 'Zone Q',
+			domaine: 'contrats',
+			domaineNom: 'Contrats',
+			chemin: 'prestataires',
+			libelle: 'Zone Q › Contrats › Prestataires',
+			niveau: 'dossier'
+		}
+	],
 	/* `UC-M12-02` — deux univers d'accueil, donc le scénario « domaine complet » est
 	   OFFERT sous ce socle. Le cas de la liste vide est joué à part. */
 	universOuCreerUnDomaine: [
@@ -150,13 +170,14 @@ describe('les libellés de format — le jeu de démonstration recopie le produi
 	});
 });
 
-describe('V-24 — l’étape 1 offre les quatre scénarios exécutés', () => {
-	it('rend les quatre résultats possibles', () => {
+describe('V-24 — l’import part de deux gestes simples', () => {
+	it('ne présente que la note et le dossier, pas les scénarios techniques', () => {
 		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
-		expect(rendu).toContain('Importer des notes dans un domaine existant');
-		expect(rendu).toContain('Importer un domaine complet');
-		expect(rendu).toContain('Importer un univers complet');
-		expect(rendu).toContain('Importer un corpus préparé');
+		expect(rendu).toContain('Importer une note');
+		expect(rendu).toContain('Importer un dossier');
+		expect(rendu).not.toContain('Importer un domaine complet');
+		expect(rendu).not.toContain('Importer un univers complet');
+		expect(rendu).not.toContain('Importer un corpus préparé');
 	});
 
 	it('n’a plus aucun scénario en retrait', () => {
@@ -167,20 +188,15 @@ describe('V-24 — l’étape 1 offre les quatre scénarios exécutés', () => {
 		expect(SCENARIO_LIVRE).toBe('notes');
 	});
 
-	it('RETIRE « domaine complet » à qui ne peut pas créer de domaine — P-09', () => {
-		/* Le droit s'éprouve sur l'UNIVERS, la cible n'existant pas encore. Sans
-		   univers d'accueil servi, l'offre n'est pas rendue : une action interdite
-		   n'est pas dessinée, et l'action la refuse par ailleurs. */
-		const rendu = corps('V-24', { ...SOCLE_V24, universOuCreerUnDomaine: [], vecteur: null });
-		expect(rendu).toContain('Importer des notes dans un domaine existant');
-		expect(rendu).toContain('Importer un corpus préparé');
-		expect(rendu).not.toContain('Importer un domaine complet');
-	});
-
-	it('RETIRE « univers complet » à qui ne peut pas créer un univers', () => {
-		const rendu = corps('V-24', { ...SOCLE_V24, peutCreerUnUnivers: false, vecteur: null });
-		expect(rendu).not.toContain('Importer un univers complet');
-		expect(rendu).toContain('Importer un domaine complet');
+	it('n’offre aucune destination interdite', () => {
+		const rendu = corps('V-24', {
+			...SOCLE_V24,
+			peutCreerUnUnivers: false,
+			universOuCreerUnDomaine: [],
+			vecteur: { et: '2' }
+		});
+		expect(rendu).not.toContain('Racine de Codicillus — créer un univers');
+		expect(rendu).not.toContain('Univers — créer un domaine');
 	});
 
 	it('porte la case du mode strict, que RG-M12-03 exige et qu’aucune maquette n’offre', () => {
@@ -192,43 +208,24 @@ describe('V-24 — l’étape 1 offre les quatre scénarios exécutés', () => {
 		expect(borneServie(rendu, 'champ-strict', 'label').ouvrante).not.toContain('hidden');
 	});
 
-	it('n’offre chaque champ de cible que sous son scénario', () => {
-		/* Les trois champs de l'étape 2 sont ceux du gel, et leur condition
-		   d'affichage est celle de `rendreDepot()` (`V-24:2923`) — à ceci près que le
-		   domaine de destination sert DEUX scénarios : `UC-M12-01` et `UC-M12-03` y
-		   rangent tous deux leurs notes. La planche rend le scénario de base. */
+	it('réunit toutes les granularités dans un seul sélecteur hiérarchique', () => {
 		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
-		expect(borneServie(rendu, 'champ-domaine', 'div').ouvrante).not.toContain('hidden');
-		expect(borneServie(rendu, 'champ-nom-domaine', 'div').ouvrante).toContain('hidden');
-		expect(borneServie(rendu, 'champ-simulation', 'label').ouvrante).toContain('hidden');
+		expect(rendu).toContain('destination-import');
+		expect(rendu).toContain('Zone Q › Contrats');
+		expect(rendu).toContain('Zone Q › Contrats › Prestataires');
+		expect(rendu).not.toContain('Nom du domaine à créer');
 	});
 
-	it('redemande le nom du domaine à créer, et son univers d’accueil', () => {
-		/* « Nom du domaine à créer * » était OBLIGATOIRE à l'écran et n'était lu
-		   nulle part : le champ avait été retiré. Il est remis, et il est LU —
-		   `destinationDuLot()` en fait le nom du domaine qu'elle crée. L'univers,
-		   lui, n'est dans aucune maquette : un domaine appartient à un univers
-		   (`RG-STR-02`), et rien d'autre à l'écran ne dit lequel. */
+	it('explique le niveau produit à partir de la destination', () => {
 		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
-		expect(rendu).toContain('Nom du domaine à créer');
-		expect(rendu).toContain('nom-domaine');
-		expect(rendu).toContain('univers-cible');
-		expect(rendu).toContain('Zone Q');
+		expect(rendu).toContain('Où faut-il le ranger');
+		expect(rendu).toContain('Choisissez une destination pour voir le rangement obtenu');
 	});
 
-	it('promet de nouveau la résolution automatique des liens, et la tient', () => {
-		/* La promesse avait été RETIRÉE parce que rien ne la tenait : un renvoi était
-		   relevé, consigné, jamais résolu — la clé ne nommait pas le type de relation.
-		   `relations:` le nomme, la seconde passe crée la relation, et le rapport la
-		   compte. La phrase du gel peut revenir. */
-		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
-		expect(rendu).toContain('liens entre documents sont résolus automatiquement');
-	});
-
-	it('n’invite plus à déposer une archive, que le classement écarte', () => {
+	it('demande un seul fichier pour une note', () => {
 		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
-		expect(rendu).toContain('Glissez un dossier ici');
-		expect(rendu).not.toContain('Glissez un dossier ou une archive ici');
+		expect(rendu).toContain('Glissez une note ici');
+		expect(rendu).toContain('Choisir une note');
 	});
 
 	it('le scénario livré reste celui de l’étape 2 de la planche', () => {
@@ -329,7 +326,9 @@ const LOT_NU: LotDImport = {
 const SOCLE_NU: Proprietes = {
 	notes: [],
 	domaines: [],
+	destinationsOuEcrire: [],
 	universOuCreerUnDomaine: [],
+	peutCreerUnUnivers: true,
 	lotImport: LOT_NU,
 	formatsImport: LIBELLE_PAR_FORMAT,
 	domaineParDefaut: ''
