@@ -76,6 +76,9 @@
 		readonly nomDuDomaine: string;
 		readonly universDAccueil: string;
 		readonly nomDeLUnivers: string;
+		readonly cibleUnivers: string;
+		readonly cibleDomaine: string;
+		readonly cibleChemin: string;
 		readonly simulation: boolean;
 		/** `RG-M12-03` — refuser le lot entier si une ligne échoue. */
 		readonly strict: boolean;
@@ -132,6 +135,9 @@
 		corps.append('nom-domaine', reglages.nomDuDomaine);
 		corps.append('univers-cible', reglages.universDAccueil);
 		corps.append('nom-univers', reglages.nomDeLUnivers);
+		corps.append('cible-univers', reglages.cibleUnivers);
+		corps.append('cible-domaine', reglages.cibleDomaine);
+		corps.append('cible-chemin', reglages.cibleChemin);
 		if (reglages.simulation) corps.append('simulation', 'oui');
 		if (reglages.strict) corps.append('strict', 'oui');
 		for (const f of fichiers) corps.append('fichiers', f, cheminDuFichier(f));
@@ -230,6 +236,7 @@
 	vecteur={data.vecteur}
 	notes={data.notes}
 	domaines={data.domainesOuEcrire}
+	destinationsOuEcrire={data.destinationsOuEcrire}
 	universOuCreerUnDomaine={data.universOuCreerUnDomaine}
 	peutCreerUnUnivers={data.peutCreerUnUnivers}
 	lotImport={data.lotImport}
