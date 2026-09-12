@@ -34,6 +34,7 @@
 	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
 	import {
 		SCENARIO_DE_DOMAINE,
+		SCENARIO_D_UNIVERS,
 		SCENARIO_LIVRE,
 		SCENARIO_PREPARE,
 		scenarioEstLivre,
@@ -65,6 +66,8 @@
 		 * d'administration, et une action interdite n'est pas rendue (`P-09`).
 		 */
 		universOuCreerUnDomaine: readonly { readonly identifiant: string; readonly nom: string }[];
+		/** Seul l'administrateur peut créer le niveau supérieur du rangement. */
+		peutCreerUnUnivers: boolean;
 		/** Le compte connecté. Absente, un compte VIDE — jamais celui du jeu. */
 		compte?: CompteAffiche | null;
 		lotImport: LotDImport;
@@ -121,6 +124,8 @@
 		 * déjà un de ce nom. L'aperçu l'annonce ; rien n'a encore été écrit.
 		 */
 		readonly domaineACreer: string;
+		readonly universACreer: string;
+		readonly domainesACreer: readonly string[];
 	}
 
 	/** Ce que le dépôt règle, et que les deux appels transportent. */
@@ -134,6 +139,7 @@
 		/** `UC-M12-02` — le nom du domaine à créer, et l'univers qui l'accueille. */
 		readonly nomDuDomaine: string;
 		readonly universDAccueil: string;
+		readonly nomDeLUnivers: string;
 		readonly simulation: boolean;
 		/** `RG-M12-03` — refuser le lot entier si une ligne échoue. */
 		readonly strict: boolean;
@@ -155,6 +161,9 @@
 		/** `RG-M12-03` — les relations créées par les renvois déclarés. */
 		readonly relationsCreees: number;
 		readonly domaine: string;
+		readonly destination: 'domaine' | 'univers';
+		readonly universCree: boolean;
+		readonly domainesCrees: number;
 		/** L'adresse du domaine visé, composée par le serveur : lui seul connaît
 		    l'identifiant persisté d'un domaine que l'import vient de créer. */
 		readonly adresseDuDomaine: string;
@@ -180,6 +189,7 @@
 		univers = [],
 		domaines,
 		universOuCreerUnDomaine,
+		peutCreerUnUnivers,
 		compte = null,
 		lotImport,
 		formatsImport,
@@ -221,9 +231,12 @@
 	let domaineRetenu = $state('');
 	/** `UC-M12-02` — le nom saisi, et l'univers d'accueil retenu. */
 	let nomDuDomaine = $state('');
+	let nomDeLUnivers = $state('');
 	let universRetenu = $state('');
 	/** Le domaine que l'aperçu annonce comme à créer, ou la chaîne vide. */
 	let domaineACreer = $state('');
+	let universACreer = $state('');
+	let domainesACreer = $state<readonly string[]>([]);
 	/** Le motif du dernier refus serveur, en code. `null` : aucun refus en cours. */
 	let refus = $state<string | null>(null);
 
@@ -252,11 +265,9 @@
 	);
 	const depose = $derived(vivant ? fichiers.length > 0 : etape >= 3);
 
-	/* Le scénario offert — `SCENARIOS` (`V-24:2871`), transcrit de la maquette.
+	/* Le scénario offert — les trois cas du gel, complétés par l'univers entier.
 	   L'illustration est en segments plutôt qu'en balisage : le gel l'injecte par
-	   `innerHTML`. LE GEL EN DESSINE TROIS, L'IMPORT N'EN EXÉCUTE QU'UN : le choix
-	   des deux autres ne partait nulle part et le lot atterrissait dans le domaine
-	   par défaut. N'offre que ce que `scenarioEstLivre()` reconnaît. */
+	   `innerHTML`. N'offre que ce que `scenarioEstLivre()` reconnaît. */
 
 	interface SegmentIllustre {
 		readonly gras: boolean;
@@ -266,6 +277,7 @@
 		readonly id: ScenarioDImport;
 		readonly nom: string;
 		readonly txt: string;
+		readonly resultat: string;
 		readonly illus: readonly SegmentIllustre[];
 	}
 
@@ -279,6 +291,7 @@
 			id: SCENARIO_LIVRE,
 			nom: 'Importer des notes dans un domaine existant',
 			txt: "Vos fichiers rejoignent un domaine déjà en place. L'arborescence des dossiers de votre disque devient l'arborescence des dossiers du domaine, à l'identique.",
+			resultat: 'Des notes ajoutées à un domaine existant',
 			illus: [
 				{
 					gras: false,
@@ -294,6 +307,7 @@
 			id: SCENARIO_DE_DOMAINE,
 			nom: 'Importer un domaine complet',
 			txt: "Le dossier de premier niveau devient un nouveau domaine, et tout ce qu'il contient s'y range. À choisir quand vous reprenez un périmètre entier d'un coup.",
+			resultat: 'Un domaine créé dans un univers existant',
 			illus: [
 				{ gras: false, texte: 'Contrats/\n  Prestataires/\n    Infogérance.docx\n\n→ ' },
 				{ gras: true, texte: 'Contrats' },
@@ -303,9 +317,29 @@
 			]
 		},
 		{
+			id: SCENARIO_D_UNIVERS,
+			nom: 'Importer un univers complet',
+			txt: 'Le dossier de premier niveau devient l’univers. Chacun de ses dossiers directs devient un domaine, avec toute son arborescence et ses notes. C’est le choix adapté à une reprise complète ou à une première installation.',
+			resultat: 'Un univers créé avec tous ses domaines',
+			illus: [
+				{
+					gras: false,
+					texte:
+						'Exploitation/\n  Contrats/\n    Prestataires/\n      Infogérance.docx\n  Réseau/\n    Plan.md\n\n→ '
+				},
+				{ gras: true, texte: 'Exploitation' },
+				{ gras: false, texte: ' (univers)\n   ├ ' },
+				{ gras: true, texte: 'Contrats' },
+				{ gras: false, texte: ' (domaine)\n   └ ' },
+				{ gras: true, texte: 'Réseau' },
+				{ gras: false, texte: ' (domaine)' }
+			]
+		},
+		{
 			id: SCENARIO_PREPARE,
 			nom: 'Importer un corpus préparé',
 			txt: 'Pour des fichiers déjà munis de leurs métadonnées — titre, étiquettes, relations. Les liens entre documents sont résolus automatiquement, et relancer le même import ne crée pas de doublons.',
+			resultat: 'Des notes et leurs métadonnées restaurées',
 			illus: [
 				{
 					gras: false,
@@ -336,8 +370,9 @@
 		SCENARIOS.filter(
 			(s) =>
 				scenarioEstLivre(s.id) &&
+				(s.id !== SCENARIO_D_UNIVERS || peutCreerUnUnivers) &&
 				(s.id !== SCENARIO_DE_DOMAINE || universOuCreerUnDomaine.length > 0) &&
-				(s.id === SCENARIO_DE_DOMAINE || domaines.length > 0)
+				(s.id === SCENARIO_DE_DOMAINE || s.id === SCENARIO_D_UNIVERS || domaines.length > 0)
 		)
 	);
 
@@ -353,10 +388,11 @@
 	const sansDomaineOuDeposer = $derived(domaines.length === 0);
 
 	/** Le geste qui débloque, nommé — même forme que les messages d'amorçage. */
-	const AMORCAGE_SANS_DOMAINE =
-		'Aucun domaine n’existe encore sur cette instance : il n’y a nulle part où déposer des notes. ' +
-		'Créez un domaine dans la console — /console/domaines — ou reprenez-en un d’un coup ci-dessous, ' +
-		'avec « Importer un domaine complet ».';
+	const AMORCAGE_SANS_DOMAINE = $derived(
+		SCENARIOS_OFFERTS.some((scenario) => scenario.id === SCENARIO_DE_DOMAINE)
+			? 'Aucun domaine n’existe encore sur cette instance : il n’y a nulle part où déposer des notes. Créez un domaine dans la console — /console/domaines — ou reprenez-en un d’un coup ci-dessous, avec « Importer un domaine complet ».'
+			: 'Cette instance est encore vide. Reprenez toute votre structure ci-dessous avec « Importer un univers complet » : l’univers, ses domaines, ses dossiers et ses notes seront créés ensemble.'
+	);
 
 	/**
 	 * LE MÊME FAIT, QUAND MÊME « Importer un domaine complet » N'EST PAS OFFERT : sans
@@ -370,8 +406,8 @@
 	/** La phrase d'introduction s'accorde au nombre de scénarios réellement offerts. */
 	const INTRODUCTION_DES_SCENARIOS = $derived(
 		SCENARIOS_OFFERTS.length === 1
-			? 'Une manière de faire entrer l’existant est disponible sur cette instance. Confirmez qu’elle décrit votre situation — la structure de vos fichiers sera reprise telle quelle.'
-			: `${SCENARIOS_OFFERTS.length} manières de faire entrer l’existant sont disponibles sur cette instance. Choisissez celle qui décrit votre situation — la structure de vos fichiers sera reprise telle quelle.`
+			? 'Une possibilité est disponible. Choisissez-la si le résultat annoncé correspond à ce que vous voulez obtenir.'
+			: 'Choisissez le résultat que vous voulez obtenir. Le schéma à droite montre exactement comment vos dossiers seront transformés.'
 	);
 
 	const scenarioCourant = $derived(SCENARIOS_OFFERTS.find((s) => s.id === scenarioChoisi) ?? null);
@@ -444,7 +480,11 @@
 			"Vous n'avez pas le droit d'écrire dans ce domaine. Rien n'a été déposé.",
 		'lot-vide': 'Aucun fichier n’est parti. Reprenez le dépôt et relancez.',
 		'scenario-non-livre':
-			'Ce scénario d’import n’est pas exécuté par cette instance. Rien n’a été déposé : seul l’import de notes dans un domaine existant est disponible.',
+			'Ce scénario d’import n’est pas exécuté par cette instance. Rien n’a été déposé.',
+		'structure-univers-invalide':
+			'La structure ne permet pas de reconnaître un univers. Choisissez un dossier racine contenant au moins un dossier direct par domaine.',
+		'univers-deja-present':
+			'Un univers porte déjà ce nom, mais il n’a pas pu être repris. Vérifiez son nom puis relancez.',
 		'erreur-serveur':
 			"Le serveur n'a pas rendu de réponse lisible. Ce qu'il a fait du lot n'est pas connu d'ici : rouvrez le domaine de destination avant de relancer."
 	};
@@ -591,7 +631,13 @@
 		}
 		return total;
 	}
-	const nombreDeDossiers = $derived(compterDossiers(arborescence));
+	const nombreDeDossiers = $derived(
+		Math.max(
+			0,
+			compterDossiers(arborescence) -
+				(scenarioChoisi === SCENARIO_D_UNIVERS ? domainesACreer.length : 0)
+		)
+	);
 
 	/** Un niveau dans l'ordre alphabétique — `Object.keys(a).sort()` du gel. */
 	function niveauTrie(niveau: readonly NoeudDuLot[]): NoeudDuLot[] {
@@ -606,14 +652,20 @@
 
 	/** La structure annoncée. Seul `UC-M12-02` crée un domaine, et seulement quand
 	    il n'en existe pas déjà un de ce nom — un réimport le réécrit. */
-	const creations = $derived(
-		domaineACreer === ''
-			? [[nombreDeDossiers, 'dossiers créés'] as const]
-			: [
-					[1, `domaine créé — ${domaineACreer}`] as const,
-					[nombreDeDossiers, 'dossiers créés'] as const
-				]
-	);
+	const creations = $derived.by(() => {
+		const lignes: [number, string][] = [];
+		if (universACreer !== '') lignes.push([1, `univers créé — ${universACreer}`]);
+		if (domainesACreer.length > 0) {
+			lignes.push([
+				domainesACreer.length,
+				`${accord(domainesACreer.length, 'domaine créé', 'domaines créés')} — ${domainesACreer.join(', ')}`
+			]);
+		} else if (domaineACreer !== '') {
+			lignes.push([1, `domaine créé — ${domaineACreer}`]);
+		}
+		lignes.push([nombreDeDossiers, 'dossiers créés']);
+		return lignes;
+	});
 
 	const ecartes = $derived(LOT.fichiers.filter((f) => f.s === 'ignore'));
 
@@ -690,7 +742,9 @@
 					? 'Lancer la simulation'
 					: "Lancer l'import"
 				: ouvrirLeDomaine
-					? 'Ouvrir le domaine'
+					? rapport?.destination === 'univers'
+						? 'Ouvrir l’univers'
+						: 'Ouvrir le domaine'
 					: 'Continuer'
 	);
 
@@ -698,6 +752,7 @@
 	   en est le seul juge. */
 
 	let champDeFichiers: HTMLInputElement | undefined = $state();
+	let champDeDossier: HTMLInputElement | undefined = $state();
 	let zoneDeDepot: HTMLElement | undefined = $state();
 
 	/**
@@ -739,6 +794,7 @@
 		domaine: domaineCible,
 		nomDuDomaine,
 		universDAccueil: universCible,
+		nomDeLUnivers,
 		simulation: simulationRetenue,
 		strict: strictRetenu
 	});
@@ -767,6 +823,8 @@
 		lotAnalyse = null;
 		dossiersExistants = [];
 		domaineACreer = '';
+		universACreer = '';
+		domainesACreer = [];
 		rapport = null;
 		refus = null;
 	}
@@ -778,6 +836,11 @@
 	function parcourir(): void {
 		if (!vivant) return;
 		champDeFichiers?.click();
+	}
+
+	function parcourirUnDossier(): void {
+		if (!vivant) return;
+		champDeDossier?.click();
 	}
 
 	function surChoixDeFichiers(evenement: Event): void {
@@ -806,6 +869,8 @@
 				lotAnalyse = issue.valeur.lot;
 				dossiersExistants = issue.valeur.dossiersExistants;
 				domaineACreer = issue.valeur.domaineACreer;
+				universACreer = issue.valeur.universACreer;
+				domainesACreer = issue.valeur.domainesACreer;
 				etapeLocale = 3;
 			} finally {
 				enCours = false;
@@ -846,6 +911,8 @@
 		lotAnalyse = null;
 		dossiersExistants = [];
 		domaineACreer = '';
+		universACreer = '';
+		domainesACreer = [];
 		rapport = null;
 		refus = null;
 		sourceDuLot = '';
@@ -874,9 +941,10 @@
 		><span class="scen__marque" aria-hidden="true"></span
 		><span
 			><h2 class="scen__nom">{s.nom}</h2
-			><p class="scen__txt">{s.txt}</p></span
-		><span class="scen__illus"
-			>{#each s.illus as seg, k (k)}{#if seg.gras}<b>{seg.texte}</b>{:else}{seg.texte}{/if}{/each}</span
+			><p class="scen__txt">{s.txt}</p
+			><span class="scen__resultat"><b>Résultat</b>{s.resultat}</span></span
+		><span class="scen__exemple"><span>Exemple</span><span class="scen__illus"
+			>{#each s.illus as seg, k (k)}{#if seg.gras}<b>{seg.texte}</b>{:else}{seg.texte}{/if}{/each}</span></span
 		></button
 	>{/snippet}
 
@@ -958,22 +1026,25 @@
 				règle l'exige, et une règle sans déclencheur n'est pas tenue. Il est posé
 				au choix du scénario parce qu'il gouverne le lot entier, pas son dépôt.
 			-->
-			<label class="case" id="champ-strict" style="margin-top:var(--e-5)">
-				<input
-					type="checkbox"
-					id="strict"
-					checked={strictRetenu}
-					onchange={(e) => (strictRetenu = (e.currentTarget as HTMLInputElement).checked)}
-				/>
-				<span class="case__txt"
-					>Refuser le lot entier si une ligne échoue
-					<span class="case__aide"
-						>Le lot est traité jusqu'au bout et son rapport est produit, puis tout est annulé si un
-						fichier a échoué ou si un renvoi ne désigne rien. Sans cette case, les fichiers en échec
-						sont simplement consignés et le reste entre.</span
-					>
-				</span>
-			</label>
+			<details class="options-import">
+				<summary>Options avancées</summary>
+				<label class="case" id="champ-strict">
+					<input
+						type="checkbox"
+						id="strict"
+						checked={strictRetenu}
+						onchange={(e) => (strictRetenu = (e.currentTarget as HTMLInputElement).checked)}
+					/>
+					<span class="case__txt"
+						>Refuser le lot entier si une ligne échoue
+						<span class="case__aide"
+							>Le lot est traité jusqu'au bout et son rapport est produit, puis tout est annulé si
+							un fichier a échoué ou si un renvoi ne désigne rien. Sans cette case, les fichiers en
+							échec sont simplement consignés et le reste entre.</span
+						>
+					</span>
+				</label>
+			</details>
 		</section>
 
 		<!-- ============ ÉTAPE 2 — Dépôt ============ -->
@@ -1001,11 +1072,15 @@
 				-->
 				<h3>Glissez un dossier ici</h3>
 				<p>
-					L'arborescence est conservée. Vous pouvez aussi parcourir vos fichiers si vous préférez.
+					L'arborescence est conservée. Pour un domaine ou un univers complet, partez du dossier qui
+					porte son nom.
 				</p>
-				<button class="btn btn--principal" id="parcourir" onclick={parcourir}
-					>Parcourir mes fichiers</button
-				>
+				<div class="depot__actions">
+					<button class="btn btn--principal" id="parcourir-dossier" onclick={parcourirUnDossier}
+						>Choisir un dossier</button
+					>
+					<button class="btn" id="parcourir" onclick={parcourir}>Choisir des fichiers</button>
+				</div>
 				<!-- Le gel ne porte pas de champ de fichiers : `#parcourir` y est un bouton
 					nu. Le champ est donc posé ici, CACHÉ, et seulement quand le parcours est
 					vivant. -->
@@ -1015,6 +1090,13 @@
 						hidden
 						bind:this={champDeFichiers}
 						onchange={surChoixDeFichiers}
+					/><input
+						type="file"
+						multiple
+						webkitdirectory={true}
+						hidden
+						bind:this={champDeDossier}
+						onchange={surChoixDeFichiers}
 					/>{/if}
 				<!-- prettier-ignore -->
 				<div class="formats-admis" id="formats-admis"
@@ -1023,10 +1105,14 @@
 			</div>
 
 			<div class="reglages-depot">
-				<!-- LE DOMAINE DE DESTINATION EXISTE DÉJÀ POUR DEUX SCÉNARIOS SUR TROIS :
+				<!-- LE DOMAINE DE DESTINATION EXISTE DÉJÀ POUR DEUX SCÉNARIOS SUR QUATRE :
 					`UC-M12-01` le choisit, `UC-M12-03` y range un corpus préparé. Seul
 					`UC-M12-02` n'en a pas, puisqu'il le crée. -->
-				<div class="champ" id="champ-domaine" hidden={scenarioChoisi === SCENARIO_DE_DOMAINE}>
+				<div
+					class="champ"
+					id="champ-domaine"
+					hidden={scenarioChoisi === SCENARIO_DE_DOMAINE || scenarioChoisi === SCENARIO_D_UNIVERS}
+				>
 					<label class="champ__label" for="domaine-cible"
 						>Domaine de destination <span class="oblig">*</span></label
 					>
@@ -1035,6 +1121,23 @@
 						>{#if depotTraverse}{#each domaines as d (d.nom)}<option
 							value={d.nom} selected={d.nom === domaineCible}>{d.univers + ' › ' + d.nom}</option
 						>{/each}{/if}</select
+					>
+				</div>
+				<div class="champ" id="champ-nom-univers" hidden={scenarioChoisi !== SCENARIO_D_UNIVERS}>
+					<label class="champ__label" for="nom-univers"
+						>Nom de l’univers à créer <span class="champ__facultatif">facultatif</span></label
+					>
+					<input
+						class="saisie"
+						type="text"
+						id="nom-univers"
+						style="max-width:380px"
+						value={nomDeLUnivers}
+						oninput={(e) => (nomDeLUnivers = (e.currentTarget as HTMLInputElement).value)}
+					/>
+					<span class="champ__aide"
+						>Vous pouvez laisser ce champ vide si le dossier choisi porte déjà le bon nom. Ses
+						dossiers directs deviendront les domaines de l’univers.</span
 					>
 				</div>
 				<!--
@@ -1049,7 +1152,7 @@
 				-->
 				<div class="champ" id="champ-nom-domaine" hidden={scenarioChoisi !== SCENARIO_DE_DOMAINE}>
 					<label class="champ__label" for="nom-domaine"
-						>Nom du domaine à créer <span class="oblig">*</span></label
+						>Nom du domaine à créer <span class="champ__facultatif">facultatif</span></label
 					>
 					<input
 						class="saisie"
@@ -1252,7 +1355,7 @@
 				>{/if}<section class="section-rapport"
 					><span class="etiq">{rapportSimule ? 'Structure qui serait créée' : 'Structure créée'}</span
 					><div class="section-rapport__cadre" style="padding:var(--e-3) var(--e-4);font-size:var(--t-petit)"
-						>{`${rapport.dossiersCrees} ${accord(rapport.dossiersCrees, 'dossier')} ${auFuturSiSimule(rapport, accord(rapport.dossiersCrees, 'créé'), accord(rapport.dossiersCrees, 'serait créé', 'seraient créés'))} dans le domaine ${rapport.domaine}.`}{#if rapport.relationsCreees}{` ${rapport.relationsCreees} ${accord(rapport.relationsCreees, 'relation')} ${auFuturSiSimule(rapport, accord(rapport.relationsCreees, 'créée', 'créées'), accord(rapport.relationsCreees, 'serait créée', 'seraient créées'))} par les renvois déclarés.`}{/if}</div
+						>{#if rapport.destination === 'univers'}{`${rapport.universCree ? '1 univers créé, ' : ''}${rapport.domainesCrees} ${accord(rapport.domainesCrees, 'domaine créé', 'domaines créés')} et ${rapport.dossiersCrees} ${accord(rapport.dossiersCrees, 'dossier créé', 'dossiers créés')} dans l’univers ${rapport.domaine}.`}{:else}{`${rapport.dossiersCrees} ${accord(rapport.dossiersCrees, 'dossier')} ${auFuturSiSimule(rapport, accord(rapport.dossiersCrees, 'créé'), accord(rapport.dossiersCrees, 'serait créé', 'seraient créés'))} dans le domaine ${rapport.domaine}.`}{/if}{#if rapport.relationsCreees}{` ${rapport.relationsCreees} ${accord(rapport.relationsCreees, 'relation')} ${auFuturSiSimule(rapport, accord(rapport.relationsCreees, 'créée', 'créées'), accord(rapport.relationsCreees, 'serait créée', 'seraient créées'))} par les renvois déclarés.`}{/if}</div
 					></section
 				><section class="section-rapport"
 					><span class="etiq">{intituleDesNotes(rapport)}</span
@@ -1264,7 +1367,7 @@
 							><span class="note-creee__nom">{n.titre}</span
 							><span class="note-creee__ou">{n.ou}</span></a
 						>{/if}{/each}{#if rapport.ecrites.length > 8}<div style="padding:var(--e-2);font-size:var(--t-mini);color:var(--c-encre-3)"
-							>{`et ${rapport.ecrites.length - 8} ${accord(rapport.ecrites.length - 8, 'autre')} — la liste complète est dans le domaine.`}</div
+							>{`et ${rapport.ecrites.length - 8} ${accord(rapport.ecrites.length - 8, 'autre')} — la liste complète est dans ${rapport.destination === 'univers' ? 'l’univers' : 'le domaine'}.`}</div
 						>{/if}</div
 					></section
 				>{/if}</div

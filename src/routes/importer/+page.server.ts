@@ -40,14 +40,17 @@ import {
 	sansLePremierNiveau,
 	sonderLeServiceDeConversion,
 	sourceDuLot,
-	type FichierDepose
+	type FichierDepose,
+	type PlanDImport,
+	type RapportDImport
 } from '$lib/donnees/import';
 import {
 	SCENARIO_DE_DOMAINE,
+	SCENARIO_D_UNIVERS,
 	SCENARIO_LIVRE,
 	scenarioEstLivre
 } from '$lib/donnees/scenarios-d-import';
-import { creerUnDomaine } from '$lib/donnees/administration';
+import { creerUnDomaine, creerUnUnivers } from '$lib/donnees/administration';
 import { lireUnivers } from '$lib/donnees/lecture';
 import {
 	droitEffectif,
@@ -60,7 +63,7 @@ import {
 	type AccesAuRangement
 } from '$lib/donnees/rangement';
 import { moteurPartage } from '$lib/recherche/acces';
-import { adresseDeDomaine, adresseDeNote } from '$lib/rangement/adresses';
+import { adresseDeDomaine, adresseDeNote, adresseDUnivers } from '$lib/rangement/adresses';
 import { estUneMiseAJour } from './reprise';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
@@ -106,7 +109,7 @@ async function importateur(locals: App.Locals): Promise<{
 	   d'accueil — sans lui, il n'y a rien où créer le domaine, et le refus nomme le
 	   geste qui débloque. */
 	const universDAccueil = peutCreerUnDomaine ? await lireUnivers(base) : [];
-	if (!dansUnDomaine && universDAccueil.length === 0) {
+	if (!dansUnDomaine && universDAccueil.length === 0 && !peutCreerUnDomaine) {
 		/* LE CODE RESTE 404 — SEULE LA PHRASE CHANGE, ET POUR UN SEUL CAS. Une
 		   instance à zéro univers n'a aucune racine de domaine : l'administrateur qui
 		   vient d'installer tombait sur un 404 nu, sans savoir que ce qui manque est
@@ -146,6 +149,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		/* `UC-M12-02` — les univers d'accueil du domaine à créer, et le droit de le
 		   faire. La vue n'offre le scénario que si la liste n'est pas vide. */
 		universOuCreerUnDomaine: universDAccueil,
+		peutCreerUnUnivers: peutCreerUnDomaine,
 		/* Le domaine proposé au dépôt : le premier où l'appelant a le droit d'écrire.
 		   Il n'est pas « son » domaine — un compte peut n'avoir aucun droit d'écriture
 		   sur celui auquel il est rattaché —, et le proposer quand même ferait choisir
@@ -440,6 +444,134 @@ async function destinationDuLot(
  * ferait deux domaines créés le même jour de deux teintes sans raison.
  */
 const COULEUR_DE_DOMAINE_IMPORTE = '#453ba0';
+const COULEUR_DUNIVERS_IMPORTE = '#24485c';
+const GLYPHE_DUNIVERS_IMPORTE = 'dossiers';
+
+interface PartieDUnivers {
+	readonly nom: string;
+	readonly plan: PlanDImport;
+	readonly fichiers: readonly FichierDepose[];
+	readonly cible: CibleDuLot | null;
+	readonly contenu: Awaited<ReturnType<typeof contenuDeLaCible>>;
+}
+
+/**
+ * Préparer un univers complet. La forme attendue est volontairement simple : un dossier
+ * racine pour l'univers, puis un dossier direct par domaine. Les niveaux suivants sont
+ * les dossiers et les fichiers qui deviendront des notes.
+ */
+async function preparerLUnivers(
+	locals: App.Locals,
+	request: Request,
+	fetch: typeof globalThis.fetch,
+	ecrire: boolean
+) {
+	const { base, acces, compteId, peutCreerUnDomaine } = await importateur(locals);
+	if (!peutCreerUnDomaine)
+		return { refus: fail(403, { issue: 'sans-droit-sur-la-cible' }) } as const;
+	const champs = await request.formData();
+	const simulation = champs.get('simulation') !== null;
+	const strict = champs.get('strict') !== null;
+	const deposesBruts = await deposes(champs);
+	if (deposesBruts.length === 0) return { refus: fail(400, { issue: 'lot-vide' }) } as const;
+
+	const source = sourceDuLot(deposesBruts);
+	if (source === SOURCE_SANS_DOSSIER) {
+		return { refus: fail(400, { issue: 'structure-univers-invalide' }) } as const;
+	}
+	const nomSaisi = String(champs.get('nom-univers') ?? '').trim();
+	const nomUnivers = nomSaisi || source;
+	let universCible = await universParNom(base, nomUnivers);
+	const universACreer = universCible === null ? nomUnivers : '';
+	if (universCible === null && ecrire) {
+		const verdict = await creerUnUnivers(base, {
+			nom: nomUnivers,
+			description: '',
+			couleur: COULEUR_DUNIVERS_IMPORTE,
+			glyphe: GLYPHE_DUNIVERS_IMPORTE,
+			ordre: Number.POSITIVE_INFINITY
+		});
+		if (verdict.issue !== 'possible') {
+			return { refus: fail(400, { issue: 'univers-deja-present' }) } as const;
+		}
+		universCible = await universParNom(base, nomUnivers);
+	}
+
+	const sousLaRacine = sansLePremierNiveau(deposesBruts);
+	const groupes = new Map<string, FichierDepose[]>();
+	for (const fichier of sousLaRacine) {
+		const coupe = fichier.chemin.indexOf('/');
+		if (coupe <= 0 || coupe === fichier.chemin.length - 1) {
+			return { refus: fail(400, { issue: 'structure-univers-invalide' }) } as const;
+		}
+		const nomDomaine = fichier.chemin.slice(0, coupe).trim();
+		const chemin = fichier.chemin.slice(coupe + 1);
+		const groupe = groupes.get(nomDomaine) ?? [];
+		groupe.push({ ...fichier, chemin });
+		groupes.set(nomDomaine, groupe);
+	}
+	if (groupes.size === 0) {
+		return { refus: fail(400, { issue: 'structure-univers-invalide' }) } as const;
+	}
+
+	const service = await sonderLeServiceDeConversion(fetch, env['URL_CONVERSION']);
+	const pris = new Set(await identifiantsPris(base));
+	const parties: PartieDUnivers[] = [];
+	const domainesACreer: string[] = [];
+	for (const [nomDomaine, fichiers] of groupes) {
+		let cible =
+			universCible === null
+				? null
+				: await racineDuDomaineDansUnivers(base, universCible.identifiant, nomDomaine);
+		const domaineManquant = cible === null;
+		if (cible === null && ecrire && universCible !== null) {
+			const verdict = await creerUnDomaine(base, {
+				nom: nomDomaine,
+				description: '',
+				univers: universCible.identifiant,
+				couleur: COULEUR_DE_DOMAINE_IMPORTE,
+				modules: ['notes', 'dossiers']
+			});
+			if (verdict.issue !== 'possible') {
+				return { refus: fail(400, { issue: 'domaine-deja-present' }) } as const;
+			}
+			cible = await racineDuDomaineDansUnivers(base, universCible.identifiant, nomDomaine);
+		}
+		if (domaineManquant) domainesACreer.push(nomDomaine);
+		const contenu =
+			cible === null
+				? {
+						notes: new Map<string, string>(),
+						notesParPlaceEtTitre: new Map<string, string>(),
+						dossiers: []
+					}
+				: await contenuDeLaCible(base, acces, cible.id);
+		const conversions = await convertirLeLot(fetch, env['URL_CONVERSION'], fichiers, service);
+		const plan = classerLeLot(source, fichiers, {
+			service,
+			conversions,
+			identifiantsPris: pris,
+			notesDeLaCible: contenu.notes,
+			notesParPlaceEtTitre: contenu.notesParPlaceEtTitre,
+			profondeurDeDepart: cible?.profondeur ?? 1
+		});
+		for (const ligne of plan.lignes) if (ligne.identifiant !== null) pris.add(ligne.identifiant);
+		parties.push({ nom: nomDomaine, plan, fichiers, cible, contenu });
+	}
+
+	return {
+		base,
+		compteId,
+		source,
+		nomUnivers,
+		universIdentifiant: universCible?.identifiant ?? '',
+		universACreer,
+		domainesACreer,
+		parties,
+		simulation,
+		strict
+	} as const;
+}
 
 export const actions: Actions = {
 	/**
@@ -449,6 +581,35 @@ export const actions: Actions = {
 	 * ligne, et les dossiers existants ; sans eux, l'aperçu comptait tout comme neuf.
 	 */
 	analyser: async ({ locals, request, fetch }) => {
+		const scenario = String((await request.clone().formData()).get('scenario') ?? SCENARIO_LIVRE);
+		if (scenario === SCENARIO_D_UNIVERS) {
+			const prepare = await preparerLUnivers(locals, request, fetch, false);
+			if ('refus' in prepare) return prepare.refus;
+			return {
+				issue: 'lot-analyse',
+				lot: {
+					source: prepare.source,
+					fichiers: prepare.parties.flatMap((partie) =>
+						partie.plan.lignes.map((ligne) => ({
+							c: `${partie.nom}/${ligne.chemin}`,
+							f: ligne.format ?? extensionDe(ligne.chemin),
+							o: 0,
+							s: ligne.sort,
+							...(ligne.motif === null ? {} : { m: ligne.motif }),
+							...(estUneMiseAJour(ligne, partie.contenu.notes) ? { maj: true } : {})
+						}))
+					)
+				},
+				dossiersExistants: prepare.parties.flatMap((partie) =>
+					partie.cible === null
+						? []
+						: [partie.nom, ...partie.contenu.dossiers.map((chemin) => `${partie.nom}/${chemin}`)]
+				),
+				domaineACreer: '',
+				universACreer: prepare.universACreer,
+				domainesACreer: prepare.domainesACreer
+			};
+		}
 		const prepare = await preparerLeLot(locals, request, fetch, false);
 		if ('refus' in prepare) return prepare.refus;
 
@@ -470,7 +631,9 @@ export const actions: Actions = {
 			dossiersExistants: prepare.contenuDeLaCible.dossiers,
 			/* `UC-M12-02` — l'aperçu annonce le domaine qui SERA créé, et rien ne l'a
 			   été : la cible est nulle tant que le lot n'est pas lancé. */
-			domaineACreer: prepare.cible === null ? prepare.domaine : ''
+			domaineACreer: prepare.cible === null ? prepare.domaine : '',
+			universACreer: '',
+			domainesACreer: []
 		};
 	},
 
@@ -480,6 +643,61 @@ export const actions: Actions = {
 	 * AUCUNE source, le gel n'ayant pas de champ de fichier.
 	 */
 	importer: async ({ locals, request, fetch }) => {
+		const scenario = String((await request.clone().formData()).get('scenario') ?? SCENARIO_LIVRE);
+		if (scenario === SCENARIO_D_UNIVERS) {
+			const prepare = await preparerLUnivers(locals, request, fetch, true);
+			if ('refus' in prepare) return prepare.refus;
+			const debut = Date.now();
+			const rapports: { partie: PartieDUnivers; rapport: RapportDImport }[] = [];
+			for (const partie of prepare.parties) {
+				if (partie.cible === null) return fail(400, { issue: 'domaine-inconnu' });
+				const octetsParChemin = new Map(
+					partie.fichiers
+						.filter((f) => f.binaire !== null)
+						.map((f) => [f.chemin, f.binaire as Uint8Array])
+				);
+				const rapport = await executerLImport(
+					prepare.base,
+					moteurPartage(),
+					{
+						domaineId: partie.cible.domaineId,
+						dossierId: partie.cible.id,
+						auteurId: prepare.compteId
+					},
+					partie.plan,
+					{
+						simulation: prepare.simulation,
+						profondeurDeDepart: partie.cible.profondeur,
+						strict: prepare.strict,
+						domaineCible: partie.nom,
+						octetsParChemin,
+						racineDesFichiers: racineDesFichiers(env)
+					}
+				);
+				rapports.push({ partie, rapport });
+				await enregistrerLeLot(
+					prepare.base,
+					entreeDeJournal(
+						{
+							domaineId: partie.cible.domaineId,
+							dossierId: partie.cible.id,
+							auteurId: prepare.compteId
+						},
+						rapport,
+						new Date(),
+						{
+							scenario,
+							domaine: partie.nom,
+							dureeMs: Date.now() - debut
+						}
+					)
+				);
+			}
+			return {
+				issue: 'lot-traite',
+				rapport: rapportDUnivers(prepare, rapports)
+			};
+		}
 		const prepare = await preparerLeLot(locals, request, fetch, true);
 		if ('refus' in prepare) return prepare.refus;
 		/* Inatteignable : `ecrire` vaut vrai, et la cible est alors créée ou refusée.
@@ -548,6 +766,9 @@ export const actions: Actions = {
 				dossiersCrees: rapport.dossiersCrees,
 				relationsCreees: rapport.relationsCreees,
 				domaine: prepare.domaine,
+				destination: 'domaine' as const,
+				universCree: false,
+				domainesCrees: 0,
 				/* L'ADRESSE VIENT D'ICI, ET DE NULLE PART AILLEURS : un domaine que
 				   `UC-M12-02` vient de créer n'est dans aucune liste servie à
 				   l'ouverture de l'écran. */
@@ -698,4 +919,109 @@ async function racineDuDomaine(base: Base, nom: string): Promise<CibleDuLot | nu
 				profondeur: racine.profondeur,
 				adresse: adresseDeDomaine(racine.universIdentifiant, racine.domaineIdentifiant)
 			};
+}
+
+async function universParNom(
+	base: Base,
+	nom: string
+): Promise<{ readonly identifiant: string; readonly nom: string } | null> {
+	const lignes = await base
+		.select({ identifiant: univers.identifiant, nom: univers.nom })
+		.from(univers);
+	return lignes.find((ligne) => ligne.nom.toLocaleLowerCase() === nom.toLocaleLowerCase()) ?? null;
+}
+
+async function racineDuDomaineDansUnivers(
+	base: Base,
+	universIdentifiant: string,
+	nom: string
+): Promise<CibleDuLot | null> {
+	const lignes = await base
+		.select({
+			id: dossiers.id,
+			domaineId: dossiers.domaineId,
+			profondeur: dossiers.profondeur,
+			parentId: dossiers.parentId,
+			domaineIdentifiant: domaines.identifiant,
+			universIdentifiant: univers.identifiant,
+			nom: domaines.nom
+		})
+		.from(dossiers)
+		.innerJoin(domaines, eq(dossiers.domaineId, domaines.id))
+		.innerJoin(univers, eq(univers.id, domaines.universId))
+		.where(eq(univers.identifiant, universIdentifiant));
+	const racine = lignes.find(
+		(ligne) => ligne.parentId === null && ligne.nom.toLocaleLowerCase() === nom.toLocaleLowerCase()
+	);
+	return racine === undefined
+		? null
+		: {
+				id: racine.id,
+				domaineId: racine.domaineId,
+				profondeur: racine.profondeur,
+				adresse: adresseDeDomaine(racine.universIdentifiant, racine.domaineIdentifiant)
+			};
+}
+
+function rapportDUnivers(
+	prepare: {
+		readonly simulation: boolean;
+		readonly universACreer: string;
+		readonly domainesACreer: readonly string[];
+		readonly nomUnivers: string;
+		readonly universIdentifiant: string;
+	},
+	rapports: readonly { readonly partie: PartieDUnivers; readonly rapport: RapportDImport }[]
+) {
+	const somme = (lire: (rapport: RapportDImport) => number): number =>
+		rapports.reduce((total, entree) => total + lire(entree.rapport), 0);
+	const ecrites = rapports.flatMap(({ partie, rapport }) => {
+		const parIdentifiant = new Map(
+			rapport.lignes
+				.filter((ligne) => ligne.identifiant !== null)
+				.map((ligne) => [ligne.identifiant as string, ligne])
+		);
+		return partie.plan.lignes
+			.filter((ligne) => ligne.sort === 'note' && ligne.identifiant !== null)
+			.map((ligne) => ({
+				identifiant: ligne.identifiant as string,
+				titre: ligne.titre ?? (ligne.identifiant as string),
+				ou: [partie.nom, ...ligne.segments].join(' › '),
+				adresse: adresseDeNote(ligne.identifiant as string),
+				miseAJour: parIdentifiant.get(ligne.identifiant as string)?.miseAJour ?? false
+			}));
+	});
+	return {
+		simulation: prepare.simulation,
+		refuseEnBloc: rapports.some(({ rapport }) => rapport.refuseEnBloc),
+		total: somme((rapport) => rapport.total),
+		notesCreees: somme((rapport) => rapport.notesCreees),
+		notesMisesAJour: somme((rapport) => rapport.notesMisesAJour),
+		ignores: somme((rapport) => rapport.ignores),
+		echecs: somme((rapport) => rapport.echecs),
+		dossiersCrees: somme((rapport) => rapport.dossiersCrees),
+		relationsCreees: somme((rapport) => rapport.relationsCreees),
+		domaine: prepare.nomUnivers,
+		destination: 'univers' as const,
+		universCree: prepare.universACreer !== '',
+		domainesCrees: prepare.domainesACreer.length,
+		adresseDuDomaine: adresseDUnivers(prepare.universIdentifiant),
+		enEchec: rapports.flatMap(({ partie, rapport }) =>
+			rapport.lignes
+				.filter((ligne) => ligne.sort === 'echec')
+				.map((ligne) => ({
+					chemin: `${partie.nom}/${ligne.chemin}`,
+					motif: ligne.motif ?? ''
+				}))
+		),
+		renvoisNonResolus: rapports.flatMap(({ partie, rapport }) =>
+			rapport.lignes
+				.filter((ligne) => ligne.renvoisNonResolus.length > 0)
+				.map((ligne) => ({
+					chemin: `${partie.nom}/${ligne.chemin}`,
+					renvois: ligne.renvoisNonResolus
+				}))
+		),
+		ecrites
+	};
 }
