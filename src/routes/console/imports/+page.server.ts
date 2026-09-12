@@ -24,11 +24,14 @@ import {
 } from '$lib/donnees/consoles';
 import type { PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import { univers } from '$lib/base/schema';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const base = basePartagee();
 	const acces = await resoudreLaConsole(base, await contexteDeRequete(base), locals.identite);
 	if (!acces.trouve) error(404, MESSAGE_INTROUVABLE);
+	const designations = await lireLesDesignationsDeDomaine(base);
+	const universConnus = await base.select({ id: univers.id }).from(univers).limit(1);
 
 	return {
 		notes: acces.ressource.notes,
@@ -44,6 +47,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		journalImports: await lireLeJournalDImports(base),
 		/* La correspondance nom d'affichage → forme canonique, pour « Ouvrir le
 		   domaine » du rapport de lot — la même table qu'à `/console/exports`. */
-		designations: await lireLesDesignationsDeDomaine(base)
+		designations,
+		aDesUnivers: universConnus.length > 0,
+		aDesDomaines: Object.keys(designations).length > 0
 	};
 };

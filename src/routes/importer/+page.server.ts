@@ -128,9 +128,10 @@ async function importateur(locals: App.Locals): Promise<{
 	return { base, acces, compteId: identite.compteId, peutCreerUnDomaine };
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const { base, acces, peutCreerUnDomaine } = await importateur(locals);
 	const cibles = await domainesOuEcrire(base, acces);
+	const scenarioDemande = url.searchParams.get('scenario') ?? '';
 	/* LES UNIVERS OÙ UN DOMAINE PEUT NAÎTRE — `UC-M12-02`. Vide pour qui n'a pas le
 	   droit de créer un domaine : l'étape 1 n'offre alors pas le scénario, et
 	   l'action le refuse. Une action interdite n'est pas rendue (`P-09`). */
@@ -138,6 +139,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		vecteur: null,
+		scenarioInitial: scenarioEstLivre(scenarioDemande) ? scenarioDemande : SCENARIO_LIVRE,
 		/**
 		 * « LAISSER TOURNER EN ARRIÈRE-PLAN » MÈNE À LA CONSOLE, ET ELLE EST
 		 * RÉSERVÉE : toutes les routes de console exigent le rôle administrateur, et

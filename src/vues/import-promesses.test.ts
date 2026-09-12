@@ -33,7 +33,11 @@ import {
 	MESURES_DE_CONSOLE_SANS_CONTREPARTIE,
 	journalDImportsEnregistre
 } from '../lib/donnees/consoles';
-import { SCENARIOS_NON_LIVRES, SCENARIO_LIVRE } from '../lib/donnees/scenarios-d-import';
+import {
+	SCENARIOS_NON_LIVRES,
+	SCENARIO_D_UNIVERS,
+	SCENARIO_LIVRE
+} from '../lib/donnees/scenarios-d-import';
 
 type Proprietes = Record<string, unknown>;
 type Rendre = (composant: unknown, options: { props: Proprietes }) => { body: string };
@@ -71,7 +75,9 @@ afterAll(async () => {
  * démonstration ; la propriété est devenue EXIGÉE, et l'état que le produit
  * sert est la table vide — aucune table n'enregistre d'import.
  */
-const EXIGEES: Readonly<Record<string, Proprietes>> = { 'V-35': { journalImports: [] } };
+const EXIGEES: Readonly<Record<string, Proprietes>> = {
+	'V-35': { journalImports: [], aDesUnivers: true, aDesDomaines: true }
+};
 
 function corps(vue: string, props: Proprietes = {}): string {
 	return rendre(composants.get(vue), { props: { notes, ...EXIGEES[vue], ...props } }).body;
@@ -137,6 +143,7 @@ const SOCLE_V24: Proprietes = {
 		{ identifiant: 'gouvernance', nom: 'Zone R' }
 	],
 	peutCreerUnUnivers: true,
+	scenarioInitial: SCENARIO_LIVRE,
 	lotImport: LOT_IMPORT,
 	formatsImport: LIBELLE_PAR_FORMAT,
 	domaineParDefaut: DOMAINES[0]!.nom
@@ -170,14 +177,13 @@ describe('les libellés de format — le jeu de démonstration recopie le produi
 	});
 });
 
-describe('V-24 — l’import part de deux gestes simples', () => {
-	it('ne présente que la note et le dossier, pas les scénarios techniques', () => {
+describe('V-24 — la console a déjà choisi le geste', () => {
+	it('ne répète aucun choix de scénario avant le dépôt', () => {
 		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
 		expect(rendu).toContain('Importer une note');
-		expect(rendu).toContain('Importer un dossier');
-		expect(rendu).not.toContain('Importer un domaine complet');
-		expect(rendu).not.toContain('Importer un univers complet');
-		expect(rendu).not.toContain('Importer un corpus préparé');
+		expect(rendu).not.toContain('Qu’avez-vous à importer');
+		expect(rendu).not.toContain('Type d’import');
+		expect(rendu).not.toContain('<section class="etape" data-etape="1"');
 	});
 
 	it('n’a plus aucun scénario en retrait', () => {
@@ -217,15 +223,28 @@ describe('V-24 — l’import part de deux gestes simples', () => {
 
 	it('ne mélange pas le parcours note avec la qualification d’un dossier', () => {
 		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
-		expect(rendu).toContain('Choisissez une note, puis l’endroit précis');
+		expect(rendu).toContain('La note sera rangée dans un domaine ou un dossier existant');
 		expect(rendu).not.toContain('Emplacement parent');
-		expect(rendu).toContain('Choisissez une destination pour voir le rangement obtenu');
+		expect(rendu).toContain('Choisissez la destination pour voir exactement ce qui sera créé');
 	});
 
 	it('demande un seul fichier pour une note', () => {
 		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
 		expect(rendu).toContain('Glissez une note ici');
 		expect(rendu).toContain('Choisir une note');
+	});
+
+	it('ouvre directement l’univers et annonce le rangement automatique des fichiers racine', () => {
+		const rendu = corps('V-24', {
+			...SOCLE_V24,
+			scenarioInitial: SCENARIO_D_UNIVERS,
+			vecteur: null
+		});
+		expect(rendu).toContain('Importer un univers');
+		expect(rendu).toContain('Un univers complet sera créé');
+		expect(rendu).toContain('fichiers Markdown placés à la racine');
+		expect(rendu).toContain('domaine portant le même nom que l’univers');
+		expect(rendu).not.toContain('Quel sera son parent');
 	});
 
 	it('le scénario livré reste celui de l’étape 2 de la planche', () => {
@@ -374,10 +393,20 @@ describe('V-35 — le journal dit ce qu’il conserve', () => {
 
 	it('offre les quatre accès directs, puisque l’import exécute les quatre', () => {
 		const rendu = corps('V-35');
-		expect(rendu).toContain('Dans un domaine existant');
-		expect(rendu).toContain('Un domaine complet');
-		expect(rendu).toContain('Un univers complet');
-		expect(rendu).toContain('Un corpus préparé');
+		expect(rendu).toContain('Importer une note');
+		expect(rendu).toContain('Importer un domaine');
+		expect(rendu).toContain('Importer un univers');
+		expect(rendu).toContain('Restaurer un corpus préparé');
+		expect(rendu).not.toContain('Déposez un dossier');
+	});
+
+	it('sur une instance vide, propose directement l’univers et explique les choix impossibles', () => {
+		const rendu = corps('V-35', { aDesUnivers: false, aDesDomaines: false });
+		expect(rendu).toContain('Importer un univers');
+		expect(rendu).toContain('Créez d’abord un univers ou importez-en un');
+		expect(rendu).toContain('Créez d’abord un domaine ou importez-en un');
+		const cartesDesactivees = rendu.match(/<button class="sc" type="button" disabled/gu) ?? [];
+		expect(cartesDesactivees).toHaveLength(3);
 	});
 
 	it('annonce son vide quand aucun lot n’a eu lieu, et nomme le geste', () => {
@@ -387,7 +416,7 @@ describe('V-35 — le journal dit ce qu’il conserve', () => {
 		   nomme le geste qui débloque. */
 		const rendu = corps('V-35', { journalImports: [], journalEnregistre: true });
 		expect(rendu).toContain("Aucun import n'a encore eu lieu");
-		expect(rendu).toContain('Déposez un dossier ci-dessus');
+		expect(rendu).toContain('Choisissez ci-dessus ce que vous voulez importer');
 		expect(rendu).not.toContain("Aucun lot n'est conservé");
 	});
 
@@ -408,7 +437,7 @@ describe('V-35 — le journal dit ce qu’il conserve', () => {
 
 	it('n’invite plus à déposer une archive', () => {
 		const rendu = corps('V-35');
-		expect(rendu).toContain('Déposez un dossier');
+		expect(rendu).not.toContain('Déposez un dossier');
 		expect(rendu).not.toContain('Déposez un dossier ou une archive');
 	});
 });

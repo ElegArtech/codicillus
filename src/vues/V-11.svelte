@@ -538,7 +538,8 @@
 								aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg
 							>Nouvelle note</a
 						>
-						<a class="btn si-ecriture" id="a-importer" href="/importer">Importer</a>{/if}
+						<a class="btn si-ecriture" id="a-importer" href="/importer?scenario=notes">Importer</a
+						>{/if}
 					{#if admin}<a class="btn si-admin" id="a-exporter" href="/console/exports">Exporter</a
 						>{/if}
 					<!--

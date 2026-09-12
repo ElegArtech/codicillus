@@ -57,7 +57,7 @@ export interface ScenarioNonLivre {
 /** Aucun. Voir l'en-tête : la liste vide est un état, pas un oubli. */
 export const SCENARIOS_NON_LIVRES: readonly ScenarioNonLivre[] = [];
 
-export function scenarioEstLivre(scenario: string): boolean {
+export function scenarioEstLivre(scenario: string): scenario is ScenarioDImport {
 	return !SCENARIOS_NON_LIVRES.some((s) => s.id === scenario) && estUnScenario(scenario);
 }
 
@@ -82,6 +82,34 @@ export const LIBELLE_DE_SCENARIO: Readonly<Record<ScenarioDImport, string>> = {
 	univers: 'Univers complet',
 	prepare: 'Corpus préparé'
 };
+
+/** Les quatre gestes montrés dans la console et repris mot pour mot dans le parcours. */
+export const CHOIX_D_IMPORT: readonly {
+	readonly id: ScenarioDImport;
+	readonly nom: string;
+	readonly sous: string;
+}[] = [
+	{
+		id: SCENARIO_LIVRE,
+		nom: 'Importer une note',
+		sous: 'La note sera rangée dans un domaine ou un dossier existant.'
+	},
+	{
+		id: SCENARIO_DE_DOMAINE,
+		nom: 'Importer un domaine',
+		sous: 'Le dossier choisi deviendra un domaine dans un univers existant.'
+	},
+	{
+		id: SCENARIO_D_UNIVERS,
+		nom: 'Importer un univers',
+		sous: 'Le dossier choisi deviendra un univers ; ses dossiers directs deviendront des domaines.'
+	},
+	{
+		id: SCENARIO_PREPARE,
+		nom: 'Restaurer un corpus préparé',
+		sous: 'Les notes, leurs métadonnées et leurs relations seront restaurées.'
+	}
+];
 
 /** Le libellé d'un scénario lu en base, ou l'identifiant brut s'il n'en est pas un. */
 export function libelleDeScenario(scenario: string): string {
