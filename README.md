@@ -26,8 +26,11 @@ la console, puis les utilisateurs ajoutent leurs notes.
 L'installation utilise Docker Engine et Docker Compose v2 sur Linux. Node.js, PostgreSQL,
 Meilisearch et les outils de conversion sont inclus dans les images.
 
+Le [paquet prêt à installer pour Linux x86-64](https://github.com/ElegArtech/codicillus/releases/tag/v1.0.0-rc.1)
+contient les six images Docker et les fichiers nécessaires à une installation hors ligne.
+
 - **[Installation](docs/installation.md)** : configuration, démarrage et premier administrateur.
-- **[Installation hors ligne](docs/hors-ligne.md)** : préparer les images sur une machine connectée,
+- **[Installation hors ligne](docs/hors-ligne.md)** : télécharger le paquet ou préparer les images,
   les transférer et installer sans accès aux registres ni aux gestionnaires de paquets.
 - **[Utilisation](docs/utilisation.md)** : organiser le corpus, rédiger et vérifier les notes.
 - **[Exploitation](docs/exploitation.md)** : mises à jour, sauvegardes, restauration et diagnostic.
