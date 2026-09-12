@@ -1,9 +1,0 @@
-{
-  "id": "PAR-036",
-  "aiguilles": 111,
-  "textes": 7,
-  "instantanes_dom": 80,
-  "trouvees": [],
-  "trace": "docs/traces/recette-personas/PAR-036/fr-FR/passe-2-reprise/trace.zip",
-  "mesure": "Texte des captures et instantanés DOM enregistrés, hors contenu des balises script/style."
-}

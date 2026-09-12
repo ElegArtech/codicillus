@@ -1,41 +1,4 @@
 <script lang="ts">
-	/**
-	 * V-20 — Cartographie par type maître. Route `/cartographie/par-type`. Aucune
-	 * entrée de rail ne la vise : on y arrive par la bascule « Par type maître » de
-	 * V-19.
-	 *
-	 * AUCUNE DONNÉE PROPRE (`RG-M09-01`), ET PLUS AUCUN DÉFAUT TIRÉ DU JEU : les
-	 * quatre tables du graphe étaient optionnelles, de défaut la constante de
-	 * `seeds/corpus.ts`. `TYPES_FICHE` était pire — importée au niveau du module,
-	 * sans propriété : le panneau de détail rendait sous « Propriétés » les noms de
-	 * champ du jeu et leurs valeurs d'EXEMPLE comme celles de la note choisie, et un
-	 * type de fiche créé en console faisait LEVER `.slice()` au clic.
-	 *
-	 * CETTE VUE N'EMPRUNTE PAS `$lib/coquille/Coquille.svelte`, ET C'EST UN ÉCART
-	 * DÉCLARÉ. `V-20:1101` pose `<nav class="fil" id="fil">` dans la barre et
-	 * `V-20:1129` un `<div class="fil-deroule" id="fil" hidden>` dans la zone de
-	 * graphe : DEUX ÉLÉMENTS PORTENT LE MÊME IDENTIFIANT, et `rendreFil()`
-	 * (`V-20:2924`) écrit dans le PREMIER en ordre de document. `Coquille` reçoit
-	 * `fil` comme une liste de segments et n'a ni `hidden`, ni bouton, ni
-	 * `span.fil-deroule__courant` ; le gabarit est REGELÉ. La coquille est donc
-	 * recomposée ici, MAIS `Rail.svelte` et `railAbregeRendu()` sont empruntés tels
-	 * quels, et aucune règle de style n'est dupliquée.
-	 *
-	 * LES TROIS AXES VIENNENT DE L'ADRESSE ET SONT EXIGÉS : l'état de l'écran n'a
-	 * plus de seconde source à laquelle retomber.
-	 *
-	 * AUCUNE DISPOSITION SIMULÉE (`ARB-011`) : « l'anneau et l'étoile sont calculés
-	 * géométriquement, la place d'un nœud ne dépend que de son rang » (`V-20:2701`).
-	 *
-	 * `.noeud`, `.arete`, `.scene`, `.detail-col`, `.zone-graphe` SONT ICI DES
-	 * CLASSES DE GRAPHE (`docs/DESIGN.md` §2.H) : `.noeud` désigne un nœud
-	 * d'ARBORESCENCE dans 33 autres vues, dont le rail de cette page même. Les règles
-	 * sont inconciliables et AUCUNE FACTORISATION N'EST PERMISE — le panneau de
-	 * détail est écrit ici, et non partagé avec V-19, pour la même raison.
-	 *
-	 * Le témoin de fraîcheur passe par la fabrique unique `$lib/fraicheur`. Le style
-	 * est dans `src/socle.css` et `src/vues/V-20.css`.
-	 */
 	import type {
 		ChampDeFiche,
 		CleDeTypeDeRelation,

@@ -1,22 +1,5 @@
 #!/usr/bin/env node
-/**
- * LE LANCEUR DES COMMANDES DE BASE.
- *
- * Il ne contient AUCUNE logique : tout est dans `src/lib/base/commandes.ts`,
- * qui est du TypeScript typé strictement et contrôlé par `pnpm check`. Ce
- * fichier ne fait que trois choses — charger `.env`, ouvrir un serveur Vite
- * pour exécuter le TypeScript du dépôt, et imprimer.
- *
- * POURQUOI VITE ET PAS UN EXÉCUTEUR TYPESCRIPT. C'est le chemin déjà employé
- * par le banc de comparaison (`verif/maquette.mjs`, `verif/banc/mode-demo.mjs`
- * chargent `/seeds/corpus.ts` par `ssrLoadModule`). Le réemployer évite une
- * dépendance de plus, et surtout évite un SECOND chemin de résolution de
- * modules dans le dépôt — deux chemins finissent toujours par diverger sur un
- * cas limite, et la divergence se paie au lot suivant.
- *
- * Codes de retour : 0 si la commande a prouvé ce qu'elle annonce, 1 sinon.
- * Aucune commande n'imprime de mot de passe (voir `connexionLisible`).
- */
+/** Commandes de gestion de la base. Le lanceur charge .env et exécute le TypeScript avec Vite. */
 import { argv, exit } from 'node:process';
 
 const [, , commande, ...arguments_] = argv;
@@ -27,25 +10,20 @@ Usage : node base/base.mjs <commande>
   migrer            applique les migrations en attente
   annuler [n|tout]  annule les n dernières migrations (1 par défaut)
   etat              liste les migrations, appliquées ou non
-  empreinte [--lignes]  imprime l'empreinte structurelle du schéma
   reversibilite     monte, descend, remonte, et compare les empreintes
   semer             charge seeds/corpus.ts dans la base
   reindexer         reconstruit l’index de recherche depuis la base
   peupler           REMPLACE le contenu par le jeu de démonstration : une DSI de
                     120 personnes, sa gouvernance, sa comitologie, ses notes de
                     service et sa documentation technique. Reproductible.
-  conformite        REMPLACE le contenu par le CORPUS DU PROTOTYPE VALIDÉ : les six
-                    univers de seeds/conformite.ts, leurs domaines et leurs
-                    soixante-dix-sept notes, chacune dans l'état que les captures
-                    de design_handoff_refonte_codicillus/captures/ montrent.
-                    Aucun compte n'est supprimé ; ceux qui manquent sont créés.
+  conformite        remplace le contenu par un second jeu de démonstration.
+                    Réservé à une instance de démonstration isolée.
   administrateur    crée le PREMIER administrateur d’une instance neuve.
                     Refuse si un compte existe déjà — les suivants se créent en
                     console. Le mot de passe se donne par MDP_ADMINISTRATEUR :
-                      ADMIN_IDENTIFIANT=a.berge ADMIN_NOM="Alexandre Bergé" \
-                      ADMIN_COURRIEL=ab@exemple.fr MDP_ADMINISTRATEUR='…' \
+                      ADMIN_IDENTIFIANT=admin ADMIN_NOM="Administrateur" \
+                      ADMIN_COURRIEL=admin@example.org MDP_ADMINISTRATEUR='…' \
                         pnpm base:administrateur
-  unicite           joue les sondes d'unicité (refus ET acceptations)
   coherence         compare src/lib/base/schema.ts au catalogue de la base
   pieces [--racine=<chemin>]
                     dépose une pièce jointe aux octets engendrés, la ressert par
@@ -295,7 +273,7 @@ try {
 			console.log(
 				`Les comptes créés par cette commande ont le mot de passe : ${C.MOT_DE_PASSE_DE_CONFORMITE}`
 			);
-			console.log('Les comptes qui existaient déjà gardent le leur, dont a.berge.');
+			console.log('Les comptes qui existaient déjà conservent leur mot de passe.');
 			console.log('');
 			console.log('Pense à réindexer la recherche : pnpm base:reindexer');
 			break;

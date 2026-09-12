@@ -1,32 +1,4 @@
 <script lang="ts">
-	/**
-	 * V-22 — Signets d'un domaine. Route `/univers/{univers}/{domaine}/signets`
-	 * (`docs/routes.md` §3.3), atteinte par l'entrée de rail « Outils › Signets ».
-	 *
-	 * L'adresse est celle du gabarit, prolongée — `$lib/rangement/adresses`. La
-	 * forme raccourcie `/domaines/…` n'existe pas (`ARB-001`), et la clause de
-	 * désambiguïsation de `RG-M03-02` reste SANS OBJET : à ne jamais implémenter.
-	 *
-	 * UN SIGNET EST UNE NOTE DE TYPE « Signet », pas un objet séparé : c'est le
-	 * vocabulaire contractuel, et c'est ce que porte `seeds/corpus.ts` — `type ===
-	 * 'Signet'`, plus `url` et `ajoute`. Le mot « lien » ne désigne ici que la cible
-	 * externe, jamais l'objet du produit.
-	 *
-	 * LES LIENS DE SIGNET PORTENT LEUR ADRESSE RÉELLE, et c'est le gel : ce sont des
-	 * adresses EXTERNES, écrites au corpus.
-	 *
-	 * Coquille de forme abrégée ; lien d'évitement `#liste` « Aller à la liste » ;
-	 * chemin courant du rail `[nom du domaine]`.
-	 *
-	 * LE MOTEUR DE FACETTES N'EST PAS FACTORISÉ AVEC V-12, ET C'EST DÉLIBÉRÉ
-	 * (`docs/DESIGN.md` §2.H) : les deux vues partagent dix-neuf classes, mais cinq
-	 * d'entre elles — `.facettes`, `.reglages`, `.val`, `.tri`, `.actifs` — ont des
-	 * définitions DIVERGENTES, chacune portée par sa propre feuille. Les
-	 * définitions de facettes diffèrent aussi : deux ici, six en V-12.
-	 *
-	 * Aucun chiffre n'est saisi : compteur, comptes de facettes et dates sortent des
-	 * notes servies. Le style est dans `src/socle.css` et `src/vues/V-22.css`.
-	 */
 	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 	import { getContext } from 'svelte';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';

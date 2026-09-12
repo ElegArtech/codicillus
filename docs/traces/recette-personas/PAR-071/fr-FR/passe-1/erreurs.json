@@ -1,7 +1,0 @@
-[
-  {
-    "type": "requestfailed",
-    "url": "http://127.0.0.1:5571/",
-    "texte": "net::ERR_CONNECTION_REFUSED"
-  }
-]

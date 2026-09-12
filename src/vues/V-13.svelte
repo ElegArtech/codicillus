@@ -1,32 +1,4 @@
 <script lang="ts">
-	/**
-	 * V-13 — Page d'un dossier.
-	 * Route `/univers/{univers}/{domaine}/dossiers/{chemin…}` (`docs/routes.md` §3.3).
-	 *
-	 * L'adresse prolonge la FORME CANONIQUE de V-11 : le segment `dossiers` lève la
-	 * collision avec les segments réservés `notes` et `signets` ; `{chemin…}` est la
-	 * suite des identifiants de dossiers, jusqu'à dix niveaux (`RG-STR-04`).
-	 *
-	 * Coquille de forme abrégée ; le chemin courant du rail est `[domaine, …chemin]`.
-	 * `.noeud` n'est pas portée ici — nœud d'arborescence du rail, rendu par la
-	 * coquille ; nœud de GRAPHE en V-19 et V-20 (`docs/DESIGN.md` §2.H).
-	 *
-	 * LES TROIS DROITS EFFECTIFS SONT DES ÉTATS DE PLANCHE, PAS UNE FRONTIÈRE DE
-	 * SÉCURITÉ. Aucun chiffre n'est saisi.
-	 *
-	 * LES QUATRE `dialog.dlg` SONT TRANSCRITS ET FERMÉS. LE CONTENU EST CELUI QUE LE
-	 * GEL COMPOSE À L'OUVERTURE, non celui de son HTML statique, que personne ne voit.
-	 *
-	 * `#dlg-droits` EST TRANSCRIT PLUTÔT QU'EMPRUNTÉ À `V-40.svelte` : monter V-40 en
-	 * hôte imposerait d'importer `V-40.css` ici, et les deux feuilles ont 96
-	 * sélecteurs de premier niveau identiques — dernier import gagnant, sur une page
-	 * qui marche. Transcrire ne coûte que neuf règles de classe, absentes de
-	 * `V-13.css`. `docs/DESIGN.md` §2.F range pourtant cette famille parmi les
-	 * classes propres à V-40 : la règle est SCIEMMENT écartée, un clic qui ne produit
-	 * rien étant un défaut. Le motif est reporté dans `V-13.css`.
-	 *
-	 * Le style est dans `src/socle.css` et `src/vues/V-13.css`.
-	 */
 	import type { Domaine, IdentifiantNote, NomDeDomaine, Note, Univers } from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import Coquille from '$lib/coquille/Coquille.svelte';
@@ -209,13 +181,6 @@
 
 	const sourceDuDroit = $derived(origineDuDroit);
 
-	/**
-	 * L'ABSENCE, ET NON LE MASQUAGE — `P-09`, `RG-M05-08`, `ARB-040`. Le gel pose les
-	 * actions puis les cache, ici avec la POLARITÉ INVERSE du socle :
-	 * `.si-gestionnaire, .si-redacteur { display: none }` puis un `display:
-	 * inline-flex` sous `data-droit` (`mockups/V-13-page-dossier.html:941-944`). LA
-	 * CLASSE RESTE POSÉE quand le nœud est rendu — c'est elle qui porte le `display`.
-	 */
 	const gestionnaire = $derived(niveau === 'gestionnaire');
 	const redacteur = $derived(niveau === 'gestionnaire' || niveau === 'redacteur');
 
@@ -959,18 +924,7 @@
 	{/if}
 
 	<!-- ============================ DIALOGUE 4 — Gérer les droits ============================ -->
-	<!--
-		TRANSCRIT DE `mockups/V-40-dialogues.html:1184-1224`, et non emprunté à
-		`V-40.svelte` — motif à l'en-tête. TROIS ÉCARTS AU GEL, chacun réparant un
-		défaut de la maquette :
-		 · LE NIVEAU D'UN DROIT PROPRE EST UN SÉLECTEUR, non une pastille inerte — le gel
-		   n'offre qu'ajouter et retirer, donc fermer un accès pour le rouvrir. La
-		   pastille reste sur les droits HÉRITÉS, qui ne se changent pas ici.
-		 · LE PIED NE PORTE PLUS « Enregistrer les droits » : au gel, les deux boutons
-		   ferment, et le second promet un enregistrement qu'il ne fait pas.
-		 · LA LIGNE DE L'APPELANT N'OFFRE NI RETRAIT NI CHANGEMENT — le serveur refuse
-		   qu'un gestionnaire se ferme la porte (`P-09`).
-	-->
+
 	<dialog class="dlg dlg--large" id="dlg-droits" aria-labelledby="dlg-droits-titre">
 		<div class="dlg__boite">
 			<div class="dlg__tete">

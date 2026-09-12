@@ -1,36 +1,3 @@
-/* ==========================================================================
-   CODICILLUS — JEU DE SEMENCE UNIQUE
-   ==========================================================================
-   Source unique et typée du corpus de démonstration (PLAN-DE-REALISATION §3.6).
-
-   PROVENANCE. Ce fichier est l'extraction fidèle des objets globaux de données
-   portés par les maquettes gelées de `mockups/`. La vue de référence est
-   `mockups/V-14-lecture-note.html`, qui porte le sur-ensemble : ses vingt-neuf
-   globales couvrent, valeur par valeur, celles des quarante autres vues.
-
-   RÈGLE DE NON-COMBLEMENT (P-02). Aucune valeur n'a été inventée, arrondie,
-   complétée ni « rendue plausible ». Ce qui manque dans les maquettes manque
-   ici, et est signalé en commentaire plutôt que fabriqué.
-
-   VARIANTES. Les quarante et une maquettes ne portent que cinq jeux de notes,
-   strictement emboîtés : 32 (complet), 27, 19, 14 et le jeu vide. Chaque vue
-   doit être nourrie du sous-ensemble exact que sa maquette utilise, faute de
-   quoi la comparaison visuelle application ↔ maquette ne prouve rien. D'où
-   `corpusPourVue()` en fin de fichier.
-
-   Ce fichier ne contient que des données et des sélecteurs sans effet de bord.
-   Les fonctions de calcul des maquettes (fraîcheur, recherche, sous-graphe,
-   arborescences…) relèvent du code applicatif, pas du jeu de semence.
-
-   UNE SEULE DÉPENDANCE SORT DE CE FICHIER, et elle est là pour P-01. `CONFIG`
-   porte les deux seuils de fraîcheur ; les écrire en littéral en faisait un
-   second jeu de seuils que rien ne liait à celui de l'implémentation unique —
-   ce qu'ADR-005 interdit nommément. `SEUILS_PAR_DEFAUT` de
-   `src/lib/fraicheur.ts` est la définition ; `CONFIG` en dérive (voir plus
-   bas). C'est l'import d'une CONSTANTE, pas d'un calcul : la règle ci-dessus
-   tient toujours. Aucun cycle n'en naît — `fraicheur.ts` ne prend d'ici qu'un
-   `import type`, effacé à la compilation.
-   ========================================================================== */
 import { SEUILS_DE_VIVACITE, SEUILS_PAR_DEFAUT } from '../src/lib/fraicheur.js';
 
 /* ── Date de référence ─────────────────────────────────────────────────────

@@ -1,37 +1,4 @@
 <script lang="ts">
-	/**
-	 * V-12 — Liste des notes d'un domaine. Route `/univers/{univers}/{domaine}/notes`
-	 * (`docs/routes.md` §3.3).
-	 *
-	 * L'adresse est celle du gabarit, prolongée — `$lib/rangement/adresses`. La
-	 * forme raccourcie `/domaines/…` n'existe pas (`ARB-001`) et la clause de
-	 * désambiguïsation de `RG-M03-02` reste SANS OBJET : à ne jamais implémenter.
-	 *
-	 * CHAQUE LIGNE PORTE L'ADRESSE RÉELLE DE SA NOTE — `ligneCarte` la compose par
-	 * `adresseDeNote()`, la fabrique unique. Le gel écrivait `href="#"` faute de
-	 * serveur.
-	 *
-	 * Coquille de forme abrégée ; lien d'évitement `#liste` « Aller à la liste » ;
-	 * chemin courant du rail `[nom du domaine]`.
-	 *
-	 * `data-etat` N'EST POSÉ QUE PAR L'ÉTAT « DOMAINE SANS NOTE », et c'est le gel :
-	 * la planche n'écrit l'attribut que sur un `change`. Aucune règle de la feuille
-	 * ne le lit ; le poser sur les autres états serait rendre ce que la maquette ne
-	 * rend pas.
-	 *
-	 * LE MOTEUR DE FACETTES N'EST PAS FACTORISÉ AVEC V-22, ET C'EST DÉLIBÉRÉ. Les
-	 * deux vues partagent dix-neuf classes, mais `docs/DESIGN.md` §2.H recense
-	 * soixante-six noms de classe à DÉFINITIONS DIVERGENTES selon la vue, dont cinq
-	 * de cette famille — `.facettes`, `.reglages`, `.val`, `.tri`, `.actifs`. La
-	 * collision est de NOM, pas d'objet, et les définitions de facettes diffèrent
-	 * réellement : six ici, deux en V-22.
-	 *
-	 * Aucun chiffre n'est saisi ; la fraîcheur vient de la fabrique unique
-	 * `$lib/fraicheur` (`ADR-005`). Les menus de facettes sont rendus fermés — le
-	 * gel ne pose `data-ouvert` qu'au clic.
-	 *
-	 * Le style est dans `src/socle.css` et `src/vues/V-12.css`.
-	 */
 	import type { Domaine, IdentifiantNote, Note, Univers } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';

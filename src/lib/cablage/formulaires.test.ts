@@ -102,7 +102,7 @@ function rendre(
 	return zone;
 }
 
-describe('mockups/V-29:3153 — la marque d’obligation est peinte au champ', () => {
+describe('La marque d’obligation est affichée au champ', () => {
 	it('pose `*` dans l’intitulé d’une propriété obligatoire', () => {
 		const zone = rendre([ADRESSE_IP]);
 		const intitule = zone.querySelector('.champ__label');
@@ -131,7 +131,7 @@ describe('mockups/V-29:3153 — la marque d’obligation est peinte au champ', (
 	});
 });
 
-describe('mockups/V-29:3138 — l’aide est affichée sous le champ', () => {
+describe('L’aide est affichée sous le champ', () => {
 	it('rend l’aide de la console, sur un champ comme sur un interrupteur', () => {
 		expect(rendre([ADRESSE_IP]).querySelector('.champ__aide')?.textContent).toBe(
 			'L’adresse de gestion, pas celle du service.'
@@ -174,7 +174,7 @@ describe('la valeur par défaut — sur un schéma CHOISI seulement', () => {
 		expect(zone.querySelector('input')?.value).toBe('');
 	});
 
-	it('UNE REPRISE N’EN POSE AUCUN — mockups/V-29:3308, la valeur est DEMANDÉE', () => {
+	it('demande le mot de passe lors d’une reprise', () => {
 		/* LE CAS MIXTE, ET C'EST CELUI QUI COMPTE : une propriété obligatoire
 		   DOTÉE D'UN DÉFAUT, sur une note écrite avant qu'elle n'existe. La note ne
 		   porte pas la clé ; si le défaut se posait ici, il serait soumis comme une

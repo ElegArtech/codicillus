@@ -123,14 +123,7 @@
 										les trois valeurs sont celles du cahier (`CDC:901`).
 									-->
 									<span class="past">origine : {relation.origine}</span>
-									<!--
-										LE SENS, DANS LES MOTS DU GEL. `phrase-rel__sens` du dialogue
-										`d-relation` dit « sens direct » quand la note lue est la source,
-										« sens inverse » quand elle est la cible
-										(`mockups/V-40-dialogues.html:3450`). Ce sont ces deux mots-là,
-										et non une reformulation : ils disent de quel côté la relation a
-										été saisie sans jamais se confondre avec son ORIGINE.
-									-->
+
 									<span class="past"
 										>{relation.sens === 'sortante' ? 'sens direct' : 'sens inverse'}</span
 									>

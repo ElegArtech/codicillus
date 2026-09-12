@@ -1,7 +1,0 @@
-[
-  {
-    "type": "requestfailed",
-    "url": "http://127.0.0.1:5903/univers/releve-polaire",
-    "texte": "net::ERR_ABORTED"
-  }
-]

@@ -1,25 +1,4 @@
 <script lang="ts">
-	/**
-	 * V-30 — Console · Types de relations. Route `/console/types-de-relations`
-	 * (`docs/routes.md` §3.6).
-	 *
-	 * Coquille de forme abrégée, enveloppe `console` (`ARB-021`, `ARB-023`).
-	 * `src/lib/console/` porte les classes communes aux dix vues de console.
-	 * Propres à V-30, et à elle seule : `sens`, `sens--inverse`, `sens__fleche`,
-	 * `sens__libelle`, `apercu-phrases`, `phrase`, `phrase--inverse`,
-	 * `phrase__sens`, `phrase__manque`, `exemples`, `choix-reaffectation`, `aide`
-	 * et `tg--relations`. AUCUNE FACTORISATION AU-DELÀ (`docs/DESIGN.md` §2.H).
-	 *
-	 * LE PANNEAU `tiroir-form` NE PÈSE AUCUN PIXEL : hors de `div.app`, il n'est pas
-	 * atteint par `.app[data-form="ouvert"] .tiroir-form` (`V-30.css:401`).
-	 *
-	 * Aucun `autofocus` : la maquette focalise `#f-direct` à l'ouverture
-	 * (`V-30:3054`), et dans le dialogue `showModal()` focalise déjà
-	 * `button.dlg__fermer`, premier focalisable.
-	 *
-	 * Aucun chiffre n'est saisi : les compteurs de relations sont calculés sur les
-	 * relations servies. Le style est dans `src/socle.css` et `src/vues/V-30.css`.
-	 */
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import BoutonDeCreation from '$lib/console/BoutonDeCreation.svelte';
 	import NavigationConsole from '$lib/console/NavigationConsole.svelte';

@@ -130,7 +130,6 @@ const ORDRE_DES_MARQUES: readonly Marque['type'][] = [
 	'code'
 ];
 
-/** Les enveloppes de marque attestées — `docs/DESIGN.md` §B-9, `V-41:4513`. */
 const BALISE_DE_MARQUE: Readonly<Record<string, string>> = {
 	bold: 'strong',
 	italic: 'em',
