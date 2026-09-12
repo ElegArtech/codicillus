@@ -359,6 +359,180 @@
   color: var(--c-encre-2); margin: 0 0 var(--e-5); max-width: 66ch;
 }
 
+.import-card {
+  overflow: hidden;
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-3);
+  background: var(--c-papier);
+  box-shadow: var(--o-pose);
+}
+.type-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--c-trait);
+}
+.type-tabs button {
+  position: relative;
+  min-width: 150px;
+  padding: var(--e-3) var(--e-5);
+  border: 0;
+  border-right: 1px solid var(--c-trait-fin);
+  background: var(--c-papier-2);
+  color: var(--c-encre-2);
+  font: inherit;
+  font-size: var(--t-petit);
+  cursor: pointer;
+}
+.type-tabs button.active {
+  background: var(--c-papier);
+  color: var(--c-accent-fonce);
+  font-weight: var(--g-lourd);
+}
+.type-tabs button.active::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--c-accent);
+  content: "";
+}
+.depot-compact {
+  padding: var(--e-5) var(--e-5) 0;
+}
+.depot-compact[data-survol="oui"] .selecteur-fichier {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px var(--c-accent-voile);
+}
+.selecteur-fichier {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: stretch;
+  min-height: 42px;
+  overflow: hidden;
+  border: 1px solid var(--c-trait-fort);
+  border-radius: var(--r-2);
+  background: var(--c-papier);
+}
+.selecteur-fichier__icone {
+  display: grid;
+  width: 46px;
+  place-items: center;
+  background: var(--c-fond-creux);
+  color: var(--c-encre-2);
+}
+.selecteur-fichier .btn {
+  border-width: 0 1px;
+  border-radius: 0;
+  box-shadow: none;
+}
+.selecteur-fichier__nom {
+  align-self: center;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 var(--e-4);
+  color: var(--c-encre-2);
+  font-size: var(--t-petit);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.selecteur-fichier__effacer {
+  width: 42px;
+  border: 0;
+  background: none;
+  color: var(--c-encre-3);
+  font-size: var(--t-t3);
+  cursor: pointer;
+}
+.destination-titre {
+  margin: 0;
+  font-family: var(--f-ui);
+  font-size: var(--t-t3);
+}
+.etat-destination-vide {
+  margin: 0;
+  padding: var(--e-3) var(--e-4);
+  border: 1px solid #dcc59a;
+  border-radius: var(--r-2);
+  background: var(--c-alerte-voile);
+  color: var(--c-alerte);
+  font-size: var(--t-petit);
+}
+.destination-champs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--e-4);
+}
+.destination-dossier {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e-4);
+}
+.destination-dossier .champ--destination-mode {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--e-4);
+}
+.destination-dossier .selecteur { max-width: none; }
+.saisie {
+  width: 100%;
+  padding: 8px var(--e-3);
+  border: 1px solid var(--c-trait-fort);
+  border-radius: var(--r-2);
+  background: var(--c-papier);
+  color: var(--c-encre);
+  font: inherit;
+}
+.explication-structure {
+  padding: var(--e-3) var(--e-4);
+  border-radius: var(--r-2);
+  background: var(--c-frais-voile);
+  color: var(--c-encre-2);
+  font-size: var(--t-petit);
+  line-height: 1.55;
+}
+.rangement-automatique {
+  margin: 0 !important;
+  padding: var(--e-3) var(--e-4);
+  border: 1px solid #b9d4e0;
+  border-radius: var(--r-2);
+  background: #f1f8fb;
+  color: var(--c-encre-2) !important;
+  font-family: var(--f-ui) !important;
+  font-size: var(--t-petit);
+}
+.actions-resultat {
+  display: flex;
+  justify-content: center;
+  gap: var(--e-3);
+  flex-wrap: wrap;
+  margin-top: var(--e-5);
+}
+.apercu-destination {
+  margin: 0 0 var(--e-3);
+  font-family: var(--f-ui);
+  font-size: var(--t-t3);
+}
+.table-apercu {
+  overflow: hidden;
+  margin-bottom: var(--e-5);
+  border: 1px solid var(--c-trait);
+  border-radius: var(--r-3);
+  background: var(--c-papier);
+}
+.table-apercu table { width: 100%; border-collapse: collapse; }
+.table-apercu th,
+.table-apercu td {
+  padding: var(--e-2) var(--e-4);
+  border-bottom: 1px solid var(--c-trait-fin);
+  text-align: left;
+  font-size: var(--t-petit);
+}
+.table-apercu th { background: var(--c-papier-2); font-weight: var(--g-fort); }
+.table-apercu th + th,
+.table-apercu td + td { border-left: 1px solid var(--c-trait-fin); }
+.table-apercu tbody tr:last-child td { border-bottom: 0; }
+
 /* --- Étape 1 : scénarios ---------------------------------------------------------
    Décrits en langage métier. Chacun montre ce qu'il produit : c'est
    l'illustration qui fait choisir, pas le titre. */
@@ -529,7 +703,10 @@
 }
 
 @media (max-width: 720px) {
-  .scenarios--gestes, .choix-import, .destination-note { grid-template-columns: 1fr; }
+  .scenarios--gestes, .choix-import, .destination-note, .destination-champs { grid-template-columns: 1fr; }
+  .destination-dossier .champ--destination-mode { grid-template-columns: 1fr; gap: var(--e-2); }
+  .selecteur-fichier { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .selecteur-fichier__icone { display: none; }
 }
 .lot-depose b { font-family: var(--f-donnee); }
 

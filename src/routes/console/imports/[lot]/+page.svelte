@@ -13,7 +13,6 @@
 	import { resolve } from '$app/paths';
 	import { adresseDeDomaine } from '$lib/rangement/adresses';
 	import type { PageData } from './$types';
-	import type { ScenarioDImport } from '$lib/donnees/scenarios-d-import';
 
 	const { data }: { data: PageData } = $props();
 </script>
@@ -45,8 +44,5 @@
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		void goto(adresseDeDomaine(canonique.univers, canonique.domaine));
 	}}
-	onScenario={(scenario: ScenarioDImport) => {
-		// eslint-disable-next-line svelte/no-navigation-without-resolve
-		void goto(`${resolve('/importer')}?scenario=${encodeURIComponent(scenario)}`);
-	}}
+	onNouvelImport={() => void goto(resolve('/importer'))}
 />
