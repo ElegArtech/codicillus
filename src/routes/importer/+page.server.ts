@@ -37,6 +37,7 @@ import {
 	formatDuChemin,
 	identifiantsPris,
 	libellesDeFormat,
+	repartirLesFichiersDUnivers,
 	sansLePremierNiveau,
 	sonderLeServiceDeConversion,
 	sourceDuLot,
@@ -457,8 +458,9 @@ interface PartieDUnivers {
 
 /**
  * Préparer un univers complet. La forme attendue est volontairement simple : un dossier
- * racine pour l'univers, puis un dossier direct par domaine. Les niveaux suivants sont
- * les dossiers et les fichiers qui deviendront des notes.
+ * racine pour l'univers, puis un dossier direct par domaine. Les fichiers directement
+ * à la racine rejoignent un domaine du même nom que l'univers, créé au besoin ; les
+ * niveaux suivants sont les dossiers et les fichiers qui deviendront des notes.
  */
 async function preparerLUnivers(
 	locals: App.Locals,
@@ -498,19 +500,8 @@ async function preparerLUnivers(
 	}
 
 	const sousLaRacine = sansLePremierNiveau(deposesBruts);
-	const groupes = new Map<string, FichierDepose[]>();
-	for (const fichier of sousLaRacine) {
-		const coupe = fichier.chemin.indexOf('/');
-		if (coupe <= 0 || coupe === fichier.chemin.length - 1) {
-			return { refus: fail(400, { issue: 'structure-univers-invalide' }) } as const;
-		}
-		const nomDomaine = fichier.chemin.slice(0, coupe).trim();
-		const chemin = fichier.chemin.slice(coupe + 1);
-		const groupe = groupes.get(nomDomaine) ?? [];
-		groupe.push({ ...fichier, chemin });
-		groupes.set(nomDomaine, groupe);
-	}
-	if (groupes.size === 0) {
+	const groupes = repartirLesFichiersDUnivers(nomUnivers, sousLaRacine);
+	if (groupes === null || groupes.size === 0) {
 		return { refus: fail(400, { issue: 'structure-univers-invalide' }) } as const;
 	}
 
