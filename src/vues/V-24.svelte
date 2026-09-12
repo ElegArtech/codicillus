@@ -1279,7 +1279,7 @@
 				<table>
 					<thead><tr><th>Élément importé</th><th>Résultat</th></tr></thead>
 					<tbody>
-						{#each LOT.fichiers as fichier (fichier.c)}<tr
+						{#each LOT.fichiers as fichier, index (`${fichier.c}:${index}`)}<tr
 								><td>{fichier.c}</td><td>{resultatDeFichier(fichier)}</td></tr
 							>{/each}
 					</tbody>
@@ -1303,7 +1303,7 @@
 						>
 						<!-- prettier-ignore -->
 						<div id="liste-ignores"
-							>{#if etape === 2}{#each ecartes as f (f.c)}{@render fichierEcarte(f)}{/each}{/if}</div
+							>{#if etape === 2}{#each ecartes as f, index (`${f.c}:${index}`)}{@render fichierEcarte(f)}{/each}{/if}</div
 						>
 					</div>
 				</div>
@@ -1407,7 +1407,7 @@
 				>{#if rapport.echecs}<section class="section-rapport section-rapport--erreurs"
 					><span class="etiq">Fichiers en échec — à reprendre</span
 					><div class="section-rapport__cadre"
-						>{#each rapport.enEchec as f (f.chemin)}<div class="ign"
+						>{#each rapport.enEchec as f, index (`${f.chemin}:${index}`)}<div class="ign"
 							><span class="ign__marque" style="background:var(--c-danger-voile);color:var(--c-danger)">échec</span
 							><span class="ign__nom">{f.chemin}</span
 							><span class="ign__motif">{motifEnClair(f.motif)}</span></div
@@ -1416,7 +1416,7 @@
 				>{/if}{#if rapport.ignoresDetail.length}<section class="section-rapport"
 					><span class="etiq">Fichiers ignorés</span
 					><div class="section-rapport__cadre"
-						>{#each rapport.ignoresDetail as f (f.chemin)}<div class="ign"
+						>{#each rapport.ignoresDetail as f, index (`${f.chemin}:${index}`)}<div class="ign"
 							><span class="ign__marque">ignoré</span
 							><span class="ign__nom">{f.chemin}</span
 							><span class="ign__motif">{motifEnClair(f.motif)}</span></div
@@ -1425,7 +1425,7 @@
 				>{/if}{#if rapport.renvoisNonResolus.length}<section class="section-rapport"
 					><span class="etiq">Références non résolues</span
 					><div class="section-rapport__cadre"
-						>{#each rapport.renvoisNonResolus as r (r.chemin)}<div class="ign"
+						>{#each rapport.renvoisNonResolus as r, index (`${r.chemin}:${index}`)}<div class="ign"
 							><span class="ign__marque">lien</span
 							><span class="ign__nom">{r.chemin}</span
 							><span class="ign__motif">{`renvoie à « ${r.renvois.join(' », « ')} », absente du lot. Le renvoi est consigné ici et nulle part ailleurs : aucun lien n’est mis en attente, et la relation reste à créer à la main.`}</span></div
@@ -1439,7 +1439,7 @@
 				><section class="section-rapport"
 					><span class="etiq">{intituleDesNotes(rapport)}</span
 					><div class="section-rapport__cadre"
-						>{#each rapport.ecrites.slice(0, 8) as n (n.identifiant)}{#if rapportSimule}<div class="note-creee"
+						>{#each rapport.ecrites.slice(0, 8) as n, index (`${n.identifiant}:${index}`)}{#if rapportSimule}<div class="note-creee"
 							><span class="note-creee__nom">{n.titre}</span
 							><span class="note-creee__ou">{n.ou}</span></div
 						>{:else}<a class="note-creee" href={n.adresse}
