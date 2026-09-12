@@ -27,6 +27,7 @@ import { basePartagee } from '$lib/base/acces';
 import { accesALaConsole } from '$lib/donnees/consoles';
 import { dossiers } from '$lib/base/schema';
 import { moteurPartage } from '$lib/recherche/acces';
+import { env } from '$env/dynamic/private';
 import { adresseDeDomaine, adresseDeDossier, identifiantLisible } from '$lib/rangement/adresses';
 import {
 	capacites,
@@ -515,14 +516,19 @@ export const actions: Actions = {
 		if (!rangementActif) error(404, MESSAGE_INTROUVABLE);
 		const brut = (await request.formData()).get('confirmation');
 
-		const fait = await supprimerUnDossier(basePartagee(), moteurPartage(), {
-			dossierId: dossier.id,
-			saisie: typeof brut === 'string' ? brut : '',
-			lignes,
-			droit: (id) => droitEffectif(acces, id),
-			/* `RG-NF-05` — l'auteur de la destruction, jusque dans la transaction. */
-			identite: locals.identite
-		});
+		const fait = await supprimerUnDossier(
+			basePartagee(),
+			moteurPartage(),
+			env.RACINE_FICHIERS?.trim() || null,
+			{
+				dossierId: dossier.id,
+				saisie: typeof brut === 'string' ? brut : '',
+				lignes,
+				droit: (id) => droitEffectif(acces, id),
+				/* `RG-NF-05` — l'auteur de la destruction, jusque dans la transaction. */
+				identite: locals.identite
+			}
+		);
 		if (!fait.fait) {
 			if (fait.message === '') error(404, MESSAGE_INTROUVABLE);
 			return fail(422, { suppression: fait.message });

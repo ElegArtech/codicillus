@@ -33,6 +33,7 @@ import { accord } from '../vocabulaire';
 import { resoudreLEditionDUneNote } from './edition';
 import type { ContexteDeLecture } from './lecture';
 import type { Retrolien } from './note';
+import { effacerLesOctetsDUneNote } from '../fichiers/entrepot';
 
 /**
  * L'état d'une note à l'instant où sa destruction est demandée, réduit à ce que
@@ -156,9 +157,7 @@ async function compterLesVersions(base: Base, identifiant: string): Promise<numb
  *  3. LA DESTRUCTION, en une transaction, PAR LA CASCADE — un seul `delete`.
  *  4. L'INDEX APRÈS LA TRANSACTION, JAMAIS DEDANS.
  *
- * CE QU'ELLE NE FAIT PAS : les OCTETS des pièces jointes vivent hors de la base, et la cascade
- * emporte les LIGNES, pas les fichiers. Ils deviennent inatteignables mais restent sur le
- * disque.
+ * Les octets des pièces jointes sont retirés après validation de la transaction.
  *
  * @throws `DocumentInvalide` — la résolution analyse le corps du registre.
  * @throws l'erreur de SOUMISSION au moteur : la note est alors DÉTRUITE et son entrée d'index
@@ -167,6 +166,7 @@ async function compterLesVersions(base: Base, identifiant: string): Promise<numb
 export async function supprimerUneNote(
 	base: Base,
 	client: Meilisearch,
+	racineFichiers: string | null,
 	demande: DemandeDeSuppression
 ): Promise<Resolution<SuppressionFaite>> {
 	const acces = await resoudreLEditionDUneNote(base, {
@@ -201,7 +201,7 @@ export async function supprimerUneNote(
 	 * note n'est plus là pour les donner.
 	 */
 	const [rangement] = await base
-		.select({ univers: univers.identifiant, domaine: domaines.identifiant })
+		.select({ noteId: notes.id, univers: univers.identifiant, domaine: domaines.identifiant })
 		.from(notes)
 		.innerJoin(domaines, eq(domaines.id, notes.domaineId))
 		.innerJoin(univers, eq(univers.id, domaines.universId))
@@ -229,6 +229,9 @@ export async function supprimerUneNote(
 		});
 	});
 
+	if (rangement !== undefined && racineFichiers !== null) {
+		await effacerLesOctetsDUneNote(racineFichiers, rangement.noteId);
+	}
 	/* LA TRANSACTION EST VALIDÉE — l'index peut suivre, jamais avant. */
 	await entretenirLIndex(base, client, [demande.identifiant]);
 
