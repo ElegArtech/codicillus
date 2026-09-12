@@ -1,15 +1,5 @@
-/* ==========================================================================
-   CODICILLUS — POLICES
-   Les trois familles du socle, servies localement. Le produit doit être
-   auto-hébergeable sans dépendance à un service externe (RG-NF-08) : les
-   maquettes, qui font foi, ne peuvent pas dépendre d'une fonderie distante.
-
-   Sous-ensembles latin et latin-ext uniquement — l'interface est en français
-   et le multilinguisme est hors périmètre (RG-M18-16).
-
-   Archivo, Literata et JetBrains Mono sont publiées sous SIL Open Font
-   License 1.1. Fichiers récupérés depuis Google Fonts le 16 août 2026.
-   ========================================================================== */
+/* Archivo, Literata et JetBrains Mono, servies localement.
+   Licences et mentions de droits dans les trois fichiers OFL de ce dossier. */
 
 @font-face {
   font-family: 'Archivo';

@@ -1,9 +1,0 @@
-{
-  "id": "PAR-107",
-  "aiguilles": 111,
-  "textes": 3,
-  "instantanes_dom": 22,
-  "trouvees": [],
-  "trace": "/home/alex/Documents/Repo/codicillus/docs/traces/recette-personas/PAR-107/fr-FR/rejeu-4/trace.zip",
-  "mesure": "Texte des captures et instantanés DOM enregistrés, hors contenu des balises script/style."
-}

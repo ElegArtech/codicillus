@@ -1,15 +1,3 @@
-/**
- * LA TRANSCRIPTION EST-ELLE FIDÈLE ? — la preuve est mécanique.
- *
- * Une transcription à la main se relit mal : l'œil recompose ce qu'il attend.
- * Ces cas confrontent donc les quatre documents au TEXTE DE LA MAQUETTE
- * elle-même, extrait du fichier gelé à chaque exécution. Un mot changé, une
- * apostrophe typographique glissée à la place d'une droite, un fragment oublié :
- * le cas rougit.
- *
- * La maquette est immuable : la lire est le seul
- * moyen d'attester une transcription sans redire à la main ce qu'elle dit déjà.
- */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { SOMMAIRE_REFERENCE } from '../lecture/note-de-demonstration';
@@ -23,113 +11,55 @@ import {
 	resoudreDansLeCorpus
 } from './documents-du-gel';
 
-/** Le contenu d'un `<div>` identifié, borné par comptage d'imbrication. */
-function corpsDeLaMaquette(fichier: string, identifiant: string): string {
-	const source = readFileSync(fichier, 'utf-8');
-	const debut = source.indexOf(`id="${identifiant}"`);
-	expect(debut, `${identifiant} introuvable dans ${fichier}`).toBeGreaterThan(0);
-	let i = source.indexOf('>', debut) + 1;
-	let profondeur = 1;
-	const departContenu = i;
-	while (profondeur > 0 && i < source.length) {
-		const ouvre = source.indexOf('<div', i);
-		const ferme = source.indexOf('</div>', i);
-		if (ferme === -1) break;
-		if (ouvre !== -1 && ouvre < ferme) {
-			profondeur += 1;
-			i = ouvre + 4;
-		} else {
-			profondeur -= 1;
-			i = ferme + 6;
-			if (profondeur === 0) return source.slice(departContenu, ferme);
-		}
-	}
-	throw new Error(`div « ${identifiant} » non refermé`);
-}
-
-/**
- * Le texte que la maquette donne à lire.
- *
- * Deux retraits, et ils sont motivés : les FIGURES, dont le document ne porte
- * pas la source (voir l'en-tête de `documents-du-gel.ts`), et la TÊTE d'un bloc
- * de code — le nom du langage et le bouton « Copier » sont du rendu, jamais du
- * contenu. Les balises en ligne disparaissent sans laisser d'espace ; les
- * autres en laissent un, parce qu'elles séparent deux blocs de lecture.
- */
-const BALISES_EN_LIGNE = /<\/?(?:a|b|i|u|s|em|strong|mark|code|span|sup|sub|time|small)\b[^>]*>/g;
-
-function texteDeLaMaquette(html: string): string {
-	return html
-		.replace(/<figure[\s\S]*?<\/figure>/g, ' ')
-		.replace(/<div class="bloc-code__tete">[\s\S]*?<\/div>/g, ' ')
-		.replace(BALISES_EN_LIGNE, '')
-		.replace(/<[^>]+>/g, ' ')
-		.replaceAll('&lt;', '<')
-		.replaceAll('&gt;', '>')
-		.replaceAll('&quot;', '"')
-		.replaceAll('&nbsp;', ' ')
-		.replaceAll('&amp;', '&')
-		.replace(/\s+/g, ' ')
-		.trim();
-}
-
 function texteDuDocument(texte: string): string {
 	return texte.replace(/\s+/g, ' ').trim();
 }
 
-const MAQUETTES = [
+const EXEMPLES = [
 	{
-		fichier: 'mockups_old/V-14-lecture-note.html',
+		fichier: 'seeds/fixtures/restauration-reference.txt',
 		note: 'n-restaurer-pg',
-		registre: 'reference' as const,
-		identifiant: 'corps-reference'
+		registre: 'reference' as const
 	},
 	{
-		fichier: 'mockups_old/V-14-lecture-note.html',
+		fichier: 'seeds/fixtures/restauration-operationnel.txt',
 		note: 'n-restaurer-pg',
-		registre: 'operationnel' as const,
-		identifiant: 'corps-operationnel'
+		registre: 'operationnel' as const
 	},
 	{
-		fichier: 'mockups_old/V-03-lecture-publique.html',
+		fichier: 'seeds/fixtures/connexion-reference.txt',
 		note: 'n-mot-de-passe',
-		registre: 'reference' as const,
-		identifiant: 'corps-reference'
+		registre: 'reference' as const
 	},
 	{
-		fichier: 'mockups_old/V-03-lecture-publique.html',
+		fichier: 'seeds/fixtures/connexion-operationnel.txt',
 		note: 'n-mot-de-passe',
-		registre: 'operationnel' as const,
-		identifiant: 'corps-operationnel'
+		registre: 'operationnel' as const
 	}
 ];
 
-describe('les corps transcrits du gel', () => {
-	it('sont quatre, chacun rattaché à sa maquette et à ses lignes', () => {
+describe('les contenus de démonstration', () => {
+	it('sont quatre, chacun rattaché à son texte attendu', () => {
 		expect(DOCUMENTS_DU_GEL).toHaveLength(4);
-		for (const d of DOCUMENTS_DU_GEL) expect(d.source).toMatch(/^mockups_old\/V-\d\d.*:\d+-\d+$/);
+		for (const d of DOCUMENTS_DU_GEL) expect(d.source).toMatch(/^seeds\/fixtures\/.+\.txt$/);
 	});
 
-	for (const m of MAQUETTES) {
+	for (const m of EXEMPLES) {
 		it(`${m.note} / ${m.registre} rend le texte de ${m.fichier}`, () => {
-			const attendu = texteDeLaMaquette(corpsDeLaMaquette(m.fichier, m.identifiant));
+			const attendu = readFileSync(m.fichier, 'utf8').trim();
 			const obtenu = texteDuDocument(texteBrut(documentDuGel(m.note, m.registre)));
 			expect(obtenu).toBe(attendu);
 		});
 	}
 
-	it('garde les espaces insécables du gel — trois, dans l’opérationnel de V-03', () => {
-		/* `V-03:1091-1093` — « Session ouverte&nbsp;? ». L’insécable est une décision
-		   typographique du gel, et le contrôle de fidélité ci-dessus ne peut pas la
-		   voir : il normalise les blancs, et la classe des blancs comprend
-		   l’insécable. Sans ce cas, la règle serait espérée, pas posée (P-5). */
+	it('garde les espaces insécables des exemples — trois, dans l’opérationnel de V-03', () => {
 		const texte = texteBrut(documentDuGel('n-mot-de-passe', 'operationnel'));
 		expect(texte.match(/\u00a0\?/g)).toHaveLength(3);
 		expect(texte.match(/\?/g)).toHaveLength(3);
 	});
 });
 
-describe('le sommaire du gel se déduit du document transcrit', () => {
+describe('le sommaire se déduit du contenu', () => {
 	it('redonne les quatorze entrées de note-de-demonstration.ts, dans l’ordre', () => {
 		const releve = [...ancresDuDocument(documentDuGel('n-restaurer-pg', 'reference'))].map(
 			([t, ancre]) => ({
@@ -141,7 +71,7 @@ describe('le sommaire du gel se déduit du document transcrit', () => {
 		expect(releve).toEqual(SOMMAIRE_REFERENCE.map((e) => ({ ...e })));
 	});
 
-	it('porte les six niveaux de titre que le gel écrit — 2 à 6, jamais 1', () => {
+	it('porte les six niveaux de titre des exemples — 2 à 6, jamais 1', () => {
 		const niveaux = new Set(
 			titres(documentDuGel('n-restaurer-pg', 'reference')).map((t) => t.attrs.level)
 		);
@@ -149,7 +79,7 @@ describe('le sommaire du gel se déduit du document transcrit', () => {
 	});
 });
 
-describe('les liens internes du gel', () => {
+describe('les liens internes des exemples', () => {
 	it('portent des identifiants du corpus quand la note existe', () => {
 		const cites = liensInternes(documentDuGel('n-restaurer-pg', 'reference'));
 		expect(cites).toContain(idParTitre('Diagnostiquer un échec de restauration Barman'));

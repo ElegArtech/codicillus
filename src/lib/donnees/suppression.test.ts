@@ -78,10 +78,6 @@ function corpsQuiCite(cible: string, fois: number) {
 
 describe('RG-M04-10 et le gel de V-40 — ce que la confirmation annonce', () => {
 	it('rend les QUATRE valeurs du gel, et rien d’autre', () => {
-		/* Trois puces au gel — `mockups/V-40-dialogues.html:3295-3297` : versions,
-		   notes qui pointent vers elle, pièces jointes — plus le titre rappelé.
-		   `RG-M04-10` n'en nomme que trois : la quatrième vient de la maquette,
-		   qui prime (`ECART-048` É-5). */
 		const resume = resumeDeSuppression({ trouve: true, ressource: etat() });
 
 		expect(resume.trouve).toBe(true);

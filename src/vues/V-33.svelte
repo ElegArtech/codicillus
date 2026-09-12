@@ -274,21 +274,6 @@
 <!-- prettier-ignore -->
 {#snippet marqueurDErreur()}<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" style="flex:none;margin-top:1px"><path d="M8 4.5v4M8 11.2v.3"/><circle cx="8" cy="8" r="6.2"/></svg>{/snippet}
 
-<!--
-	La barre de répartition du produit, et sa légende chiffrée.
-
-	LA BRANCHE VIDE EST CELLE DU GEL, ET ELLE EST LA PREMIÈRE CHOSE RENDUE :
-	`mockups/V-33-console-configuration.html:2902-2908` — quand l'ensemble mesuré
-	est vide, la fabrique ne rend NI barre NI légende, mais un seul
-	`div.zone-etat__txt` portant « Aucune note à mesurer. ». Le corpus natif de V-33
-	ne l'exerce jamais ; c'est le corpus vierge qui l'a levé.
-
-	ICI LES SEGMENTS SONT DES `span`, ET NON DES BOUTONS. Ailleurs (V-07, V-10,
-	V-11) une part de barre ouvre la liste filtrée sur son niveau ; ces deux
-	barres-là ne le peuvent pas — « Avec ces seuils » compte selon des seuils
-	SAISIS, que le serveur ne connaît pas. Le gel fait le même choix : il appelle sa
-	fabrique sans `surPart` (`V-33:3084`).
--->
 <!-- prettier-ignore -->
 {#snippet barreRepartition(r: Repartition, sansLegende: boolean)}{#if !r.total}<div class="zone-etat__txt" style="margin:0">Aucune note à mesurer.</div>{:else}<div class="repart" role="img" aria-label={libelleDeBarre(r)}
 		>{#each partsDe(r) as p (p.cle)}<span class={p.classe} style="flex:{p.n}" title={p.libelle}></span>{/each}</div

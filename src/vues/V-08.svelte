@@ -1,31 +1,4 @@
 <script lang="ts">
-	/**
-	 * V-08 — Recherche interne. Route `/recherche` (`docs/routes.md` §3.3).
-	 *
-	 * `rendre()` du gel LÈVE — ni `trier` ni `carte` n'y est défini — et la zone de
-	 * résultats de la maquette reste donc vide. `ARB-030` a tranché ce qu'elle ne
-	 * montre pas : la carte de résultat de V-08 est celle de V-02, gelée et
-	 * fonctionnelle (`mockups/V-02-recherche-publique.html:1145-1252`).
-	 *
-	 * `recherchees` EST LE POINT UNIQUE OÙ LES DEUX RÉGIMES SE SÉPARENT. Sans elle,
-	 * la vue cherche elle-même dans le jeu qu'on lui donne et ne rend aucun résultat,
-	 * comme la maquette. Avec elle, les notes reçues sont le résultat de l'index, et
-	 * la zone de résultats, le compteur, les comptes de facette et `data-trop`
-	 * deviennent vrais. Le chargeur de `/recherche` la pose ; rien d'autre.
-	 *
-	 * L'ÉTAT DE LA RECHERCHE EST PORTÉ PAR L'ADRESSE — `RG-M02-06` : `retenues` vient
-	 * de l'adresse et rien d'autre ne la porte. `docs/routes.md` §4.2 : dans une
-	 * facette les valeurs sont en OU (paramètre répété), entre facettes en ET.
-	 *
-	 * `RG-M02-01` — la bascule en mots-clés est ANNONCÉE. La fraîcheur vient de la
-	 * fabrique unique (`ADR-005`) : la facette « Fraîcheur » lit `n.fraicheur`, et
-	 * c'est pourquoi elle se filtre ici et non dans l'index, qui ne porte pas ce
-	 * champ.
-	 *
-	 * Cinq attributs de données passent par `donnees` : `data-etat`, `data-mode`,
-	 * `data-degrade`, `data-trop`, `data-facettes`. Le style est dans
-	 * `src/socle.css` et `src/vues/V-08.css`.
-	 */
 	import type { Domaine, Note, Univers, UtilisateurCourant } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
@@ -317,11 +290,6 @@
 	/** Seules les facettes qui ont au moins une valeur sont rendues (`V-08:1841`). */
 	const facettes = $derived(FACETTES.map(facetteRendue).filter((f) => f.valeurs.length > 0));
 
-	/* LA ZONE DE RÉSULTATS — dérivée de V-02 (`ARB-030`), où `carte()` est gelée et
-	   fonctionnelle (`mockups/V-02-recherche-publique.html:1145-1252`). Elle porte
-	   déjà les deux publics : chaque différence y est un test sur `opts.publique`.
-	   V-02 appelle avec `{ publique: true }`, V-08 sans l'option. */
-
 	/**
 	 * `trier()` EST L'IDENTITÉ, ET C'EST VOULU : l'ordre est celui du MOTEUR, qui
 	 * l'applique avant cette vue — trier ici ne classerait que ce que le plafond de
@@ -489,18 +457,6 @@
 <!-- prettier-ignore -->
 {#snippet marque(texte: string, q: string)}{#each segmenter(texte, q) as s, rang (rang)}{#if s.marque}<mark>{s.texte}</mark>{:else}{s.texte}{/if}{/each}{/snippet}
 
-<!--
-	LA CARTE DE RÉSULTAT, VARIANTE CONNECTÉE — le port de `carte()` de V-02
-	(`mockups/V-02-recherche-publique.html:1145-1252`) avec `opts.publique` indéfini,
-	comme `V-08:2025-2028` l'appelle. Le pastillon Brouillon, la marque de registre,
-	le rangement complet et la mention de visibilité sont les nœuds réservés au
-	public connecté ; le segment de dossier est CONDITIONNEL — une note posée à la
-	racine d'un domaine a un chemin vide, et le séparateur resterait pendu.
-
-	AUCUN BLANC ENTRE LES NŒUDS, et il doit le rester : le nom accessible se construit
-	sur `textContent`. L'espace de `{n.univers + ' › '}` est PORTÉ DANS L'EXPRESSION,
-	jamais laissé en bord d'élément, que Svelte élaguerait.
--->
 <!-- prettier-ignore -->
 {#snippet carte(n: Note, q: string, index: number)}<a class="carte" href={resolve('/notes/[identifiant]', { identifiant: n.id })} data-index={index}
 		><div class="carte__haut"

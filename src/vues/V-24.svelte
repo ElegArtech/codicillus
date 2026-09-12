@@ -83,13 +83,7 @@
 		lotImport: LotDImport;
 		/** Les libellés des formats admis. Reçue PARTIELLE : le rendu retombe sur l'extension. */
 		formatsImport: Partial<Record<FormatDImport, string>>;
-		/**
-		 * Un lot déjà déposé, remis par l'écran qui l'a reçu — le dépôt de la console
-		 * (`mockups/V-35-console-imports.html:3000`) fait atterrir les fichiers AVANT le
-		 * choix du scénario, et l'étape 1 doit les tenir. Vide, le parcours s'ouvre sur
-		 * une étape 1 vierge. Le lot n'est pas analysé pour autant : le classement
-		 * demande une cible, donc un scénario.
-		 */
+
 		lotRecu?: readonly File[];
 		/** L'analyse d'un lot déposé. Absente, rien n'est envoyé nulle part. Fournie, le
 		    serveur CLASSE le lot sans rien écrire — `UC-M12-04` §3, « rien n'a encore été

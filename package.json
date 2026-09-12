@@ -1,9 +1,16 @@
 {
 	"name": "codicillus",
-	"version": "1.0.0",
+	"version": "1.0.0-rc.1",
 	"private": true,
 	"type": "module",
-	"description": "Codicillus — base de connaissances documentaire. Squelette applicatif (lot T-002).",
+	"description": "Base de connaissances auto-hébergée : vivacité des notes, registres de lecture et relations qualifiées.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ElegArtech/codicillus.git"
+	},
+	"homepage": "https://github.com/ElegArtech/codicillus#readme",
+	"packageManager": "pnpm@11.22.0",
 	"engines": {
 		"node": ">=24.19.0 <25"
 	},
