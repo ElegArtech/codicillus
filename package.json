@@ -1,6 +1,6 @@
 {
 	"name": "codicillus",
-	"version": "1.0.0-rc.1",
+	"version": "1.0.0-rc.2",
 	"private": true,
 	"type": "module",
 	"description": "Base de connaissances auto-hébergée : vivacité des notes, registres de lecture et relations qualifiées.",
@@ -32,7 +32,8 @@
 		"base:peupler": "node base/base.mjs peupler",
 		"base:conformite": "node base/base.mjs conformite",
 		"base:reindexer": "node base/base.mjs reindexer",
-		"base:administrateur": "node base/base.mjs administrateur"
+		"base:administrateur": "node base/base.mjs administrateur",
+		"base:initialiser": "node base/base.mjs initialiser"
 	},
 	"dependencies": {
 		"@node-rs/argon2": "2.1.0",

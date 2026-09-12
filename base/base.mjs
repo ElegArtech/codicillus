@@ -7,6 +7,7 @@ const [, , commande, ...arguments_] = argv;
 const USAGE = `
 Usage : node base/base.mjs <commande>
 
+  initialiser       prépare le schéma, le premier compte et la recherche au démarrage
   migrer            applique les migrations en attente
   annuler [n|tout]  annule les n dernières migrations (1 par défaut)
   etat              liste les migrations, appliquées ou non
@@ -62,6 +63,33 @@ const ligne = (gauche, droite) => console.log(`  ${gauche.padEnd(58)} ${droite}`
 
 try {
 	switch (commande) {
+		case 'initialiser': {
+			const posees = await B.migrer(session.pool);
+			ligne('migrations appliquées', String(posees.length));
+			if ((await B.compter(session, 'comptes')) === 0) {
+				const qui = {
+					identifiant: process.env.ADMIN_IDENTIFIANT ?? '',
+					nom: process.env.ADMIN_NOM ?? '',
+					courriel: process.env.ADMIN_COURRIEL ?? '',
+					motDePasse: process.env.MDP_ADMINISTRATEUR ?? ''
+				};
+				const fait = await B.creerLePremierAdministrateur(session, qui);
+				if (!fait.cree) {
+					throw new Error(
+						`Premier administrateur : ${fait.motif}. Renseigner ADMIN_IDENTIFIANT, ADMIN_NOM, ADMIN_COURRIEL et MDP_ADMINISTRATEUR dans .env, puis relancer docker compose up -d.`
+					);
+				}
+				ligne('premier administrateur créé', qui.identifiant);
+			} else {
+				console.log('Les comptes existants et leurs mots de passe sont conservés.');
+			}
+			const R = await vite.ssrLoadModule('/src/lib/recherche/commandes.ts');
+			const resultat = await R.reindexerLeCorpus(session.db, process.env);
+			ligne('notes indexées', String(resultat.indexees));
+			console.log('Initialisation terminée.');
+			break;
+		}
+
 		case 'migrer': {
 			const posees = await B.migrer(session.pool);
 			if (posees.length === 0) console.log('aucune migration en attente.');

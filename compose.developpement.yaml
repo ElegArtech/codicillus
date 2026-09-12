@@ -1,0 +1,10 @@
+# Ports locaux pour travailler sur les sources ; inutiles pour l'installation standard.
+services:
+  app:
+    ports: ['127.0.0.1:${PORT_APP:-19300}:3000']
+  db:
+    ports: ['127.0.0.1:${PORT_DB:-19432}:5432']
+  recherche:
+    ports: ['127.0.0.1:${PORT_RECHERCHE:-19700}:7700']
+  conversion:
+    ports: ['127.0.0.1:${PORT_CONVERSION:-19800}:8000']
