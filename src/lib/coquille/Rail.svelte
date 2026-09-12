@@ -27,6 +27,7 @@
 	import Pictogramme from '$lib/console/Pictogramme.svelte';
 	import { CHAMP_DOMAINE_CIBLE, CHAMP_NOM, CHAMP_UNIVERS_CIBLE } from '$lib/console/structure';
 	import { identifiantLisible } from '$lib/rangement/adresses';
+	import { accord } from '$lib/vocabulaire';
 	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
 	import { SCENARIO_DE_DOMAINE, SCENARIO_LIVRE } from '$lib/donnees/scenarios-d-import';
 	import {
@@ -182,11 +183,21 @@
 		readonly nom: string;
 		readonly cible: NoeudRendu['cible'];
 		readonly identifiant: string | null;
+		readonly decompte: {
+			readonly domaines: number;
+			readonly dossiers: number;
+			readonly notes: number;
+		};
 	}
 
 	let menuContextuel = $state<CibleContextuelle | null>(null);
 	let positionDuMenu = $state({ x: 0, y: 0 });
 	let elementDuMenu = $state<HTMLDivElement>();
+	let boiteDeSuppression = $state<HTMLDialogElement>();
+	let suppressionDemandee = $state<CibleContextuelle | null>(null);
+	let confirmationDeSuppression = $state('');
+	let suppressionEnCours = $state(false);
+	let erreurDeSuppression = $state<string | null>(null);
 	let noteDeplacee = $state<CibleContextuelle | null>(null);
 	let cibleDeDepot = $state<string | null>(null);
 	let importEnCours = $state(false);
@@ -197,21 +208,60 @@
 		erreur: string | null;
 	} | null>(null);
 
+	function decompteDesNoeuds(noeuds: readonly NoeudRendu[]): {
+		readonly dossiers: number;
+		readonly notes: number;
+	} {
+		let dossiers = 0;
+		let notes = 0;
+		for (const noeud of noeuds) {
+			if (noeud.type === 'note') notes += 1;
+			if (noeud.type === 'dossier') dossiers += 1;
+			const enfants = decompteDesNoeuds(noeud.enfants);
+			dossiers += enfants.dossiers;
+			notes += enfants.notes;
+		}
+		return { dossiers, notes };
+	}
+
 	function cibleDeNoeud(noeud: NoeudRendu): CibleContextuelle {
+		const contenu = decompteDesNoeuds(noeud.enfants);
 		return {
 			type: noeud.type,
 			nom: noeud.nom,
 			cible: noeud.cible,
-			identifiant: noeud.identifiant
+			identifiant: noeud.identifiant,
+			decompte: {
+				domaines: 0,
+				dossiers: contenu.dossiers,
+				notes: noeud.type === 'note' ? 1 : contenu.notes
+			}
 		};
 	}
 
 	function cibleDUnivers(section: SectionRendue): CibleContextuelle {
-		return { type: 'univers', nom: section.nom, cible: section.cible, identifiant: null };
+		const contenu = decompteDesNoeuds(section.domaines);
+		return {
+			type: 'univers',
+			nom: section.nom,
+			cible: section.cible,
+			identifiant: null,
+			decompte: {
+				domaines: section.domaines.length,
+				dossiers: contenu.dossiers,
+				notes: contenu.notes
+			}
+		};
 	}
 
 	function cibleDeNoteRecente(note: NoteRecente): CibleContextuelle {
-		return { type: 'note', nom: note.titre, cible: null, identifiant: note.identifiant };
+		return {
+			type: 'note',
+			nom: note.titre,
+			cible: null,
+			identifiant: note.identifiant,
+			decompte: { domaines: 0, dossiers: 0, notes: 1 }
+		};
 	}
 
 	async function ouvrirLeMenu(evenement: MouseEvent, cible: CibleContextuelle): Promise<void> {
@@ -399,31 +449,55 @@
 		} else if (cible.type === 'domaine') {
 			champs.set(CHAMP_UNIVERS_CIBLE, cible.cible?.univers ?? '');
 			champs.set(CHAMP_DOMAINE_CIBLE, cible.cible?.domaine ?? '');
-			champs.set('sup-saisie', cible.nom);
+			champs.set('sup-saisie', confirmationDeSuppression);
 		} else if (cible.type === 'dossier') {
-			champs.set('confirmation', cible.nom);
+			champs.set('confirmation', confirmationDeSuppression);
 		}
 		return champs;
 	}
 
-	async function supprimerDepuisLeMenu(): Promise<void> {
+	async function demanderLaSuppressionDepuisLeMenu(): Promise<void> {
 		if (menuContextuel === null) return;
-		const cible = menuContextuel;
-		const contenu = cible.type === 'domaine' || cible.type === 'dossier' ? ' et son contenu' : '';
-		if (!window.confirm(`Supprimer définitivement « ${cible.nom} »${contenu} ?`)) return;
+		suppressionDemandee = menuContextuel;
 		menuContextuel = null;
+		confirmationDeSuppression = '';
+		suppressionEnCours = false;
+		erreurDeSuppression = null;
+		await tick();
+		boiteDeSuppression?.showModal();
+	}
+
+	function annulerLaSuppression(): void {
+		if (suppressionEnCours) return;
+		boiteDeSuppression?.close();
+		suppressionDemandee = null;
+	}
+
+	async function confirmerLaSuppression(): Promise<void> {
+		if (suppressionDemandee === null || suppressionEnCours) return;
+		const cible = suppressionDemandee;
+		if (cible.type !== 'note' && confirmationDeSuppression !== cible.nom) return;
+		suppressionEnCours = true;
+		erreurDeSuppression = null;
 		try {
 			const reponse = await fetch(adresseDeSuppression(cible), {
 				method: 'POST',
 				body: champsDeSuppression(cible)
 			});
 			if (!reponse.ok) {
-				window.alert(`« ${cible.nom} » ne peut pas être supprimé.`);
+				erreurDeSuppression =
+					cible.type === 'univers'
+						? `« ${cible.nom} » est l'univers système et ne peut pas être supprimé.`
+						: `« ${cible.nom} » ne peut pas être supprimé.`;
+				suppressionEnCours = false;
 				return;
 			}
+			boiteDeSuppression?.close();
+			suppressionDemandee = null;
 			await goto(resolve('/'), { invalidateAll: true });
 		} catch {
-			window.alert('La suppression a échoué.');
+			erreurDeSuppression = 'La suppression a échoué.';
+			suppressionEnCours = false;
 		}
 	}
 
@@ -947,7 +1021,7 @@
 				type="button"
 				role="menuitem"
 				class="rail__menu-contextuel-danger"
-				onclick={supprimerDepuisLeMenu}>Supprimer</button
+				onclick={demanderLaSuppressionDepuisLeMenu}>Supprimer</button
 			>
 		{:else if menuContextuel.type === 'domaine'}
 			{#if admin}<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}
@@ -959,7 +1033,7 @@
 					type="button"
 					role="menuitem"
 					class="rail__menu-contextuel-danger"
-					onclick={supprimerDepuisLeMenu}>Supprimer</button
+					onclick={demanderLaSuppressionDepuisLeMenu}>Supprimer</button
 				>{/if}
 		{:else if menuContextuel.type === 'dossier'}
 			<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}>Renommer</button>
@@ -969,7 +1043,7 @@
 				type="button"
 				role="menuitem"
 				class="rail__menu-contextuel-danger"
-				onclick={supprimerDepuisLeMenu}>Supprimer</button
+				onclick={demanderLaSuppressionDepuisLeMenu}>Supprimer</button
 			>
 		{:else if menuContextuel.identifiant}
 			<a role="menuitem" href={adresseDeNote(menuContextuel)}>Ouvrir</a>
@@ -979,9 +1053,141 @@
 					type="button"
 					role="menuitem"
 					class="rail__menu-contextuel-danger"
-					onclick={supprimerDepuisLeMenu}>Supprimer</button
+					onclick={demanderLaSuppressionDepuisLeMenu}>Supprimer</button
 				>
 			{/if}
 		{/if}
 	</div>
 {/if}
+
+<dialog
+	class="rail__suppression"
+	bind:this={boiteDeSuppression}
+	aria-labelledby="rail-suppression-titre"
+	oncancel={(evenement) => {
+		if (suppressionEnCours) evenement.preventDefault();
+		else suppressionDemandee = null;
+	}}
+>
+	{#if suppressionDemandee}
+		<div class="rail__suppression-boite">
+			<div class="rail__suppression-tete">
+				<span class="rail__suppression-marque" aria-hidden="true">!</span>
+				<h2 id="rail-suppression-titre">
+					Supprimer {suppressionDemandee.type === 'univers'
+						? "l'univers"
+						: suppressionDemandee.type === 'domaine'
+							? 'le domaine'
+							: suppressionDemandee.type === 'dossier'
+								? 'le dossier'
+								: 'la note'}
+				</h2>
+				<button
+					type="button"
+					class="rail__suppression-fermer"
+					aria-label="Fermer"
+					disabled={suppressionEnCours}
+					onclick={annulerLaSuppression}>×</button
+				>
+			</div>
+			<div class="rail__suppression-corps">
+				<p>
+					<strong>« {suppressionDemandee.nom} »</strong>
+				</p>
+				{#if suppressionDemandee.type === 'univers'}
+					<p class="rail__suppression-avertissement">
+						Attention, supprimer cet univers supprimera l'intégralité des domaines, dossiers,
+						sous-dossiers et notes qu'il contient.
+					</p>
+					<ul>
+						<li>
+							{suppressionDemandee.decompte.domaines}
+							{accord(suppressionDemandee.decompte.domaines, 'domaine')}
+						</li>
+						<li>
+							{suppressionDemandee.decompte.dossiers}
+							{accord(suppressionDemandee.decompte.dossiers, 'dossier')} et
+							{accord(suppressionDemandee.decompte.dossiers, 'sous-dossier')}
+						</li>
+						<li>
+							{suppressionDemandee.decompte.notes}
+							{accord(suppressionDemandee.decompte.notes, 'note')}
+						</li>
+					</ul>
+				{:else if suppressionDemandee.type === 'domaine'}
+					<p class="rail__suppression-avertissement">
+						Supprimer ce domaine supprimera tous ses dossiers, sous-dossiers et notes.
+					</p>
+					<ul>
+						<li>
+							{suppressionDemandee.decompte.dossiers}
+							{accord(suppressionDemandee.decompte.dossiers, 'dossier')} et
+							{accord(suppressionDemandee.decompte.dossiers, 'sous-dossier')}
+						</li>
+						<li>
+							{suppressionDemandee.decompte.notes}
+							{accord(suppressionDemandee.decompte.notes, 'note')}
+						</li>
+					</ul>
+				{:else if suppressionDemandee.type === 'dossier'}
+					<p class="rail__suppression-avertissement">
+						Supprimer ce dossier supprimera tous ses sous-dossiers et toutes les notes qu'ils
+						contiennent.
+					</p>
+					<ul>
+						<li>
+							{suppressionDemandee.decompte.dossiers}
+							{accord(suppressionDemandee.decompte.dossiers, 'sous-dossier')}
+						</li>
+						<li>
+							{suppressionDemandee.decompte.notes}
+							{accord(suppressionDemandee.decompte.notes, 'note')}
+						</li>
+					</ul>
+				{:else}
+					<p class="rail__suppression-avertissement">
+						Le contenu, les registres, l'historique, les relations et les pièces jointes de cette
+						note seront supprimés.
+					</p>
+				{/if}
+				<p class="rail__suppression-definitif">
+					La suppression est définitive : il n'y a pas de corbeille.
+				</p>
+				{#if suppressionDemandee.type !== 'note'}
+					<label for="rail-confirmation-suppression">
+						Pour confirmer, retapez le nom exact :
+						<strong>{suppressionDemandee.nom}</strong>
+					</label>
+					<input
+						id="rail-confirmation-suppression"
+						type="text"
+						autocomplete="off"
+						spellcheck="false"
+						bind:value={confirmationDeSuppression}
+					/>
+				{/if}
+				{#if erreurDeSuppression}<p class="rail__suppression-erreur" role="alert">
+						{erreurDeSuppression}
+					</p>{/if}
+			</div>
+			<div class="rail__suppression-pied">
+				<button
+					type="button"
+					class="btn"
+					disabled={suppressionEnCours}
+					onclick={annulerLaSuppression}>Annuler</button
+				>
+				<button
+					type="button"
+					class="btn rail__suppression-valider"
+					disabled={suppressionEnCours ||
+						(suppressionDemandee.type !== 'note' &&
+							confirmationDeSuppression !== suppressionDemandee.nom)}
+					onclick={confirmerLaSuppression}
+				>
+					{suppressionEnCours ? 'Suppression…' : 'Supprimer définitivement'}
+				</button>
+			</div>
+		</div>
+	{/if}
+</dialog>

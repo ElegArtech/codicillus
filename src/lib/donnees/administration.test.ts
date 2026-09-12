@@ -55,7 +55,6 @@ import {
 	nomConfirme,
 	roleDepuisLeLibelle,
 	SORTIE_DELESTER_LES_NOTES,
-	SORTIE_RATTACHER_LES_DOMAINES,
 	supprimerUnDomaine,
 	valeursDeConfigurationSaisies,
 	validerLaConfiguration,
@@ -70,27 +69,15 @@ import type { Configuration } from '../../../seeds/corpus';
 
 /* ═══════════════════════════════════ `RG-M14-01` ════════════════════════ */
 
-describe('RG-M14-01 — un univers qui contient des domaines ne se supprime pas', () => {
-	it('REFUSE l’univers peuplé, et rend le décompte de ce qui le retient', () => {
+describe('suppression d’un univers et de tout son contenu', () => {
+	it('AUTORISE l’univers peuplé et rend le décompte annoncé', () => {
 		const verdict = verdictDeSuppressionDUnUnivers({
 			systeme: false,
 			decompte: { domaines: 3, notes: 27 }
 		});
-		expect(verdict.issue).toBe('univers-non-vide');
-		if (verdict.issue !== 'univers-non-vide') return;
+		expect(verdict.issue).toBe('possible');
+		if (verdict.issue !== 'possible') return;
 		expect(verdict.decompte).toEqual({ domaines: 3, notes: 27 });
-	});
-
-	it('PROPOSE de rattacher les domaines ailleurs — la seconde moitié de la règle', () => {
-		const verdict = verdictDeSuppressionDUnUnivers({
-			systeme: false,
-			decompte: { domaines: 1, notes: 0 }
-		});
-		if (verdict.issue !== 'univers-non-vide') throw new Error('refus attendu');
-		/* Le refus SEUL ne tient pas la règle : « le produit propose de rattacher
-		   ses domaines ailleurs ». La sortie est donc éprouvée à part. */
-		expect(verdict.sortie).toBe(SORTIE_RATTACHER_LES_DOMAINES);
-		expect(verdict.sortie).toContain('Rattachez');
 	});
 
 	it('LAISSE PASSER l’univers vide — la polarité inverse, et elle compte autant', () => {
@@ -98,7 +85,7 @@ describe('RG-M14-01 — un univers qui contient des domaines ne se supprime pas'
 			systeme: false,
 			decompte: { domaines: 0, notes: 0 }
 		});
-		expect(verdict).toEqual({ issue: 'possible' });
+		expect(verdict).toEqual({ issue: 'possible', decompte: { domaines: 0, notes: 0 } });
 	});
 
 	it('refuse l’univers SYSTÈME avant tout décompte — RG-STR-01, et le gel l’ordonne ainsi', () => {
@@ -240,8 +227,16 @@ function baseFeinte(options: { readonly echouerA?: number } = {}) {
 	const files: unknown[][] = [
 		[{ id: 'd-1', nom: 'Infrastructure' }],
 		[
-			{ identifiant: 'note-a', typeDeNote: 'Procédure' },
-			{ identifiant: 'note-b', typeDeNote: 'Fiche' }
+			{
+				id: '10000000-0000-4000-8000-000000000001',
+				identifiant: 'note-a',
+				typeDeNote: 'Procédure'
+			},
+			{
+				id: '10000000-0000-4000-8000-000000000002',
+				identifiant: 'note-b',
+				typeDeNote: 'Fiche'
+			}
 		],
 		[{ dossiers: 5 }],
 		[{ comptesRattaches: 2 }]
@@ -259,6 +254,7 @@ function baseFeinte(options: { readonly echouerA?: number } = {}) {
  * pas quand la transaction a échoué.
  */
 const MOTEUR = {} as unknown as Meilisearch;
+const RACINE_FICHIERS_DE_TEST = '/tmp/codicillus-fichiers-tests-absents';
 
 /**
  * L'AUTEUR DES DESTRUCTIONS ÉPROUVÉES — `RG-NF-05`. Une identité authentifiée, parce
@@ -282,7 +278,7 @@ describe('RG-M14-03 — la suppression est atomique : soit tout, soit rien', () 
 		entretiens.length = 0;
 		const feinte = baseFeinte();
 
-		const resultat = await supprimerUnDomaine(feinte.base, MOTEUR, {
+		const resultat = await supprimerUnDomaine(feinte.base, MOTEUR, RACINE_FICHIERS_DE_TEST, {
 			univers: 'production',
 			domaine: 'infrastructure',
 			saisie: 'Infrastructure',
@@ -310,7 +306,7 @@ describe('RG-M14-03 — la suppression est atomique : soit tout, soit rien', () 
 		const feinte = baseFeinte({ echouerA: 2 });
 
 		await expect(
-			supprimerUnDomaine(feinte.base, MOTEUR, {
+			supprimerUnDomaine(feinte.base, MOTEUR, RACINE_FICHIERS_DE_TEST, {
 				univers: 'production',
 				domaine: 'infrastructure',
 				saisie: 'Infrastructure',
@@ -329,7 +325,7 @@ describe('RG-M14-03 — la suppression est atomique : soit tout, soit rien', () 
 		entretiens.length = 0;
 		const feinte = baseFeinte();
 
-		const resultat = await supprimerUnDomaine(feinte.base, MOTEUR, {
+		const resultat = await supprimerUnDomaine(feinte.base, MOTEUR, RACINE_FICHIERS_DE_TEST, {
 			univers: 'production',
 			domaine: 'infrastructure',
 			saisie: 'infrastructure',
@@ -350,7 +346,7 @@ describe('RG-M14-05 — le contenu détruit disparaît immédiatement de la rech
 		entretiens.length = 0;
 		const feinte = baseFeinte();
 
-		await supprimerUnDomaine(feinte.base, MOTEUR, {
+		await supprimerUnDomaine(feinte.base, MOTEUR, RACINE_FICHIERS_DE_TEST, {
 			univers: 'production',
 			domaine: 'infrastructure',
 			saisie: 'Infrastructure',

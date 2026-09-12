@@ -40,6 +40,7 @@ import { moteurPartage } from '$lib/recherche/acces';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import { CATALOGUE_DE_MODULES } from '$lib/rangement/modules';
+import { env } from '$env/dynamic/private';
 
 /**
  * LE CATALOGUE DES SIX MODULES ACTIVABLES SUR UN DOMAINE — LU, JAMAIS RECOPIÉ.
@@ -104,13 +105,18 @@ export const actions: Actions = {
 	supprimer: async ({ locals, request }) => {
 		consoleOuverte(locals);
 		const champs = await request.formData();
-		const resultat = await supprimerUnDomaine(basePartagee(), moteurPartage(), {
-			univers: String(champs.get('univers') ?? ''),
-			domaine: String(champs.get('domaine') ?? ''),
-			saisie: champs.get('sup-saisie'),
-			/* `RG-NF-05` — l'auteur de la destruction, jusque dans la transaction. */
-			identite: locals.identite
-		});
+		const resultat = await supprimerUnDomaine(
+			basePartagee(),
+			moteurPartage(),
+			env.RACINE_FICHIERS?.trim() || null,
+			{
+				univers: String(champs.get('univers') ?? ''),
+				domaine: String(champs.get('domaine') ?? ''),
+				saisie: champs.get('sup-saisie'),
+				/* `RG-NF-05` — l'auteur de la destruction, jusque dans la transaction. */
+				identite: locals.identite
+			}
+		);
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);
 		return resultat;

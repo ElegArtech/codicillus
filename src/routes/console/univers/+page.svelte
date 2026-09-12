@@ -14,8 +14,6 @@
 	 */
 	import Vue from '../../../vues/V-27.svelte';
 	import '../../../vues/V-27.css';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { envoyerAUneAction } from '../cablage';
 	import {
 		CHAMP_POSITION,
@@ -61,11 +59,8 @@
 	qu'en `/console/domaines`, et pour la même raison : le décompte du refus se
 	compose sur ce que le chargeur a servi à la vue.
 
-	`RG-M14-01` et `RG-STR-01` sont tenues côté serveur par
-	`verdictDeSuppressionDUnUnivers()` : un univers qui porte des domaines et
-	l'univers système sont refusés là, quoi que l'écran propose. La vue n'offre le
-	bouton que dans la branche « possible » (`P-09` : une action interdite n'est
-	pas rendue), ce qui ne dispense jamais de refuser.
+	`RG-STR-01` reste tenue côté serveur : l'univers système est refusé quoi que
+	l'écran propose. Tout autre univers est supprimé avec son contenu.
 
 	L'UNIVERS EST DÉSIGNÉ PAR SON IDENTIFIANT LISIBLE, comme le geste l'attend.
 	`data.univers` ne le porte pas — `interface Univers` du jeu de semence n'a que
@@ -88,9 +83,6 @@
 		const identifiant = data.designations[nom];
 		if (identifiant === undefined) return;
 		void envoyerAUneAction(document, '?/supprimer', { univers: identifiant });
-	}}
-	onRattacher={() => {
-		void goto(resolve('/console/domaines'));
 	}}
 	{refus}
 	onCreer={(saisie: SaisieDUnivers) => {
