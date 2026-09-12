@@ -319,7 +319,7 @@
 		{
 			id: SCENARIO_D_UNIVERS,
 			nom: 'Importer un univers complet',
-			txt: 'Le dossier de premier niveau devient l’univers. Chacun de ses dossiers directs devient un domaine, avec toute son arborescence et ses notes. C’est le choix adapté à une reprise complète ou à une première installation.',
+			txt: 'Le dossier de premier niveau devient l’univers. Chacun de ses dossiers directs devient un domaine, avec toute son arborescence et ses notes. Les fichiers placés directement à la racine rejoignent automatiquement un domaine portant le nom de l’univers. C’est le choix adapté à une reprise complète ou à une première installation.',
 			resultat: 'Un univers créé avec tous ses domaines',
 			illus: [
 				{
@@ -482,7 +482,7 @@
 		'scenario-non-livre':
 			'Ce scénario d’import n’est pas exécuté par cette instance. Rien n’a été déposé.',
 		'structure-univers-invalide':
-			'La structure ne permet pas de reconnaître un univers. Choisissez un dossier racine contenant au moins un dossier direct par domaine.',
+			'La structure ne permet pas de reconnaître un univers. Choisissez un dossier racine unique ; ses dossiers directs deviendront des domaines et ses fichiers racine seront rangés dans un domaine portant son nom.',
 		'univers-deja-present':
 			'Un univers porte déjà ce nom, mais il n’a pas pu être repris. Vérifiez son nom puis relancez.',
 		'erreur-serveur':
@@ -1073,7 +1073,8 @@
 				<h3>Glissez un dossier ici</h3>
 				<p>
 					L'arborescence est conservée. Pour un domaine ou un univers complet, partez du dossier qui
-					porte son nom.
+					porte son nom. Dans un univers, les fichiers à la racine seront rangés dans un domaine du
+					même nom.
 				</p>
 				<div class="depot__actions">
 					<button class="btn btn--principal" id="parcourir-dossier" onclick={parcourirUnDossier}
@@ -1203,7 +1204,7 @@
 					></span
 					><span style="flex:1"
 						><b>{`${fichiers.length} ${accord(fichiers.length, 'fichier')}`}</b>{PHRASES.recusDepuis(fichiers.length)}<b>{sourceDuLot}</b>{` — ${megaOctets} Mo.`}</span
-					><button class="btn" onclick={renoncer}>Remplacer le lot</button>{/if}</div
+					><button class="btn" onclick={renoncer}>Choisir un autre dossier</button>{/if}</div
 				>
 			</div>
 		</section>
