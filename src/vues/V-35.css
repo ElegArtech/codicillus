@@ -574,7 +574,7 @@
 .depot__ic { color: var(--c-encre-4); margin-bottom: var(--e-2); }
 .depot[data-survol="oui"] .depot__ic { color: var(--c-accent); }
 
-.scenarios-court { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--e-2); }
+.scenarios-court { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--e-2); }
 .sc {
   display: flex; flex-direction: column; gap: 3px;
   padding: var(--e-3);
@@ -582,6 +582,8 @@
   background: var(--c-papier); cursor: pointer; text-align: left; color: inherit; font: inherit;
 }
 .sc:hover { border-color: var(--c-accent); background: var(--c-accent-voile); }
+.sc:disabled { cursor: not-allowed; opacity: .58; background: var(--c-fond); }
+.sc:disabled:hover { border-color: var(--c-trait); }
 .sc__nom { font-size: var(--t-petit); font-weight: var(--g-fort); }
 .sc:hover .sc__nom { color: var(--c-accent-fonce); }
 .sc__sous { font-size: var(--t-mini); color: var(--c-encre-3); line-height: 1.4; }

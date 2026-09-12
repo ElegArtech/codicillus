@@ -33,10 +33,13 @@
 	const adresses = adressesParLesNoms(designationsDeCoquille());
 	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
 	import {
+		CHOIX_D_IMPORT,
 		SCENARIO_DE_DOMAINE,
 		SCENARIO_D_UNIVERS,
-		SCENARIO_LIVRE
+		SCENARIO_LIVRE,
+		SCENARIO_PREPARE
 	} from '$lib/donnees/scenarios-d-import';
+	import type { ScenarioDImport } from '$lib/donnees/scenarios-d-import';
 
 	interface DestinationDImport {
 		readonly univers: string;
@@ -70,6 +73,8 @@
 		universOuCreerUnDomaine: readonly { readonly identifiant: string; readonly nom: string }[];
 		/** Seul l'administrateur peut créer le niveau supérieur du rangement. */
 		peutCreerUnUnivers: boolean;
+		/** Choisi dans la console : la page d'import ne répète jamais ce choix. */
+		scenarioInitial: ScenarioDImport;
 		/** Le compte connecté. Absente, un compte VIDE — jamais celui du jeu. */
 		compte?: CompteAffiche | null;
 		lotImport: LotDImport;
@@ -195,7 +200,7 @@
 		domaines,
 		destinationsOuEcrire,
 		universOuCreerUnDomaine,
-		peutCreerUnUnivers,
+		scenarioInitial,
 		compte = null,
 		lotImport,
 		formatsImport,
@@ -215,9 +220,9 @@
 	/** Le parcours est-il vivant ? Il l'est dès qu'une route lui donne prise. */
 	const vivant = $derived(analyser !== undefined && importer !== undefined);
 
-	let etapeLocale = $state(1);
-	let typeLocal = $state<'note' | 'dossier' | null>(null);
-	let destinationRetenue = $state('');
+	let etapeLocale = $state(2);
+	// svelte-ignore state_referenced_locally
+	let destinationRetenue = $state(scenarioInitial === SCENARIO_D_UNIVERS ? 'racine' : '');
 	let universDeNoteRetenu = $state('');
 	let domaineDeNoteRetenu = $state('');
 	/**
@@ -265,8 +270,8 @@
 				: 1
 	);
 
-	const typeChoisi = $derived<'note' | 'dossier' | null>(
-		vivant ? typeLocal : etape >= 2 ? 'note' : null
+	const typeChoisi = $derived<'note' | 'dossier'>(
+		scenarioInitial === SCENARIO_LIVRE ? 'note' : 'dossier'
 	);
 	const depose = $derived(vivant ? fichiers.length > 0 : etape >= 3);
 	const destination = $derived.by(() => {
@@ -306,18 +311,9 @@
 					cible.univers === universDeNoteRetenu && cible.domaine === domaineDeNoteRetenu
 			)
 	);
-	const scenarioChoisi = $derived<string | null>(
-		typeChoisi === null
-			? null
-			: typeChoisi === 'note'
-				? SCENARIO_LIVRE
-				: destinationRetenue === 'racine'
-					? SCENARIO_D_UNIVERS
-					: universDestination !== null
-						? SCENARIO_DE_DOMAINE
-						: destination !== null
-							? SCENARIO_LIVRE
-							: null
+	const scenarioChoisi = $derived<ScenarioDImport>(scenarioInitial);
+	const titreDuParcours = $derived(
+		CHOIX_D_IMPORT.find((choix) => choix.id === scenarioChoisi)?.nom ?? 'Importer'
 	);
 
 	/* Étape 2 — le dépôt (`rendreDepot()`, `V-24:2918`). Les formats admis et les
@@ -334,9 +330,7 @@
 
 	const depotTraverse = $derived(vivant ? etape >= 2 : etape === 2);
 	const sousTitreDuDepot = $derived(
-		typeChoisi === 'note'
-			? 'Choisissez une note, puis l’endroit précis où elle doit être rangée.'
-			: 'Choisissez un dossier, puis son parent dans Codicillus. Son niveau sera déduit automatiquement.'
+		CHOIX_D_IMPORT.find((choix) => choix.id === scenarioChoisi)?.sous ?? ''
 	);
 
 	/* Le lot, et ce qu'on en déduit — `resumeLot()` (`V-24:2552`) et
@@ -610,7 +604,6 @@
 	/* Le fil de jalons et le pied de parcours — `majPied()` (`V-24:3349`). */
 
 	const JALONS: readonly { readonly rang: number; readonly nom: string }[] = [
-		{ rang: 1, nom: 'Type' },
 		{ rang: 2, nom: 'Dépôt' },
 		{ rang: 3, nom: 'Aperçu' },
 		{ rang: 4, nom: 'Import' }
@@ -625,7 +618,7 @@
 	const termine = $derived(etape === 4 && rapport !== null);
 	const rapportSimule = $derived(rapport !== null && rienNAEteEcrit(rapport));
 	const simulationTerminee = $derived(termine && rapportSimule);
-	const precedentMasque = $derived(etape === 1 || etape === 4);
+	const precedentMasque = $derived(etape === 2 || etape === 4);
 	/**
 	 * « Ouvrir le domaine » n'est offert que si quelque chose y a été écrit : après
 	 * une simulation, le domaine ne porte aucune des notes annoncées. Le pied de
@@ -633,24 +626,20 @@
 	 */
 	const ouvrirLeDomaine = $derived(termine && !simulationTerminee);
 	/* L'import lancé, « Continuer » disparaît jusqu'à ce que le rapport soit là. */
-	const suivantMasque = $derived(etape === 1 || (etape === 4 && !ouvrirLeDomaine));
+	const suivantMasque = $derived(etape === 4 && !ouvrirLeDomaine);
 	/**
 	 * `majPied()` ne retouche l'inhibition qu'aux étapes 1 à 3 : à l'étape 4, elle
 	 * reste celle du dernier passage.
 	 */
 	const destinationValide = $derived(
-		typeChoisi === 'note'
-			? destination !== null
-			: destinationRetenue === 'racine' || universDestination !== null || destination !== null
+		scenarioChoisi === SCENARIO_D_UNIVERS
+			? destinationRetenue === 'racine'
+			: scenarioChoisi === SCENARIO_DE_DOMAINE
+				? universDestination !== null
+				: destination !== null
 	);
 	const suivantInhibe = $derived(
-		etape === 1
-			? typeChoisi === null
-			: etape === 2
-				? !depose || !destinationValide
-				: etape === 3
-					? enCours
-					: !termine
+		etape === 2 ? !depose || !destinationValide : etape === 3 ? enCours : !termine
 	);
 	const libelleDuSuivant = $derived(
 		etape === 2
@@ -708,7 +697,7 @@
 	const universCible = $derived(universRetenu || (universOuCreerUnDomaine[0]?.identifiant ?? ''));
 
 	const reglages = $derived({
-		scenario: scenarioChoisi ?? SCENARIO_LIVRE,
+		scenario: scenarioChoisi,
 		domaine: destination?.domaineNom ?? domaineCible,
 		nomDuDomaine,
 		universDAccueil: universDestination?.identifiant ?? universCible,
@@ -719,15 +708,6 @@
 		simulation: simulationRetenue,
 		strict: strictRetenu
 	});
-
-	function choisirType(type: 'note' | 'dossier'): void {
-		if (!vivant) return;
-		typeLocal = type;
-		destinationRetenue = '';
-		universDeNoteRetenu = '';
-		domaineDeNoteRetenu = '';
-		etapeLocale = 2;
-	}
 
 	function choisirUniversDeNote(identifiant: string): void {
 		universDeNoteRetenu = identifiant;
@@ -771,20 +751,22 @@
 	}
 
 	const nomDeLaSource = $derived.by(() => {
-		if (!depose) return typeChoisi === 'note' ? 'La note choisie' : 'Le dossier choisi';
+		if (!depose) return typeChoisi === 'note' ? 'la note choisie' : 'le dossier choisi';
 		if (typeChoisi === 'note') return fichiers[0]?.name.replace(/\.[^.]+$/, '') ?? 'La note';
 		return sourceDuLot;
 	});
 	const annonceDuResultat = $derived.by(() => {
-		if (!destinationValide) return 'Choisissez une destination pour voir le rangement obtenu.';
-		if (typeChoisi === 'note' && destination !== null)
+		const dossier = depose ? `Le dossier « ${nomDeLaSource} »` : 'Le dossier choisi';
+		if (scenarioChoisi === SCENARIO_D_UNIVERS)
+			return `${dossier} deviendra un univers. Ses dossiers directs deviendront des domaines. Ses fichiers Markdown placés à la racine seront rangés automatiquement dans un domaine portant le même nom que l’univers.`;
+		if (!destinationValide)
+			return 'Choisissez la destination pour voir exactement ce qui sera créé.';
+		if (scenarioChoisi === SCENARIO_LIVRE && destination !== null)
 			return `La note « ${nomDeLaSource} » sera rangée dans ${destination.libelle}.`;
-		if (destinationRetenue === 'racine')
-			return `Le dossier « ${nomDeLaSource} » deviendra un univers du même nom.`;
-		if (universDestination !== null)
-			return `Le dossier « ${nomDeLaSource} » deviendra un domaine dans l’univers ${universDestination.nom}.`;
-		if (destination !== null)
-			return `Le dossier « ${nomDeLaSource} » deviendra un ${destination.niveau === 'domaine' ? 'dossier' : 'sous-dossier'} dans ${destination.libelle}.`;
+		if (scenarioChoisi === SCENARIO_DE_DOMAINE && universDestination !== null)
+			return `${dossier} deviendra un domaine dans l’univers ${universDestination.nom}.`;
+		if (scenarioChoisi === SCENARIO_PREPARE && destination !== null)
+			return `Les notes, leurs métadonnées et leurs relations seront restaurées dans ${destination.libelle}.`;
 		return '';
 	});
 
@@ -810,10 +792,6 @@
 	async function avancer(): Promise<void> {
 		if (!vivant || enCours) return;
 
-		if (etape === 1) {
-			if (typeLocal !== null) etapeLocale = 2;
-			return;
-		}
 		if (etape === 2) {
 			if (fichiers.length === 0 || analyser === undefined) return;
 			enCours = true;
@@ -860,7 +838,7 @@
 	}
 
 	function reculer(): void {
-		if (!vivant || etape === 1) return;
+		if (!vivant || etape === 2) return;
 		etapeLocale = etape - 1;
 	}
 
@@ -875,11 +853,10 @@
 		rapport = null;
 		refus = null;
 		sourceDuLot = '';
-		destinationRetenue = '';
+		destinationRetenue = scenarioChoisi === SCENARIO_D_UNIVERS ? 'racine' : '';
 		universDeNoteRetenu = '';
 		domaineDeNoteRetenu = '';
-		typeLocal = null;
-		etapeLocale = 1;
+		etapeLocale = 2;
 	}
 
 	function remplacerLaSource(): void {
@@ -959,48 +936,9 @@
 			>{/each}</ol
 		>
 
-		<!-- ============ ÉTAPE 1 — Geste ============ -->
-		<section class="etape" data-etape="1" data-active={etape === 1 ? 'oui' : 'non'}>
-			<h1 class="etape__titre">Qu’avez-vous à importer&nbsp;?</h1>
-			<p class="etape__sous">Chaque choix ouvre un parcours adapté à ce que vous importez.</p>
-			<div class="choix-import" id="scenarios" role="group" aria-label="Type d’import">
-				<button
-					class="choix-import__carte choix-import__carte--note"
-					type="button"
-					disabled={destinationsOuEcrire.length === 0}
-					onclick={() => choisirType('note')}
-				>
-					<span class="choix-import__icone" aria-hidden="true">N</span>
-					<span
-						><strong>Importer une note</strong><small>Un fichier à ranger précisément</small></span
-					>
-					<span class="choix-import__fleche" aria-hidden="true">→</span>
-				</button>
-				<button
-					class="choix-import__carte choix-import__carte--dossier"
-					type="button"
-					disabled={!peutCreerUnUnivers &&
-						universOuCreerUnDomaine.length === 0 &&
-						destinationsOuEcrire.length === 0}
-					onclick={() => choisirType('dossier')}
-				>
-					<span class="choix-import__icone" aria-hidden="true">D</span>
-					<span><strong>Importer un dossier</strong><small>Une arborescence à intégrer</small></span
-					>
-					<span class="choix-import__fleche" aria-hidden="true">→</span>
-				</button>
-			</div>
-			{#if destinationsOuEcrire.length === 0}<p class="etape__vide" id="sans-domaine">
-					Aucun emplacement existant ne peut encore recevoir une note. Vous pouvez néanmoins
-					importer un dossier à la racine pour créer votre premier univers.
-				</p>{/if}
-		</section>
-
 		<!-- ============ ÉTAPE 2 — Dépôt ============ -->
 		<section class="etape" data-etape="2" data-active={etape === 2 ? 'oui' : 'non'}>
-			<h1 class="etape__titre">
-				{typeChoisi === 'note' ? 'Importer une note' : 'Importer un dossier'}
-			</h1>
+			<h1 class="etape__titre">{titreDuParcours}</h1>
 			<p class="etape__sous" id="depot-sous">{sousTitreDuDepot}</p>
 
 			<div class="depot" id="depot" bind:this={zoneDeDepot}>
@@ -1120,13 +1058,13 @@
 							>
 						</div>
 					</div>
-				{:else}
+				{:else if scenarioChoisi === SCENARIO_DE_DOMAINE}
 					<div class="destination-dossier" id="destination-dossier">
-						<h2>Quel sera son parent&nbsp;?</h2>
-						<p>Le niveau du dossier importé dépend directement de ce choix.</p>
+						<h2>Dans quel univers créer ce domaine&nbsp;?</h2>
+						<p>Le dossier choisi portera le nom du nouveau domaine.</p>
 						<div class="champ" id="champ-destination">
 							<label class="champ__label" for="destination-import"
-								>Emplacement parent <span class="oblig">*</span></label
+								>Univers de destination <span class="oblig">*</span></label
 							>
 							<select
 								class="selecteur selecteur--destination"
@@ -1135,26 +1073,44 @@
 								onchange={(e) =>
 									(destinationRetenue = (e.currentTarget as HTMLSelectElement).value)}
 							>
-								<option value="">Choisir le parent…</option>
-								{#if peutCreerUnUnivers}<option value="racine"
-										>Racine de Codicillus — le dossier deviendra un univers</option
-									>{/if}
-								{#if universOuCreerUnDomaine.length > 0}<optgroup
-										label="Dans un univers — le dossier deviendra un domaine"
-										>{#each universOuCreerUnDomaine as u (u.identifiant)}<option
-												value={'univers:' + u.identifiant}>{u.nom}</option
-											>{/each}</optgroup
-									>{/if}
-								{#if destinationsOuEcrire.length > 0}<optgroup
-										label="Dans un domaine ou un dossier — il deviendra un niveau dessous"
-										>{#each destinationsOuEcrire as d, index (d.univers + '/' + d.domaine + '/' + d.chemin)}<option
-												value={'emplacement:' + index}>{d.libelle}</option
-											>{/each}</optgroup
-									>{/if}
+								<option value="">Choisir un univers…</option>
+								{#each universOuCreerUnDomaine as u (u.identifiant)}<option
+										value={'univers:' + u.identifiant}>{u.nom}</option
+									>{/each}
 							</select>
 							<span class="champ__aide"
-								>Seuls les parents où vous avez le droit d’écrire sont proposés.</span
+								>Seuls les univers dans lesquels vous pouvez créer un domaine sont proposés.</span
 							>
+						</div>
+					</div>
+				{:else if scenarioChoisi === SCENARIO_D_UNIVERS}
+					<div class="destination-dossier" id="destination-dossier">
+						<h2>Un univers complet sera créé</h2>
+						<p>
+							Le dossier choisi donnera son nom à l’univers. Chaque dossier direct deviendra un
+							domaine.
+						</p>
+					</div>
+				{:else}
+					<div class="destination-dossier" id="destination-dossier">
+						<h2>Où restaurer ce corpus&nbsp;?</h2>
+						<p>La structure, les métadonnées et les relations du corpus seront conservées.</p>
+						<div class="champ" id="champ-destination">
+							<label class="champ__label" for="destination-import"
+								>Destination <span class="oblig">*</span></label
+							>
+							<select
+								class="selecteur selecteur--destination"
+								id="destination-import"
+								value={destinationRetenue}
+								onchange={(e) =>
+									(destinationRetenue = (e.currentTarget as HTMLSelectElement).value)}
+							>
+								<option value="">Choisir une destination…</option>
+								{#each destinationsOuEcrire as d, index (d.univers + '/' + d.domaine + '/' + d.chemin)}<option
+										value={'emplacement:' + index}>{d.libelle}</option
+									>{/each}
+							</select>
 						</div>
 					</div>
 				{/if}
@@ -1368,7 +1324,7 @@
 		</section>
 
 		<!-- ---------- Pied de parcours ---------- -->
-		<div class="pied-parcours" id="pied" hidden={etape === 1}>
+		<div class="pied-parcours" id="pied">
 			<button class="btn" id="precedent" hidden={precedentMasque} onclick={reculer}>Retour</button>
 			<div class="pied-parcours__droite">
 				<button class="btn" id="renoncer" hidden={renoncerMasque} onclick={renoncer}

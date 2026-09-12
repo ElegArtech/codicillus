@@ -996,7 +996,11 @@
 				>{/if}
 			<a class="rail__menu-lien" href={resolve('/carte-mentale')}>Carte mentale</a>
 			<a class="rail__menu-lien" href="{resolve('/recherche')}?type=Signet">Signets</a>
-			{#if ecriture}<a class="rail__menu-lien" href={resolve('/importer')}>Import</a>{/if}
+			{#if ecriture}<a
+					class="rail__menu-lien"
+					href={admin ? resolve('/console/imports') : `${resolve('/importer')}?scenario=notes`}
+					>Import</a
+				>{/if}
 			<div class="rail__menu-sep"></div>
 			<a class="rail__menu-lien" href={resolve('/mon-profil')}>Mon profil</a>
 			<a class="rail__menu-lien" href={resolve('/deconnexion')}>Se déconnecter</a>

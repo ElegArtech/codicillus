@@ -12,41 +12,15 @@
 	 * migration `009`. Le rapport détaillé d'un lot est une ADRESSE, pas un état
 	 * local : `/console/imports/{lot}`.
 	 */
-	import { onMount } from 'svelte';
 	import Vue from '../../../vues/V-35.svelte';
 	import '../../../vues/V-35.css';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { adresseDeDomaine } from '$lib/rangement/adresses';
-	import { cablerLeDepot } from '../cablage';
-	import { deposerLotEnAttente } from '../../importer/lot-en-attente';
 	import type { PageData } from './$types';
+	import type { ScenarioDImport } from '$lib/donnees/scenarios-d-import';
 
 	const { data }: { data: PageData } = $props();
-
-	/**
-	 * LA ZONE DE DÉPÔT ET « PARCOURIR » — ET LES OCTETS TRAVERSENT. Les quatre écouteurs du
-	 * gel sont posés, et le parcours d'import s'ouvre AVEC un lot RÉEL — des `File`, pas un
-	 * décompte : « Lot reçu — parcours d'import à l'étape du choix de scénario, vue V-24 ».
-	 *
-	 * LA RÉPARATION N'ÉTAIT PAS ICI : le parcours de V-24 ne retenait des fichiers qu'à son
-	 * étape 2, une fois un scénario choisi, alors que le gel de V-35 fait atterrir le lot à
-	 * l'étape du CHOIX DE SCÉNARIO. C'est donc le PARCOURS qui a reçu de quoi tenir un lot
-	 * avant ce choix — le scénario reste choisi par l'utilisateur.
-	 *
-	 * LE LOT NE PASSE PAS PAR LE RÉSEAU EN CHEMIN : `deposerLotEnAttente()` le confie à une
-	 * variable de module que la navigation client traverse. L'ARBORESCENCE D'UN DOSSIER
-	 * DÉPOSÉ EST DESCENDUE, MÊME DESCENTE QU'EN V-24 : sans elle le dépôt arrivait plat, et
-	 * l'idempotence de l'import cassait avec — son discriminant compte le chemin de dossier.
-	 */
-	onMount(() =>
-		cablerLeDepot(document, {
-			surLot: (fichiers) => {
-				deposerLotEnAttente(fichiers);
-				void goto(resolve('/importer'));
-			}
-		})
-	);
 </script>
 
 <!--
@@ -58,6 +32,8 @@
 	notes={data.notes}
 	journalImports={data.journalImports}
 	journalEnregistre={data.journalEnregistre}
+	aDesUnivers={data.aDesUnivers}
+	aDesDomaines={data.aDesDomaines}
 	onOuvrirLeRapport={(lot) => {
 		/* LE RAPPORT D'UN LOT EST UNE ADRESSE — `/console/imports/{lot}`
 		   (`docs/routes.md`) : « un objet identifié et consultable indéfiniment est
@@ -87,14 +63,11 @@
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		void goto(adresseDeDomaine(canonique.univers, canonique.domaine));
 	}}
-	onScenario={() => {
-		/* LE GEL ANNONCE LA DESTINATION, PAS LE FILTRE. Il notifie « Parcours
-		   d'import, scénario "X" — vue V-24 » : la vue cible est nommée, donc
-		   l'adresse l'est aussi — `/importer`. Le SCÉNARIO, lui, n'a aucun
-		   paramètre d'adresse déclaré (`docs/routes.md`), et en inventer un serait
-		   combler. La navigation va donc à l'écran annoncé, sans son scénario.
-		   Même arbitrage qu'en `/console/univers` pour le filtre par univers. */
-		void goto(resolve('/importer'));
+	onScenario={(scenario: ScenarioDImport) => {
+		/* La console est l'unique choix du scénario. Le parcours s'ouvre donc
+		   directement au dépôt, avec le geste choisi dans son adresse. */
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		void goto(`${resolve('/importer')}?scenario=${encodeURIComponent(scenario)}`);
 	}}
 />
 
