@@ -57,6 +57,7 @@ import {
 	identifiantLibre,
 	libellesDeFormat,
 	motifDIndisponibilite,
+	repartirLesFichiersDUnivers,
 	segmentsPlafonnes,
 	sonderLeServiceDeConversion,
 	verdictDuCorps,
@@ -73,6 +74,34 @@ import {
 	SUFFIXE_DE_NOTE,
 	type NoteAExporter
 } from '../export/archive';
+
+function fichierDepose(chemin: string): FichierDepose {
+	return { chemin, octets: 1, texte: '# Note', binaire: null };
+}
+
+describe('la répartition des fichiers d’un univers', () => {
+	it('crée un domaine du nom de l’univers pour ses fichiers racine', () => {
+		const groupes = repartirLesFichiersDUnivers('Exploitation', [
+			fichierDepose('Accueil.md'),
+			fichierDepose('Réseau/Plan.md')
+		]);
+		expect([...groupes!.keys()]).toEqual(['Exploitation', 'Réseau']);
+		expect(groupes!.get('Exploitation')?.map((f) => f.chemin)).toEqual(['Accueil.md']);
+		expect(groupes!.get('Réseau')?.map((f) => f.chemin)).toEqual(['Plan.md']);
+	});
+
+	it('réunit les fichiers racine et le dossier direct portant déjà le nom de l’univers', () => {
+		const groupes = repartirLesFichiersDUnivers('Exploitation', [
+			fichierDepose('Accueil.md'),
+			fichierDepose('Exploitation/Procédures.md')
+		]);
+		expect([...groupes!.keys()]).toEqual(['Exploitation']);
+		expect(groupes!.get('Exploitation')?.map((f) => f.chemin)).toEqual([
+			'Accueil.md',
+			'Procédures.md'
+		]);
+	});
+});
 
 /* ═══════════════════════════════════════════ Le catalogue des formats ══ */
 
