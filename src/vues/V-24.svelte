@@ -218,6 +218,8 @@
 	let etapeLocale = $state(1);
 	let typeLocal = $state<'note' | 'dossier' | null>(null);
 	let destinationRetenue = $state('');
+	let universDeNoteRetenu = $state('');
+	let domaineDeNoteRetenu = $state('');
 	/**
 	 * Le lot tenu par le parcours, initialisé ici et non dans un effet : un lot remis
 	 * est connu au montage. La valeur INITIALE de `lotRecu` est bien ce qu'on veut —
@@ -278,6 +280,31 @@
 					(u) => u.identifiant === destinationRetenue.slice('univers:'.length)
 				) ?? null)
 			: null
+	);
+	const universPourUneNote = $derived.by(() => {
+		return destinationsOuEcrire
+			.filter(
+				(cible, index, toutes) =>
+					toutes.findIndex((candidate) => candidate.univers === cible.univers) === index
+			)
+			.map((cible) => ({ identifiant: cible.univers, nom: cible.universNom }));
+	});
+	const domainesPourUneNote = $derived.by(() => {
+		return destinationsOuEcrire
+			.filter((cible) => cible.univers === universDeNoteRetenu)
+			.filter(
+				(cible, index, toutes) =>
+					toutes.findIndex((candidate) => candidate.domaine === cible.domaine) === index
+			)
+			.map((cible) => ({ identifiant: cible.domaine, nom: cible.domaineNom }));
+	});
+	const emplacementsPourUneNote = $derived(
+		destinationsOuEcrire
+			.map((cible, index) => ({ cible, index }))
+			.filter(
+				({ cible }) =>
+					cible.univers === universDeNoteRetenu && cible.domaine === domaineDeNoteRetenu
+			)
 	);
 	const scenarioChoisi = $derived<string | null>(
 		typeChoisi === null
@@ -606,7 +633,7 @@
 	 */
 	const ouvrirLeDomaine = $derived(termine && !simulationTerminee);
 	/* L'import lancé, « Continuer » disparaît jusqu'à ce que le rapport soit là. */
-	const suivantMasque = $derived(etape === 4 && !ouvrirLeDomaine);
+	const suivantMasque = $derived(etape === 1 || (etape === 4 && !ouvrirLeDomaine));
 	/**
 	 * `majPied()` ne retouche l'inhibition qu'aux étapes 1 à 3 : à l'étape 4, elle
 	 * reste celle du dernier passage.
@@ -697,6 +724,26 @@
 		if (!vivant) return;
 		typeLocal = type;
 		destinationRetenue = '';
+		universDeNoteRetenu = '';
+		domaineDeNoteRetenu = '';
+		etapeLocale = 2;
+	}
+
+	function choisirUniversDeNote(identifiant: string): void {
+		universDeNoteRetenu = identifiant;
+		domaineDeNoteRetenu = '';
+		destinationRetenue = '';
+	}
+
+	function choisirDomaineDeNote(identifiant: string): void {
+		domaineDeNoteRetenu = identifiant;
+		const racine = destinationsOuEcrire.findIndex(
+			(cible) =>
+				cible.univers === universDeNoteRetenu &&
+				cible.domaine === identifiant &&
+				cible.niveau === 'domaine'
+		);
+		destinationRetenue = racine < 0 ? '' : `emplacement:${racine}`;
 	}
 
 	function sourceDe(retenus: readonly File[]): string {
@@ -829,8 +876,18 @@
 		refus = null;
 		sourceDuLot = '';
 		destinationRetenue = '';
+		universDeNoteRetenu = '';
+		domaineDeNoteRetenu = '';
 		typeLocal = null;
 		etapeLocale = 1;
+	}
+
+	function remplacerLaSource(): void {
+		fichiers = [];
+		lotAnalyse = null;
+		rapport = null;
+		refus = null;
+		sourceDuLot = '';
 	}
 
 	/** L'adresse du domaine visé — bâtie par le constructeur unique (`ARB-001`). */
@@ -905,100 +962,45 @@
 		<!-- ============ ÉTAPE 1 — Geste ============ -->
 		<section class="etape" data-etape="1" data-active={etape === 1 ? 'oui' : 'non'}>
 			<h1 class="etape__titre">Qu’avez-vous à importer&nbsp;?</h1>
-			<p class="etape__sous">
-				Choisissez simplement ce qui se trouve sur votre ordinateur. Vous indiquerez sa destination
-				à l’étape suivante.
-			</p>
-			<div
-				class="scenarios scenarios--gestes"
-				id="scenarios"
-				role="group"
-				aria-label="Type d’import"
-			>
+			<p class="etape__sous">Chaque choix ouvre un parcours adapté à ce que vous importez.</p>
+			<div class="choix-import" id="scenarios" role="group" aria-label="Type d’import">
 				<button
-					class="scen scen--geste"
+					class="choix-import__carte choix-import__carte--note"
 					type="button"
-					aria-pressed={typeChoisi === 'note'}
 					disabled={destinationsOuEcrire.length === 0}
 					onclick={() => choisirType('note')}
 				>
-					<span class="scen__marque" aria-hidden="true"></span>
+					<span class="choix-import__icone" aria-hidden="true">N</span>
 					<span
-						><h2 class="scen__nom">Importer une note</h2>
-						<p class="scen__txt">
-							Choisissez un fichier, puis son univers, son domaine et, si besoin, son dossier ou
-							sous-dossier.
-						</p></span
+						><strong>Importer une note</strong><small>Un fichier à ranger précisément</small></span
 					>
+					<span class="choix-import__fleche" aria-hidden="true">→</span>
 				</button>
 				<button
-					class="scen scen--geste"
+					class="choix-import__carte choix-import__carte--dossier"
 					type="button"
-					aria-pressed={typeChoisi === 'dossier'}
 					disabled={!peutCreerUnUnivers &&
 						universOuCreerUnDomaine.length === 0 &&
 						destinationsOuEcrire.length === 0}
 					onclick={() => choisirType('dossier')}
 				>
-					<span class="scen__marque" aria-hidden="true"></span>
-					<span
-						><h2 class="scen__nom">Importer un dossier</h2>
-						<p class="scen__txt">
-							Choisissez son parent. À la racine il devient un univers ; dans un univers, un domaine
-							; ailleurs, un dossier ou sous-dossier.
-						</p></span
+					<span class="choix-import__icone" aria-hidden="true">D</span>
+					<span><strong>Importer un dossier</strong><small>Une arborescence à intégrer</small></span
 					>
+					<span class="choix-import__fleche" aria-hidden="true">→</span>
 				</button>
 			</div>
 			{#if destinationsOuEcrire.length === 0}<p class="etape__vide" id="sans-domaine">
 					Aucun emplacement existant ne peut encore recevoir une note. Vous pouvez néanmoins
 					importer un dossier à la racine pour créer votre premier univers.
 				</p>{/if}
-
-			<!--
-				LE MODE STRICT — `RG-M12-03` : « les références non résolues sont signalées
-				dans le rapport sans faire échouer l'import, SAUF SI l'utilisateur a
-				explicitement demandé un mode strict ». Aucune maquette ne l'offre ; la
-				règle l'exige, et une règle sans déclencheur n'est pas tenue. Il est posé
-				au choix du scénario parce qu'il gouverne le lot entier, pas son dépôt.
-			-->
-			<details class="options-import">
-				<summary>Options avancées</summary>
-				<label class="case" id="champ-simulation">
-					<input
-						type="checkbox"
-						id="simulation"
-						checked={simulationRetenue}
-						onchange={(e) => (simulationRetenue = (e.currentTarget as HTMLInputElement).checked)}
-					/>
-					<span class="case__txt"
-						>Simulation<span class="case__aide"
-							>Analyser tout le contenu et produire le rapport sans rien écrire.</span
-						></span
-					>
-				</label>
-				<label class="case" id="champ-strict">
-					<input
-						type="checkbox"
-						id="strict"
-						checked={strictRetenu}
-						onchange={(e) => (strictRetenu = (e.currentTarget as HTMLInputElement).checked)}
-					/>
-					<span class="case__txt"
-						>Refuser le lot entier si une ligne échoue
-						<span class="case__aide"
-							>Le lot est traité jusqu'au bout et son rapport est produit, puis tout est annulé si
-							un fichier a échoué ou si un renvoi ne désigne rien. Sans cette case, les fichiers en
-							échec sont simplement consignés et le reste entre.</span
-						>
-					</span>
-				</label>
-			</details>
 		</section>
 
 		<!-- ============ ÉTAPE 2 — Dépôt ============ -->
 		<section class="etape" data-etape="2" data-active={etape === 2 ? 'oui' : 'non'}>
-			<h1 class="etape__titre">Déposez vos fichiers</h1>
+			<h1 class="etape__titre">
+				{typeChoisi === 'note' ? 'Importer une note' : 'Importer un dossier'}
+			</h1>
 			<p class="etape__sous" id="depot-sous">{sousTitreDuDepot}</p>
 
 			<div class="depot" id="depot" bind:this={zoneDeDepot}>
@@ -1059,39 +1061,103 @@
 			</div>
 
 			<div class="reglages-depot">
-				<div class="champ" id="champ-destination">
-					<label class="champ__label" for="destination-import"
-						>Où faut-il le ranger&nbsp;? <span class="oblig">*</span></label
-					>
-					<select
-						class="selecteur selecteur--destination"
-						id="destination-import"
-						value={destinationRetenue}
-						onchange={(e) => (destinationRetenue = (e.currentTarget as HTMLSelectElement).value)}
-					>
-						<option value="">Choisir dans l’arborescence…</option>
-						{#if typeChoisi === 'dossier' && peutCreerUnUnivers}<option value="racine"
-								>Racine de Codicillus — créer un univers</option
-							>{/if}
-						{#if typeChoisi === 'dossier' && universOuCreerUnDomaine.length > 0}<optgroup
-								label="Univers — créer un domaine"
-								>{#each universOuCreerUnDomaine as u (u.identifiant)}<option
-										value={'univers:' + u.identifiant}>{u.nom}</option
-									>{/each}</optgroup
-							>{/if}
-						{#if destinationsOuEcrire.length > 0}<optgroup
-								label={typeChoisi === 'note'
-									? 'Domaines et dossiers'
-									: 'Domaines et dossiers — créer un niveau dessous'}
-								>{#each destinationsOuEcrire as d, index (d.univers + '/' + d.domaine + '/' + d.chemin)}<option
-										value={'emplacement:' + index}>{d.libelle}</option
-									>{/each}</optgroup
-							>{/if}
-					</select>
-					<span class="champ__aide"
-						>La liste ne montre que les emplacements où vous avez le droit d’écrire.</span
-					>
-				</div>
+				{#if typeChoisi === 'note'}
+					<div class="destination-note" id="destination-note">
+						<div class="champ">
+							<label class="champ__label" for="univers-note"
+								>Univers <span class="oblig">*</span></label
+							>
+							<select
+								class="selecteur"
+								id="univers-note"
+								value={universDeNoteRetenu}
+								onchange={(e) => choisirUniversDeNote((e.currentTarget as HTMLSelectElement).value)}
+							>
+								<option value="">Choisir un univers…</option>
+								{#each universPourUneNote as u (u.identifiant)}<option value={u.identifiant}
+										>{u.nom}</option
+									>{/each}
+							</select>
+						</div>
+						<div class="champ">
+							<label class="champ__label" for="domaine-note"
+								>Domaine <span class="oblig">*</span></label
+							>
+							<select
+								class="selecteur"
+								id="domaine-note"
+								value={domaineDeNoteRetenu}
+								disabled={universDeNoteRetenu === ''}
+								onchange={(e) => choisirDomaineDeNote((e.currentTarget as HTMLSelectElement).value)}
+							>
+								<option value="">Choisir un domaine…</option>
+								{#each domainesPourUneNote as d (d.identifiant)}<option value={d.identifiant}
+										>{d.nom}</option
+									>{/each}
+							</select>
+						</div>
+						<div class="champ">
+							<label class="champ__label" for="destination-import"
+								>Dossier <span class="champ__facultatif">facultatif</span></label
+							>
+							<select
+								class="selecteur"
+								id="destination-import"
+								value={destinationRetenue}
+								disabled={domaineDeNoteRetenu === ''}
+								onchange={(e) =>
+									(destinationRetenue = (e.currentTarget as HTMLSelectElement).value)}
+							>
+								{#each emplacementsPourUneNote as emplacement (emplacement.index)}<option
+										value={'emplacement:' + emplacement.index}
+										>{emplacement.cible.niveau === 'domaine'
+											? 'À la racine du domaine'
+											: emplacement.cible.chemin.split('/').join(' › ')}</option
+									>{/each}
+							</select>
+							<span class="champ__aide"
+								>Laissez « À la racine du domaine » si aucun dossier particulier n’est nécessaire.</span
+							>
+						</div>
+					</div>
+				{:else}
+					<div class="destination-dossier" id="destination-dossier">
+						<h2>Quel sera son parent&nbsp;?</h2>
+						<p>Le niveau du dossier importé dépend directement de ce choix.</p>
+						<div class="champ" id="champ-destination">
+							<label class="champ__label" for="destination-import"
+								>Emplacement parent <span class="oblig">*</span></label
+							>
+							<select
+								class="selecteur selecteur--destination"
+								id="destination-import"
+								value={destinationRetenue}
+								onchange={(e) =>
+									(destinationRetenue = (e.currentTarget as HTMLSelectElement).value)}
+							>
+								<option value="">Choisir le parent…</option>
+								{#if peutCreerUnUnivers}<option value="racine"
+										>Racine de Codicillus — le dossier deviendra un univers</option
+									>{/if}
+								{#if universOuCreerUnDomaine.length > 0}<optgroup
+										label="Dans un univers — le dossier deviendra un domaine"
+										>{#each universOuCreerUnDomaine as u (u.identifiant)}<option
+												value={'univers:' + u.identifiant}>{u.nom}</option
+											>{/each}</optgroup
+									>{/if}
+								{#if destinationsOuEcrire.length > 0}<optgroup
+										label="Dans un domaine ou un dossier — il deviendra un niveau dessous"
+										>{#each destinationsOuEcrire as d, index (d.univers + '/' + d.domaine + '/' + d.chemin)}<option
+												value={'emplacement:' + index}>{d.libelle}</option
+											>{/each}</optgroup
+									>{/if}
+							</select>
+							<span class="champ__aide"
+								>Seuls les parents où vous avez le droit d’écrire sont proposés.</span
+							>
+						</div>
+					</div>
+				{/if}
 				<p class="resultat-destination" id="resultat-destination">{annonceDuResultat}</p>
 				<!-- `deposer()` du gel : les deux nombres sont mesurés sur les fichiers reçus. -->
 				<!-- prettier-ignore -->
@@ -1101,8 +1167,36 @@
 					></span
 					><span style="flex:1"
 						><b>{`${fichiers.length} ${accord(fichiers.length, 'fichier')}`}</b>{PHRASES.recusDepuis(fichiers.length)}<b>{sourceDuLot}</b>{` — ${megaOctets} Mo.`}</span
-					><button class="btn" onclick={renoncer}>{typeChoisi === 'note' ? 'Choisir une autre note' : 'Choisir un autre dossier'}</button>{/if}</div
+					><button class="btn" onclick={remplacerLaSource}>{typeChoisi === 'note' ? 'Choisir une autre note' : 'Choisir un autre dossier'}</button>{/if}</div
 				>
+				<details class="options-import">
+					<summary>Options avancées</summary>
+					<label class="case" id="champ-simulation"
+						><input
+							type="checkbox"
+							id="simulation"
+							checked={simulationRetenue}
+							onchange={(e) => (simulationRetenue = (e.currentTarget as HTMLInputElement).checked)}
+						/><span class="case__txt"
+							>Simulation<span class="case__aide"
+								>Analyser le contenu et produire le rapport sans rien écrire.</span
+							></span
+						></label
+					>
+					<label class="case" id="champ-strict"
+						><input
+							type="checkbox"
+							id="strict"
+							checked={strictRetenu}
+							onchange={(e) => (strictRetenu = (e.currentTarget as HTMLInputElement).checked)}
+						/><span class="case__txt"
+							>Refuser tout l’import si un fichier échoue<span class="case__aide"
+								>Sans cette option, les fichiers en échec sont consignés et les autres sont
+								importés.</span
+							></span
+						></label
+					>
+				</details>
 			</div>
 		</section>
 
@@ -1274,7 +1368,7 @@
 		</section>
 
 		<!-- ---------- Pied de parcours ---------- -->
-		<div class="pied-parcours" id="pied">
+		<div class="pied-parcours" id="pied" hidden={etape === 1}>
 			<button class="btn" id="precedent" hidden={precedentMasque} onclick={reculer}>Retour</button>
 			<div class="pied-parcours__droite">
 				<button class="btn" id="renoncer" hidden={renoncerMasque} onclick={renoncer}
