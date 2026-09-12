@@ -1,5 +1,8 @@
 # Service optionnel de conversion bureautique, autonome à l'exécution.
 FROM python:3.14.7-slim-trixie
+LABEL org.opencontainers.image.source="https://github.com/ElegArtech/codicillus" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.title="Codicillus"
 
 ARG VERSION_PANDOC=3.10.2
 ARG TARGETARCH=amd64
