@@ -308,14 +308,14 @@ const VUES: Readonly<
 				cle: 'lotImport',
 				socle: true,
 				autre: { ...LOT_IMPORT, fichiers: LOT_IMPORT.fichiers.slice(0, 4) },
-				/* L'étape 3 est celle de l'aperçu : c'est là que le lot est compté. */
-				base: { ...SOCLE_V24, vecteur: { et: '3' } }
+				/* L'étape 2 est celle de l'aperçu : c'est là que le lot est compté. */
+				base: { ...SOCLE_V24, vecteur: { et: '2' } }
 			},
 			{
 				cle: 'formatsImport',
 				socle: true,
 				autre: {},
-				base: { ...SOCLE_V24, vecteur: { et: '3' } }
+				base: { ...SOCLE_V24, vecteur: { et: '2' } }
 			}
 		]
 	},
