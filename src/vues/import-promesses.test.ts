@@ -116,6 +116,7 @@ const SOCLE_V24: Proprietes = {
 		{ identifiant: 'production', nom: 'Zone Q' },
 		{ identifiant: 'gouvernance', nom: 'Zone R' }
 	],
+	peutCreerUnUnivers: true,
 	lotImport: LOT_IMPORT,
 	formatsImport: LIBELLE_PAR_FORMAT,
 	domaineParDefaut: DOMAINES[0]!.nom
@@ -149,11 +150,12 @@ describe('les libellés de format — le jeu de démonstration recopie le produi
 	});
 });
 
-describe('V-24 — l’étape 1 offre les trois scénarios, et les trois sont exécutés', () => {
-	it('rend les trois vignettes du gel', () => {
+describe('V-24 — l’étape 1 offre les quatre scénarios exécutés', () => {
+	it('rend les quatre résultats possibles', () => {
 		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
 		expect(rendu).toContain('Importer des notes dans un domaine existant');
 		expect(rendu).toContain('Importer un domaine complet');
+		expect(rendu).toContain('Importer un univers complet');
 		expect(rendu).toContain('Importer un corpus préparé');
 	});
 
@@ -173,6 +175,12 @@ describe('V-24 — l’étape 1 offre les trois scénarios, et les trois sont ex
 		expect(rendu).toContain('Importer des notes dans un domaine existant');
 		expect(rendu).toContain('Importer un corpus préparé');
 		expect(rendu).not.toContain('Importer un domaine complet');
+	});
+
+	it('RETIRE « univers complet » à qui ne peut pas créer un univers', () => {
+		const rendu = corps('V-24', { ...SOCLE_V24, peutCreerUnUnivers: false, vecteur: null });
+		expect(rendu).not.toContain('Importer un univers complet');
+		expect(rendu).toContain('Importer un domaine complet');
 	});
 
 	it('porte la case du mode strict, que RG-M12-03 exige et qu’aucune maquette n’offre', () => {
@@ -365,10 +373,11 @@ describe('V-35 — le journal dit ce qu’il conserve', () => {
 		expect(corps('V-35', { journalEnregistre: true })).toBe(corps('V-35'));
 	});
 
-	it('offre les trois accès directs, puisque l’import exécute les trois', () => {
+	it('offre les quatre accès directs, puisque l’import exécute les quatre', () => {
 		const rendu = corps('V-35');
 		expect(rendu).toContain('Dans un domaine existant');
 		expect(rendu).toContain('Un domaine complet');
+		expect(rendu).toContain('Un univers complet');
 		expect(rendu).toContain('Un corpus préparé');
 	});
 

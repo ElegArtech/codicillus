@@ -50,6 +50,9 @@
 		/** `RG-M12-03` — les relations créées par les renvois déclarés. */
 		readonly relationsCreees: number;
 		readonly domaine: string;
+		readonly destination: 'domaine' | 'univers';
+		readonly universCree: boolean;
+		readonly domainesCrees: number;
 		/** L'adresse du domaine visé, composée par le serveur. */
 		readonly adresseDuDomaine: string;
 		readonly enEchec: readonly { readonly chemin: string; readonly motif: string }[];
@@ -72,6 +75,7 @@
 		/** `UC-M12-02` — le nom du domaine à créer, et l'univers qui l'accueille. */
 		readonly nomDuDomaine: string;
 		readonly universDAccueil: string;
+		readonly nomDeLUnivers: string;
 		readonly simulation: boolean;
 		/** `RG-M12-03` — refuser le lot entier si une ligne échoue. */
 		readonly strict: boolean;
@@ -82,6 +86,8 @@
 		readonly dossiersExistants: readonly string[];
 		/** `UC-M12-02` — le domaine que l'import CRÉERA, et qui n'existe pas encore. */
 		readonly domaineACreer: string;
+		readonly universACreer: string;
+		readonly domainesACreer: readonly string[];
 	}
 
 	/**
@@ -125,6 +131,7 @@
 		corps.append('domaine-cible', reglages.domaine);
 		corps.append('nom-domaine', reglages.nomDuDomaine);
 		corps.append('univers-cible', reglages.universDAccueil);
+		corps.append('nom-univers', reglages.nomDeLUnivers);
 		if (reglages.simulation) corps.append('simulation', 'oui');
 		if (reglages.strict) corps.append('strict', 'oui');
 		for (const f of fichiers) corps.append('fichiers', f, cheminDuFichier(f));
@@ -171,7 +178,9 @@
 				lot,
 				dossiersExistants:
 					(issue.valeur['dossiersExistants'] as readonly string[] | undefined) ?? [],
-				domaineACreer: (issue.valeur['domaineACreer'] as string | undefined) ?? ''
+				domaineACreer: (issue.valeur['domaineACreer'] as string | undefined) ?? '',
+				universACreer: (issue.valeur['universACreer'] as string | undefined) ?? '',
+				domainesACreer: (issue.valeur['domainesACreer'] as readonly string[] | undefined) ?? []
 			}
 		};
 	}
@@ -222,6 +231,7 @@
 	notes={data.notes}
 	domaines={data.domainesOuEcrire}
 	universOuCreerUnDomaine={data.universOuCreerUnDomaine}
+	peutCreerUnUnivers={data.peutCreerUnUnivers}
 	lotImport={data.lotImport}
 	formatsImport={data.formatsImport}
 	domaineParDefaut={data.domaineParDefaut}

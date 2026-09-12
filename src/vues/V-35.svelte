@@ -145,6 +145,11 @@
 			sous: 'Le dossier de premier niveau devient un nouveau domaine.'
 		},
 		{
+			id: 'univers',
+			nom: 'Un univers complet',
+			sous: 'Le premier niveau devient un univers, ses dossiers directs deviennent des domaines.'
+		},
+		{
 			id: 'prepare',
 			nom: 'Un corpus préparé',
 			sous: 'Fichiers déjà munis de leurs métadonnées, liens résolus.'
