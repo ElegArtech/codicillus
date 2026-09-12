@@ -264,6 +264,16 @@ describe('V-24 — dépôt et destination sur la même page', () => {
 		expect(rendu).not.toContain('Nom de l’univers');
 	});
 
+	it('rend deux lignes de même chemin sans faire collision sur leur clé Svelte', () => {
+		const fichier = { c: 'Univers/Domaine/Même.md', f: 'md', o: 1, s: 'note' } as const;
+		const rendu = corps('V-24', {
+			...SOCLE_V24,
+			lotImport: { source: 'Racine', fichiers: [fichier, fichier] },
+			vecteur: { et: '2' }
+		});
+		expect(rendu.match(/Univers\/Domaine\/Même\.md/g)?.length).toBeGreaterThanOrEqual(2);
+	});
+
 	it('sur une instance vide, la note explique le manque et le dossier peut créer le premier univers', () => {
 		const baseVide = {
 			...SOCLE_V24,
