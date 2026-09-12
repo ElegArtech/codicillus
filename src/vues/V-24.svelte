@@ -35,6 +35,7 @@
 	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
 	import {
 		SCENARIO_DE_DOMAINE,
+		SCENARIO_DE_RACINE,
 		SCENARIO_D_UNIVERS,
 		SCENARIO_LIVRE,
 		SCENARIO_PREPARE
@@ -173,8 +174,9 @@
 		/** `RG-M12-03` — les relations créées par les renvois déclarés. */
 		readonly relationsCreees: number;
 		readonly domaine: string;
-		readonly destination: 'domaine' | 'univers';
+		readonly destination: 'domaine' | 'univers' | 'racine';
 		readonly universCree: boolean;
+		readonly universCrees: number;
 		readonly domainesCrees: number;
 		/** L'adresse du domaine visé, composée par le serveur : lui seul connaît
 		    l'identifiant persisté d'un domaine que l'import vient de créer. */
@@ -231,12 +233,14 @@
 		scenarioInitial === SCENARIO_LIVRE ? 'note' : 'dossier'
 	);
 	// svelte-ignore state_referenced_locally
-	let destinationDuDossier = $state<'existant' | 'domaine' | 'univers'>(
-		scenarioInitial === SCENARIO_D_UNIVERS
-			? 'univers'
-			: scenarioInitial === SCENARIO_DE_DOMAINE
-				? 'domaine'
-				: 'existant'
+	let destinationDuDossier = $state<'existant' | 'domaine' | 'univers' | 'racine'>(
+		scenarioInitial === SCENARIO_DE_RACINE
+			? 'racine'
+			: scenarioInitial === SCENARIO_D_UNIVERS
+				? 'univers'
+				: scenarioInitial === SCENARIO_DE_DOMAINE
+					? 'domaine'
+					: 'existant'
 	);
 	// svelte-ignore state_referenced_locally
 	let destinationRetenue = $state(scenarioInitial === SCENARIO_D_UNIVERS ? 'racine' : '');
@@ -321,11 +325,13 @@
 	const scenarioChoisi = $derived<ScenarioDImport>(
 		typeChoisi === 'note'
 			? SCENARIO_LIVRE
-			: destinationDuDossier === 'univers'
-				? SCENARIO_D_UNIVERS
-				: destinationDuDossier === 'domaine'
-					? SCENARIO_DE_DOMAINE
-					: SCENARIO_PREPARE
+			: destinationDuDossier === 'racine'
+				? SCENARIO_DE_RACINE
+				: destinationDuDossier === 'univers'
+					? SCENARIO_D_UNIVERS
+					: destinationDuDossier === 'domaine'
+						? SCENARIO_DE_DOMAINE
+						: SCENARIO_PREPARE
 	);
 
 	/* Étape 1 — le dépôt et sa destination sont réunis sur un même écran. */
@@ -382,6 +388,8 @@
 			'Ce scénario d’import n’est pas exécuté par cette instance. Rien n’a été déposé.',
 		'structure-univers-invalide':
 			'La structure ne permet pas de reconnaître un univers. Choisissez un dossier racine unique ; ses dossiers directs deviendront des domaines et ses fichiers racine seront rangés dans un domaine portant son nom.',
+		'structure-racine-invalide':
+			'La structure ne contient aucun sous-dossier pouvant devenir un univers. Choisissez un dossier maître dont chaque dossier direct représente un univers.',
 		'univers-deja-present':
 			'Un univers porte déjà ce nom, mais il n’a pas pu être repris. Vérifiez son nom puis relancez.',
 		'erreur-serveur':
@@ -553,7 +561,14 @@
 	    il n'en existe pas déjà un de ce nom — un réimport le réécrit. */
 	const creations = $derived.by(() => {
 		const lignes: [number, string][] = [];
-		if (universACreer !== '') lignes.push([1, `univers créé — ${universACreer}`]);
+		if (universACreer !== '') {
+			const noms =
+				scenarioChoisi === SCENARIO_DE_RACINE ? universACreer.split(', ') : [universACreer];
+			lignes.push([
+				noms.length,
+				`${accord(noms.length, 'univers créé', 'univers créés')} — ${noms.join(', ')}`
+			]);
+		}
 		if (domainesACreer.length > 0) {
 			lignes.push([
 				domainesACreer.length,
@@ -568,6 +583,7 @@
 
 	const ecartes = $derived(LOT.fichiers.filter((f) => f.s === 'ignore'));
 	const destinationDeLApercu = $derived.by(() => {
+		if (scenarioChoisi === SCENARIO_DE_RACINE) return 'racine de l’application';
 		if (scenarioChoisi === SCENARIO_D_UNIVERS)
 			return `nouvel univers ${nomDeLUnivers.trim() || sourceDuLot}`;
 		if (scenarioChoisi === SCENARIO_DE_DOMAINE) {
@@ -641,11 +657,13 @@
 	const suivantMasque = $derived(etape === 3);
 	/** La destination requise dépend du geste choisi sur la page de dépôt. */
 	const destinationValide = $derived(
-		scenarioChoisi === SCENARIO_D_UNIVERS
-			? nomDeLUnivers.trim() !== '' || sourceDuLot !== ''
-			: scenarioChoisi === SCENARIO_DE_DOMAINE
-				? universRetenu !== '' && (nomDuDomaine.trim() !== '' || sourceDuLot !== '')
-				: destination !== null
+		scenarioChoisi === SCENARIO_DE_RACINE
+			? sourceDuLot !== ''
+			: scenarioChoisi === SCENARIO_D_UNIVERS
+				? nomDeLUnivers.trim() !== '' || sourceDuLot !== ''
+				: scenarioChoisi === SCENARIO_DE_DOMAINE
+					? universRetenu !== '' && (nomDuDomaine.trim() !== '' || sourceDuLot !== '')
+					: destination !== null
 	);
 	const suivantInhibe = $derived(
 		etape === 1 ? !depose || !destinationValide || enCours : etape === 2 ? enCours : true
@@ -726,7 +744,13 @@
 	}
 
 	function choisirDestinationDuDossier(valeur: string): void {
-		if (valeur !== 'existant' && valeur !== 'domaine' && valeur !== 'univers') return;
+		if (
+			valeur !== 'existant' &&
+			valeur !== 'domaine' &&
+			valeur !== 'univers' &&
+			valeur !== 'racine'
+		)
+			return;
 		destinationDuDossier = valeur;
 		destinationRetenue = '';
 		lotAnalyse = null;
@@ -785,6 +809,8 @@
 	});
 	const annonceDuResultat = $derived.by(() => {
 		const dossier = depose ? `Le dossier « ${nomDeLaSource} »` : 'Le dossier choisi';
+		if (scenarioChoisi === SCENARIO_DE_RACINE)
+			return `${dossier} sera traité comme la racine de l’application. Chacun de ses dossiers directs deviendra un univers ou complétera l’univers existant du même nom. Les fichiers placés directement à la racine seront ignorés.`;
 		if (scenarioChoisi === SCENARIO_D_UNIVERS)
 			return `${dossier} deviendra un univers. Ses dossiers directs deviendront des domaines. Ses fichiers Markdown placés à la racine seront rangés automatiquement dans un domaine portant le même nom que l’univers.`;
 		if (!destinationValide)
@@ -1128,7 +1154,7 @@
 										>{/if}
 									{#if peutCreerUnUnivers}<option value="univers"
 											>Créer un univers à partir de ce dossier</option
-										>{/if}
+										><option value="racine">Importer comme racine de l’application</option>{/if}
 								</select>
 							</div>
 							{#if destinationDuDossier === 'existant'}
@@ -1178,7 +1204,7 @@
 										/>
 									</div>
 								</div>
-							{:else}
+							{:else if destinationDuDossier === 'univers'}
 								<div class="champ">
 									<label class="champ__label" for="nom-univers">Nom de l’univers</label>
 									<input
@@ -1194,6 +1220,15 @@
 								<p class="rangement-automatique">
 									Les notes placées à la racine seront rangées automatiquement dans un domaine
 									portant le nom de l’univers.
+								</p>
+							{:else}
+								<div class="explication-structure">
+									Chaque dossier direct du dossier choisi deviendra un univers. Un univers déjà
+									existant sera complété ; un univers absent sera créé.
+								</div>
+								<p class="rangement-automatique">
+									Les fichiers placés directement dans le dossier racine seront ignorés et signalés
+									dans l’aperçu et le rapport.
 								</p>
 							{/if}
 						</div>
@@ -1399,7 +1434,7 @@
 				>{/if}<section class="section-rapport"
 					><span class="etiq">{rapportSimule ? 'Structure qui serait créée' : 'Structure créée'}</span
 					><div class="section-rapport__cadre" style="padding:var(--e-3) var(--e-4);font-size:var(--t-petit)"
-						>{#if rapport.destination === 'univers'}{`${rapport.universCree ? '1 univers créé, ' : ''}${rapport.domainesCrees} ${accord(rapport.domainesCrees, 'domaine créé', 'domaines créés')} et ${rapport.dossiersCrees} ${accord(rapport.dossiersCrees, 'dossier créé', 'dossiers créés')} dans l’univers ${rapport.domaine}.`}{:else}{`${rapport.dossiersCrees} ${accord(rapport.dossiersCrees, 'dossier')} ${auFuturSiSimule(rapport, accord(rapport.dossiersCrees, 'créé'), accord(rapport.dossiersCrees, 'serait créé', 'seraient créés'))} dans le domaine ${rapport.domaine}.`}{/if}{#if rapport.relationsCreees}{` ${rapport.relationsCreees} ${accord(rapport.relationsCreees, 'relation')} ${auFuturSiSimule(rapport, accord(rapport.relationsCreees, 'créée', 'créées'), accord(rapport.relationsCreees, 'serait créée', 'seraient créées'))} par les renvois déclarés.`}{/if}</div
+						>{#if rapport.destination === 'racine'}{`${rapport.universCrees} ${accord(rapport.universCrees, 'univers créé', 'univers créés')}, ${rapport.domainesCrees} ${accord(rapport.domainesCrees, 'domaine créé', 'domaines créés')} et ${rapport.dossiersCrees} ${accord(rapport.dossiersCrees, 'dossier créé', 'dossiers créés')} depuis la racine ${rapport.domaine}.`}{:else if rapport.destination === 'univers'}{`${rapport.universCree ? '1 univers créé, ' : ''}${rapport.domainesCrees} ${accord(rapport.domainesCrees, 'domaine créé', 'domaines créés')} et ${rapport.dossiersCrees} ${accord(rapport.dossiersCrees, 'dossier créé', 'dossiers créés')} dans l’univers ${rapport.domaine}.`}{:else}{`${rapport.dossiersCrees} ${accord(rapport.dossiersCrees, 'dossier')} ${auFuturSiSimule(rapport, accord(rapport.dossiersCrees, 'créé'), accord(rapport.dossiersCrees, 'serait créé', 'seraient créés'))} dans le domaine ${rapport.domaine}.`}{/if}{#if rapport.relationsCreees}{` ${rapport.relationsCreees} ${accord(rapport.relationsCreees, 'relation')} ${auFuturSiSimule(rapport, accord(rapport.relationsCreees, 'créée', 'créées'), accord(rapport.relationsCreees, 'serait créée', 'seraient créées'))} par les renvois déclarés.`}{/if}</div
 					></section
 				><section class="section-rapport"
 					><span class="etiq">{intituleDesNotes(rapport)}</span
@@ -1411,7 +1446,7 @@
 							><span class="note-creee__nom">{n.titre}</span
 							><span class="note-creee__ou">{n.ou}</span></a
 						>{/if}{/each}{#if rapport.ecrites.length > 8}<div style="padding:var(--e-2);font-size:var(--t-mini);color:var(--c-encre-3)"
-							>{`et ${rapport.ecrites.length - 8} ${accord(rapport.ecrites.length - 8, 'autre')} — la liste complète est dans ${rapport.destination === 'univers' ? 'l’univers' : 'le domaine'}.`}</div
+							>{`et ${rapport.ecrites.length - 8} ${accord(rapport.ecrites.length - 8, 'autre')} — la liste complète est accessible depuis ${rapport.destination === 'racine' ? 'l’accueil' : rapport.destination === 'univers' ? 'l’univers' : 'le domaine'}.`}</div
 						>{/if}</div
 					></section
 			>{/if}</div
@@ -1427,7 +1462,9 @@
 							? 'Ouvrir la note'
 							: rapport.destination === 'univers'
 								? 'Ouvrir l’univers'
-								: 'Ouvrir le domaine'}</a
+								: rapport.destination === 'racine'
+									? 'Ouvrir l’accueil'
+									: 'Ouvrir le domaine'}</a
 					>
 					{#if peutVoirLeJournal}<a class="btn" href={resolve('/console/imports')}
 							>Voir le rapport</a

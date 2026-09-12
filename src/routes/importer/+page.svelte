@@ -50,8 +50,9 @@
 		/** `RG-M12-03` — les relations créées par les renvois déclarés. */
 		readonly relationsCreees: number;
 		readonly domaine: string;
-		readonly destination: 'domaine' | 'univers';
+		readonly destination: 'domaine' | 'univers' | 'racine';
 		readonly universCree: boolean;
+		readonly universCrees: number;
 		readonly domainesCrees: number;
 		/** L'adresse du domaine visé, composée par le serveur. */
 		readonly adresseDuDomaine: string;
