@@ -19,11 +19,9 @@
 	 * vient de `lots_d_import`, et les fichiers en échec nommés au rapport de
 	 * `lignes_de_lot`. La mécanique du gel reste la même (`V-35:3127`).
 	 *
-	 * LES SCÉNARIOS SONT UN LITTÉRAL DU GEL (`V-35:2966`) : nom et sous-titre
-	 * d'accès direct, que la donnée ne porte pas. Le gel en porte trois, l'import les
-	 * exécute tous les trois, et le filtre lit malgré tout
-	 * `$lib/donnees/scenarios-d-import.ts` : l'écran n'offre jamais que ce que
-	 * l'action accepte, et il n'y a pas de seconde liste à tenir à jour.
+	 * L'ENTRÉE D'IMPORT EST UNIQUE : la distinction note/dossier et la destination
+	 * se font sur la page de dépôt. Le journal conserve seulement l'accès à cette
+	 * entrée et les rapports des lots passés.
 	 *
 	 * Coquille de forme abrégée, enveloppe `div.console`. `div.app` ne porte au gel
 	 * que `data-rail` et `data-role` (`V-35:1145`). `dialog#dlg-rapport` vit HORS de
@@ -35,8 +33,6 @@
 	import type { EntreeDeJournalDImport, Note } from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
-	import { CHOIX_D_IMPORT, scenarioEstLivre } from '$lib/donnees/scenarios-d-import';
-	import type { ScenarioDImport } from '$lib/donnees/scenarios-d-import';
 	import { accord } from '$lib/vocabulaire';
 	/* LE MOTIF D'UN FICHIER EN ÉCHEC EST UN CODE en base ; sa phrase est celle de
 	   V-24, partagée plutôt que recopiée. L'écran rendait le code nu. */
@@ -45,12 +41,8 @@
 	interface Proprietes {
 		etat?: string;
 		notes: readonly Note[];
-		/**
-		 * CE QUE LA VUE FAIT QUAND UN SCÉNARIO EST CHOISI. Le gel l'annonce lui-même :
-		 * le clic mène au « Parcours d'import, scénario "X" — vue V-24 »
-		 * (`mockups/V-35-console-imports.html:2984`). La page sait où cela mène.
-		 */
-		onScenario?: (scenario: ScenarioDImport) => void;
+		/** Ce que fait l'accès unique « Nouvel import ». */
+		onNouvelImport?: () => void;
 		/**
 		 * « OUVRIR LE DOMAINE » DU RAPPORT DE LOT — le pied de `#dlg-rapport`. La
 		 * vue rend le NOM du domaine où le lot a atterri ; la page sait à quelle
@@ -94,9 +86,6 @@
 		 * l'écran de traçabilité même. `/console/imports` sert celui de la base.
 		 */
 		journalImports: readonly EntreeDeJournalDImport[];
-		/** Les choix impossibles sur une instance vide restent visibles et expliquent le préalable. */
-		aDesUnivers?: boolean;
-		aDesDomaines?: boolean;
 		/**
 		 * LE JOURNAL EST-IL ENREGISTRÉ QUELQUE PART ? Le gel affirme que « les rapports
 		 * restent consultables indéfiniment ». Tant qu'aucune table ne les gardait, la
@@ -124,31 +113,11 @@
 		lotOuvert = null,
 		journalImports,
 		journalEnregistre = true,
-		aDesUnivers = true,
-		aDesDomaines = true,
-		onScenario,
+		onNouvelImport,
 		onOuvrirLeDomaine,
 		onOuvrirLeRapport,
 		onFermerLeRapport
 	}: Proprietes = $props();
-
-	/**
-	 * LES SCÉNARIOS D'ACCÈS DIRECT — littéral du gel (`V-35:2966`) : la donnée ne
-	 * porte pas ces libellés. LE GEL EN OFFRE TROIS ; L'IMPORT N'EN EXÉCUTE QU'UN,
-	 * et les deux autres menaient au parcours sans que rien ne transmette le choix —
-	 * le lot se rangeait alors dans le domaine proposé par défaut. Ce qui reste est
-	 * ce que `scenarioEstLivre()` reconnaît, même source que l'étape 1 de V-24.
-	 */
-	const SCENARIOS_OFFERTS = CHOIX_D_IMPORT.filter((s) => scenarioEstLivre(s.id));
-
-	function indisponible(scenario: ScenarioDImport): string | null {
-		if (scenario === 'univers') return null;
-		if (scenario === 'domaine' && !aDesUnivers)
-			return 'Créez d’abord un univers ou importez-en un.';
-		if ((scenario === 'notes' || scenario === 'prepare') && !aDesDomaines)
-			return 'Créez d’abord un domaine ou importez-en un.';
-		return null;
-	}
 
 	/**
 	 * LE LOT DEMANDÉ DEPUIS LE JOURNAL — `ouvrirRapport(i)` du gel (`V-35:3067`).
@@ -269,10 +238,8 @@
 		<!-- ---------- Lancer un import ---------- -->
 		<!-- prettier-ignore -->
 		<section class="lancement"
-			><span class="etiq" style="display:block;margin-bottom:var(--e-2)">Que voulez-vous importer&nbsp;?</span
-			><div class="scenarios-court" id="scenarios"
-				>{#each SCENARIOS_OFFERTS as s (s.id)}{@const motif = indisponible(s.id)}<button class="sc" type="button" disabled={motif !== null} onclick={() => onScenario?.(s.id)}><span class="sc__nom">{s.nom}</span><span class="sc__sous">{motif ?? s.sous}</span></button>{/each}</div
-		></section>
+			><button class="btn btn--principal" type="button" onclick={() => onNouvelImport?.()}>Nouvel import</button></section
+		>
 
 		<!-- ---------- Journal ---------- -->
 		<!-- prettier-ignore -->

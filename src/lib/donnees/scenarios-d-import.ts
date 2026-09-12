@@ -80,7 +80,7 @@ export const LIBELLE_DE_SCENARIO: Readonly<Record<ScenarioDImport, string>> = {
 	notes: 'Notes dans un domaine existant',
 	domaine: 'Domaine complet',
 	univers: 'Univers complet',
-	prepare: 'Corpus préparé'
+	prepare: 'Dossier dans un emplacement existant'
 };
 
 /** Les quatre gestes montrés dans la console et repris mot pour mot dans le parcours. */
@@ -106,8 +106,8 @@ export const CHOIX_D_IMPORT: readonly {
 	},
 	{
 		id: SCENARIO_PREPARE,
-		nom: 'Restaurer un corpus préparé',
-		sous: 'Les notes, leurs métadonnées et leurs relations seront restaurées.'
+		nom: 'Importer un dossier',
+		sous: 'Les notes du dossier seront rangées dans un emplacement existant.'
 	}
 ];
 

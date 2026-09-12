@@ -56,6 +56,7 @@
 		/** L'adresse du domaine visé, composée par le serveur. */
 		readonly adresseDuDomaine: string;
 		readonly enEchec: readonly { readonly chemin: string; readonly motif: string }[];
+		readonly ignoresDetail: readonly { readonly chemin: string; readonly motif: string }[];
 		readonly renvoisNonResolus: readonly {
 			readonly chemin: string;
 			readonly renvois: readonly string[];
@@ -239,6 +240,7 @@
 	destinationsOuEcrire={data.destinationsOuEcrire}
 	universOuCreerUnDomaine={data.universOuCreerUnDomaine}
 	peutCreerUnUnivers={data.peutCreerUnUnivers}
+	peutVoirLeJournal={data.suiviEnConsole}
 	scenarioInitial={data.scenarioInitial}
 	lotImport={data.lotImport}
 	formatsImport={data.formatsImport}
