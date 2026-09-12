@@ -35,7 +35,8 @@
 	import type { EntreeDeJournalDImport, Note } from '../../seeds/corpus';
 	import CoquilleDeConsole from '$lib/console/CoquilleDeConsole.svelte';
 	import TeteDeSection from '$lib/console/TeteDeSection.svelte';
-	import { SCENARIO_LIVRE, scenarioEstLivre } from '$lib/donnees/scenarios-d-import';
+	import { CHOIX_D_IMPORT, scenarioEstLivre } from '$lib/donnees/scenarios-d-import';
+	import type { ScenarioDImport } from '$lib/donnees/scenarios-d-import';
 	import { accord } from '$lib/vocabulaire';
 	/* LE MOTIF D'UN FICHIER EN ÉCHEC EST UN CODE en base ; sa phrase est celle de
 	   V-24, partagée plutôt que recopiée. L'écran rendait le code nu. */
@@ -49,7 +50,7 @@
 		 * le clic mène au « Parcours d'import, scénario "X" — vue V-24 »
 		 * (`mockups/V-35-console-imports.html:2984`). La page sait où cela mène.
 		 */
-		onScenario?: (scenario: string) => void;
+		onScenario?: (scenario: ScenarioDImport) => void;
 		/**
 		 * « OUVRIR LE DOMAINE » DU RAPPORT DE LOT — le pied de `#dlg-rapport`. La
 		 * vue rend le NOM du domaine où le lot a atterri ; la page sait à quelle
@@ -93,6 +94,9 @@
 		 * l'écran de traçabilité même. `/console/imports` sert celui de la base.
 		 */
 		journalImports: readonly EntreeDeJournalDImport[];
+		/** Les choix impossibles sur une instance vide restent visibles et expliquent le préalable. */
+		aDesUnivers?: boolean;
+		aDesDomaines?: boolean;
 		/**
 		 * LE JOURNAL EST-IL ENREGISTRÉ QUELQUE PART ? Le gel affirme que « les rapports
 		 * restent consultables indéfiniment ». Tant qu'aucune table ne les gardait, la
@@ -120,6 +124,8 @@
 		lotOuvert = null,
 		journalImports,
 		journalEnregistre = true,
+		aDesUnivers = true,
+		aDesDomaines = true,
 		onScenario,
 		onOuvrirLeDomaine,
 		onOuvrirLeRapport,
@@ -133,30 +139,16 @@
 	 * le lot se rangeait alors dans le domaine proposé par défaut. Ce qui reste est
 	 * ce que `scenarioEstLivre()` reconnaît, même source que l'étape 1 de V-24.
 	 */
-	const SCENARIOS = [
-		{
-			id: SCENARIO_LIVRE,
-			nom: 'Dans un domaine existant',
-			sous: "L'arborescence des fichiers devient celle des dossiers."
-		},
-		{
-			id: 'domaine',
-			nom: 'Un domaine complet',
-			sous: 'Le dossier de premier niveau devient un nouveau domaine.'
-		},
-		{
-			id: 'univers',
-			nom: 'Un univers complet',
-			sous: 'Le premier niveau devient un univers, ses dossiers directs deviennent des domaines.'
-		},
-		{
-			id: 'prepare',
-			nom: 'Un corpus préparé',
-			sous: 'Fichiers déjà munis de leurs métadonnées, liens résolus.'
-		}
-	] as const;
+	const SCENARIOS_OFFERTS = CHOIX_D_IMPORT.filter((s) => scenarioEstLivre(s.id));
 
-	const SCENARIOS_OFFERTS = SCENARIOS.filter((s) => scenarioEstLivre(s.id));
+	function indisponible(scenario: ScenarioDImport): string | null {
+		if (scenario === 'univers') return null;
+		if (scenario === 'domaine' && !aDesUnivers)
+			return 'Créez d’abord un univers ou importez-en un.';
+		if ((scenario === 'notes' || scenario === 'prepare') && !aDesDomaines)
+			return 'Créez d’abord un domaine ou importez-en un.';
+		return null;
+	}
 
 	/**
 	 * LE LOT DEMANDÉ DEPUIS LE JOURNAL — `ouvrirRapport(i)` du gel (`V-35:3067`).
@@ -277,17 +269,9 @@
 		<!-- ---------- Lancer un import ---------- -->
 		<!-- prettier-ignore -->
 		<section class="lancement"
-			><div class="depot" id="depot"
-				><div class="depot__ic"
-					><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 16V4M8 7.5L12 3.5l4 4"/><path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/></svg
-				></div
-				><h2>Déposez un dossier</h2
-				><p>Traitement de texte, présentations, PDF, texte brut, Markdown. L'arborescence est conservée telle quelle. Une archive déposée est écartée, avec son motif.</p
-				><button class="btn btn--principal" id="parcourir">Parcourir mes fichiers</button
-			></div
-			><span class="etiq" style="display:block;margin-bottom:var(--e-2)">Ou choisissez directement votre scénario</span
+			><span class="etiq" style="display:block;margin-bottom:var(--e-2)">Que voulez-vous importer&nbsp;?</span
 			><div class="scenarios-court" id="scenarios"
-				>{#each SCENARIOS_OFFERTS as s (s.nom)}<button class="sc" type="button" onclick={() => onScenario?.(s.nom)}><span class="sc__nom">{s.nom}</span><span class="sc__sous">{s.sous}</span></button>{/each}</div
+				>{#each SCENARIOS_OFFERTS as s (s.id)}{@const motif = indisponible(s.id)}<button class="sc" type="button" disabled={motif !== null} onclick={() => onScenario?.(s.id)}><span class="sc__nom">{s.nom}</span><span class="sc__sous">{motif ?? s.sous}</span></button>{/each}</div
 		></section>
 
 		<!-- ---------- Journal ---------- -->
@@ -349,9 +333,8 @@
 				<p
 					style="font-family:var(--f-lecture);font-size:var(--t-base);line-height:1.6;color:var(--c-encre-2);margin:0 auto;max-width:52ch"
 				>
-					Déposez un dossier ci-dessus, ou choisissez directement votre scénario. Chaque lot
-					laissera ici sa date, son auteur, son volume et son rapport détaillé — y compris les lots
-					partiellement en échec.
+					Choisissez ci-dessus ce que vous voulez importer. Chaque lot laissera ici sa date, son
+					auteur, son volume et son rapport détaillé — y compris les lots partiellement en échec.
 				</p>
 			</div>
 		{:else}
