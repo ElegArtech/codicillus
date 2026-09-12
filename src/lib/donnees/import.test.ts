@@ -58,6 +58,7 @@ import {
 	libellesDeFormat,
 	motifDIndisponibilite,
 	repartirLesFichiersDUnivers,
+	repartirLesFichiersDeRacine,
 	segmentsPlafonnes,
 	sonderLeServiceDeConversion,
 	verdictDuCorps,
@@ -100,6 +101,22 @@ describe('la répartition des fichiers d’un univers', () => {
 			'Accueil.md',
 			'Procédures.md'
 		]);
+	});
+});
+
+describe('la répartition des fichiers d’une racine d’application', () => {
+	it('fait de chaque dossier direct un univers et ignore les fichiers racine', () => {
+		const repartition = repartirLesFichiersDeRacine([
+			fichierDepose('LISEZMOI.md'),
+			fichierDepose('Exploitation/Accueil.md'),
+			fichierDepose('Réseau/Infrastructure/Plan.md')
+		]);
+		expect([...repartition!.univers.keys()]).toEqual(['Exploitation', 'Réseau']);
+		expect(repartition!.univers.get('Exploitation')?.map((f) => f.chemin)).toEqual(['Accueil.md']);
+		expect(repartition!.univers.get('Réseau')?.map((f) => f.chemin)).toEqual([
+			'Infrastructure/Plan.md'
+		]);
+		expect(repartition!.ignores.map((f) => f.chemin)).toEqual(['LISEZMOI.md']);
 	});
 });
 

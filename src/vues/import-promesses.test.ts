@@ -35,6 +35,7 @@ import {
 } from '../lib/donnees/consoles';
 import {
 	SCENARIOS_NON_LIVRES,
+	SCENARIO_DE_RACINE,
 	SCENARIO_D_UNIVERS,
 	SCENARIO_LIVRE
 } from '../lib/donnees/scenarios-d-import';
@@ -248,6 +249,19 @@ describe('V-24 — dépôt et destination sur la même page', () => {
 		expect(rendu).toContain('notes placées à la racine');
 		expect(rendu).toContain('domaine portant le même nom que l’univers');
 		expect(rendu).not.toContain('Quel sera son parent');
+	});
+
+	it('propose une racine d’application et annonce que ses fichiers directs seront ignorés', () => {
+		const rendu = corps('V-24', {
+			...SOCLE_V24,
+			scenarioInitial: SCENARIO_DE_RACINE,
+			vecteur: null
+		});
+		expect(rendu).toContain('Importer comme racine de l’application');
+		expect(rendu).toContain('Chaque dossier direct du dossier choisi deviendra un univers');
+		expect(rendu).toContain('seront ignorés et signalés');
+		expect(rendu).toContain('dans l’aperçu et le rapport');
+		expect(rendu).not.toContain('Nom de l’univers');
 	});
 
 	it('sur une instance vide, la note explique le manque et le dossier peut créer le premier univers', () => {
