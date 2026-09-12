@@ -274,6 +274,22 @@ describe('V-24 — dépôt et destination sur la même page', () => {
 		expect(rendu.match(/Univers\/Domaine\/Même\.md/g)?.length).toBeGreaterThanOrEqual(2);
 	});
 
+	it('regroupe les extensions qui portent le même libellé dans le récapitulatif', () => {
+		const rendu = corps('V-24', {
+			...SOCLE_V24,
+			lotImport: {
+				source: 'Racine',
+				fichiers: [
+					{ c: 'Univers/Photos/Plan.png', f: 'png', o: 1, s: 'note' },
+					{ c: 'Univers/Photos/Équipe.jpg', f: 'jpg', o: 1, s: 'note' }
+				]
+			},
+			vecteur: { et: '2' }
+		});
+		expect(rendu).toContain('<b>2</b><span>Image</span>');
+		expect(rendu.match(/<span>Image<\/span>/g)).toHaveLength(1);
+	});
+
 	it('sur une instance vide, la note explique le manque et le dossier peut créer le premier univers', () => {
 		const baseVide = {
 			...SOCLE_V24,
