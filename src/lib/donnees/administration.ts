@@ -1724,9 +1724,9 @@ export interface SaisieDUnDomaine {
  * ses modules. Sans racine, aucune note ne peut naître dans le domaine ; la racine porte le
  * nom du domaine, de profondeur 1 et sans parent.
  *
- * L'UNICITÉ EST CHERCHÉE SUR LE NOM, ET GLOBALEMENT — alors que la base ne l'exige que sur
- * `(univers, identifiant)` : deux lectures de console INDEXENT PAR LE NOM D'AFFICHAGE, et deux
- * homonymes en feraient disparaître un sans que rien ne s'en plaigne.
+ * L'UNICITÉ EST CELLE DU RANGEMENT ET DE LA BASE : un nom dans un univers. Deux univers
+ * peuvent donc porter des domaines homonymes ; leurs adresses restent distinctes puisqu'elles
+ * portent l'identifiant de l'univers avant celui du domaine.
  */
 export async function creerUnDomaine(
 	base: Base,
@@ -1745,7 +1745,8 @@ export async function creerUnDomaine(
 	const existants = await base
 		.select({ nom: domaines.nom, identifiant: domaines.identifiant, universId: domaines.universId })
 		.from(domaines);
-	if (existants.some((d) => memeNom(d.nom, nom))) return refuser('nom', messageDejaPris(nom));
+	if (existants.some((d) => d.universId === accueil.id && memeNom(d.nom, nom)))
+		return refuser('nom', messageDejaPris(nom));
 
 	const identifiant = identifiantLibre(
 		nom,
