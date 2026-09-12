@@ -286,13 +286,6 @@ export interface LigneDeNote {
 	readonly revisionLe: Date | null;
 }
 
-/**
- * Le renommage de « Production » en « Technique », à l'étage du semeur. Il ne peut PAS se
- * faire dans `seeds/corpus.ts` : ce fichier est la transcription des maquettes gelées, et
- * son test le prouve en relisant `mockups/`. Le produit sert désormais deux univers de
- * contenu. Conséquence assumée : les adresses passent de `/univers/production/…` à
- * `/univers/technique/…`.
- */
 const RENOMMAGES_DUNIVERS: Readonly<Record<string, string>> = { Production: 'Technique' };
 
 function nomDUniversSeme(nom: string): string {

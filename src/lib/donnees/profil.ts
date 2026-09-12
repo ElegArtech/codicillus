@@ -315,7 +315,6 @@ export function vecteurDeV25(
    latins-1, ce qui rend le compte des « natures » légèrement généreux : c'est le
    comportement du gel, et le corriger ici ferait diverger le serveur de l'écran. */
 
-/** `MINI` du gel — `mockups/V-25-profil.html:2619`. */
 export const MINIMUM_DE_CARACTERES = 12;
 
 /** `natures()` du gel — quatre classes, comptées présentes ou absentes. */

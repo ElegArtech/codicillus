@@ -1,30 +1,4 @@
 <script lang="ts">
-	/**
-	 * V-07 — ACCUEIL CONNECTÉ. Route `/`, branche avec session.
-	 *
-	 * Cinq blocs, dans cet ordre : la salutation et le chiffre de la bibliothèque, le
-	 * grand champ de recherche, la carte « À surveiller », les deux cartes de
-	 * découverte, le tableau des univers. C'est la composition du prototype validé
-	 * (`design_handoff_refonte_codicillus/captures/01-accueil.png`).
-	 *
-	 * AUCUN ÉTAT DE VIVACITÉ N'EST CALCULÉ ICI (`P-01`, `ADR-005`). Le chargeur passe
-	 * l'état de chaque note, déjà produit par `vivacite()` ; cette vue ne fait
-	 * qu'additionner, grouper et rendre. Le glyphe est le composant unique,
-	 * `GlypheDeVivacite`, jamais un cercle dessiné à la main, et il ne paraît jamais
-	 * sans son libellé (`RG-M18-09`).
-	 *
-	 * LE PRODUIT COMMENCE VIDE, et chacun des cinq blocs le dit à sa façon : aucun
-	 * n'affiche un zéro muet, chacun nomme le geste qui débloque — créer un univers,
-	 * créer une note, ouvrir une note, demander un accès. C'est le chemin le plus
-	 * important de cet écran, pas son cas limite.
-	 *
-	 * CHAQUE GESTE MÈNE QUELQUE PART. Les deux alertes ouvrent la liste filtrée des
-	 * notes concernées — `/?surveiller=…`, servie par le chargeur de cette même
-	 * route ; chaque ligne de liste est un lien vers sa note ; chaque ligne du
-	 * tableau des univers ouvre la page de son univers.
-	 *
-	 * Le style est dans `src/socle.css` et `src/vues/V-07.css`.
-	 */
 	import type { Domaine, Note, Univers, UtilisateurCourant } from '../../seeds/corpus';
 	import { resolve } from '$app/paths';
 	import Coquille from '$lib/coquille/Coquille.svelte';

@@ -1,42 +1,18 @@
-# Sources de vérité gelées — jamais reformatées
-cadrage/
-mockups/
-mockups_old/
-design_handoff_refonte_codicillus/
-règles/
-guide/
-verif/references/
-
-# Copies contrôlées, extraites mécaniquement d'une source gelée par
-# `pnpm socle:extraire` (lot T-004). Elles doivent rester identiques octet pour
-# octet à leur source : les reformater ferait rougir `pnpm verif:jetons` (P-6.1).
-src/socle.css
-static/polices/
-
-# Feuilles de vue portées — même règle, même motif (P-6.3, ÉCART-011 É-2).
-# Une feuille `V-xx.css` est identique octet pour octet au second bloc <style>
-# de sa maquette gelée ; la reformater ferait rougir `pnpm verif:jetons`.
-# Installées par `node verif/feuilles-de-vue.mjs V-xx --installer`.
-src/**/V-[0-9][0-9].css
-
-# Produits
+node_modules/
+.pnpm-store/
 .svelte-kit/
 build/
 dist/
-node_modules/
+.local/
+.codex/
+certificats/
 pnpm-lock.yaml
+static/licences/
+static/polices/
 test-results/
 playwright-report/
-
-# Documentation et harnais agentique — le formatage porte sur le code, pas sur
-# la prose : reflouer du texte français rédigé à la main n'apporte rien et rend
-# les diffs illisibles.
+blob-report/
 *.md
-.claude/
-docs/
-
-# Le site de présentation. `presentation-codicillus.html` est la toile de
-# conception assemblée — 3,4 Mo dont le gros est du code d'éditeur minifié :
-# la reformater n'a aucun sens et casserait son bloc d'état. `Main.dc.html`
-# est sa source, écrite au format des composants de conception.
-site/
+# Les styles des vues conservent leur mise en forme compacte.
+src/socle.css
+src/**/V-[0-9][0-9].css

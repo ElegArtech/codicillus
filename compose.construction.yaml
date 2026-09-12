@@ -1,0 +1,13 @@
+# À utiliser sur une machine disposant de l'accès aux registres de paquets.
+services:
+  app:
+    build:
+      context: .
+      target: execution
+  gestion:
+    build:
+      context: .
+      target: gestion
+  conversion:
+    build:
+      context: ./services/conversion

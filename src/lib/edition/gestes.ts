@@ -34,10 +34,6 @@ export const DOCUMENT_VIDE: Document = { type: 'doc', content: [{ type: 'paragra
  */
 export type EtatDuTemoin = 'vierge' | 'modifie' | 'encours' | 'enregistre' | 'erreur';
 
-/**
- * LE RAPPEL DE SORTIE — la phrase du dialogue gelé, reprise plutôt que
- * reformulée (`mockups/V-17-editeur.html`, `dialog#dlg-quitter`).
- */
 export const RAPPEL_DE_SORTIE =
 	'Quitter sans enregistrer ?\n\nLes modifications non enregistrées seront perdues.';
 

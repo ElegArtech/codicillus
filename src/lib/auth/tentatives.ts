@@ -45,7 +45,7 @@ export interface LigneDeTentative {
  */
 export const BAREME = {
 	attentesEnSecondes: [0, 0, 1, 2, 4, 8],
-	/** `mockups/V-05-connexion.html:777` — `verrouiller(90)`. */
+
 	blocageEnSecondes: 90
 } as const;
 

@@ -255,12 +255,6 @@
 	>
 {/snippet}
 
-<!--
-	`ligne(largeur, classe)` — le calque exact de la fabrique du gel
-	(`mockups/V-39-etats.html:2939`), qui pose la largeur d'une ligne d'esquisse en
-	ARGUMENT et jamais en littéral de style. Les largeurs vivent donc au point
-	d'appel, comme dans la maquette.
--->
 {#snippet ligne(largeur: string, classe: string)}
 	<div class={classe ? `sq sq-l ${classe}` : 'sq sq-l'} style="width:{largeur}{pause}"></div>
 {/snippet}

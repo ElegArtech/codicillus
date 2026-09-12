@@ -1,49 +1,8 @@
-"""Service de conversion — l'interface HTTP. Lots T-003 puis T-052.
+"""Service HTTP de conversion de fichiers en Markdown et images.
 
-`T-003` a posé le conteneur, ses outils et son contrôle de santé. `T-052` pose
-le point d'entrée de conversion, et l'extraction elle-même vit dans
-`convertisseurs.py`, exécuté EN SOUS-PROCESSUS.
-
-Deux invariants du service, posés par ADR-004 et ADR-009, gouvernent tout ce
-fichier :
-
-  * le service retourne du Markdown et des images extraites, JAMAIS le
-    document canonique — l'application applique ensuite son convertisseur
-    unique (ADR-004) ;
-  * l'appel est fichier par fichier, et l'arrêt du service dégrade l'import
-    bureautique sans empêcher l'import Markdown (ADR-009, RG-NF-01).
-
-═══════════════════════════════════════════════════════════════════════════
-CE PROCESSUS-CI NE CONVERTIT RIEN LUI-MÊME, ET C'EST TOUTE LA GARANTIE
-
-`RG-M12-04` : « un fichier en erreur n'interrompt jamais le lot ». `STACK`
-§4.6 dit pourquoi un service séparé le garantit — les convertisseurs « sont
-lents, consomment de la mémoire de façon irrégulière et échouent sur des
-fichiers malformés ».
-
-Un service qui les appellerait dans son propre processus n'apporterait qu'une
-frontière de réseau : une saturation de mémoire ou une erreur native
-emporterait le serveur, et le lot avec lui. La conversion tourne donc dans un
-processus enfant, borné par `DELAI_MAX_CONVERSION`, et tué s'il le dépasse.
-C'est la seule construction où « un fichier malformé ne peut pas faire tomber
-le service » est une propriété et non un espoir.
-
-═══════════════════════════════════════════════════════════════════════════
-UN ÉCHEC DE CONVERSION EST UN VERDICT, PAS UNE PANNE — DONC UN 200
-
-Le point d'entrée rend **200** dans les deux cas, et le corps porte `issue` :
-`converti` ou `echec`. Un code d'erreur HTTP est réservé à ce que le service ne
-peut pas traiter du tout — une requête sans fichier.
-
-Le motif est double. D'abord, l'appelant distingue ainsi sans ambiguïté « le
-service est en panne » (aucune réponse, ou réponse non conforme) de « ce
-fichier-là n'a pas pu être lu » : les deux ont des conséquences opposées
-(`P-10` d'un côté, `RG-M12-04` de l'autre). Ensuite, un 4xx par fichier
-malformé sur un lot de plusieurs centaines de fichiers noierait les journaux
-d'exploitation d'erreurs qui n'en sont pas.
-
-AUCUNE TRACE TECHNIQUE NE SORT DANS LA RÉPONSE — `STACK` §4.7. Le détail de
-l'échec part au journal du conteneur ; le corps ne porte qu'un code de motif.
+Chaque conversion s'exécute dans un processus enfant avec un délai maximal.
+Un fichier illisible retourne une issue d'échec ; les détails techniques restent
+dans les journaux du conteneur. L'application produit ensuite le contenu structuré.
 """
 
 from __future__ import annotations
@@ -63,7 +22,7 @@ application = FastAPI(
     title="Codicillus — service de conversion",
     description=(
         "Brique optionnelle. Son arrêt dégrade l'import bureautique, "
-        "il n'interrompt jamais le produit (P-10, RG-NF-01)."
+        "les imports Markdown et texte restent disponibles."
     ),
     version="0.2.0",
 )

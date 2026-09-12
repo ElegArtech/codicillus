@@ -389,17 +389,6 @@
 	];
 </script>
 
-<!--
-	L'ÉLÉMENT FOCAL DE CHAQUE BOÎTE, DÉCLARÉ — et non piloté. La maquette le pose en
-	script à l'ouverture (`mockups/V-40-dialogues.html:3189`) ; ici `autofocus`
-	déclare la même propriété, que le délégué de focalisation de `showModal()`
-	honore. Pour `d-droits` et `d-deplacer` la cible est désactivée, donc non
-	focalisable, et la focalisation retombe sur le bouton de fermeture — ce que la
-	maquette obtient parce que `focus()` y est sans effet. `a11y_autofocus` vise la
-	focalisation au CHARGEMENT D'UNE PAGE ; ici c'est celle d'un dialogue modal, que
-	`RG-M18-08` exige.
--->
-
 {#snippet croix()}
 	<svg
 		width="16"

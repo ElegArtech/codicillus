@@ -1,40 +1,23 @@
-# Dépendances
+# Dépendances et constructions
 node_modules/
 .pnpm-store/
-
-# Constructions
 build/
 .svelte-kit/
 dist/
 services/conversion/__pycache__/
 services/conversion/.venv/
 
-# Environnement
+# Configuration, données et certificats locaux
 .env
-.env.local
-.env.*.local
-
-# Témoin d'indisponibilité programmée (RG-NF-10) : un état d'exploitation,
-# jamais un état du dépôt.
+.env.*
+!.env.example
+.local/
+certificats/
 frontal/indisponibilite/ACTIF
 
-# Outillage agentique
-.claude/settings.local.json
-.claude/worktrees/
-
-# Vérification — sorties volatiles (les références sont versionnées)
-verif/captures/
-verif/rapports/
+# Résultats de tests et fichiers temporaires
 test-results/
 playwright-report/
 blob-report/
-
-# Système
-.DS_Store
 *.log
-
-# Les sorties de la comparaison écran / capture : des images regardées puis
-# jetées. La RÉFÉRENCE, elle, est versionnée — c'est `design_handoff_.../captures`.
-tools/conformite/rendu/
-tools/conformite/cote-a-cote/
-.aiguilles-cartes/
+.DS_Store
