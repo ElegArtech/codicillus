@@ -208,10 +208,12 @@ const TROIS_VERSIONS: readonly Version[] = (
  */
 const SOCLE_V24: Proprietes = {
 	domaines: DOMAINES,
+	destinationsOuEcrire: [],
 	/* `UC-M12-02` — les univers où un domaine peut naître. La route la sert toujours,
 	   la propriété est donc EXIGÉE ; vide, le scénario « domaine complet » n'est pas
 	   offert, ce qui est l'état d'un compte sans droit de créer un domaine. */
 	universOuCreerUnDomaine: [],
+	peutCreerUnUnivers: false,
 	lotImport: LOT_IMPORT,
 	formatsImport: LIBELLE_PAR_FORMAT,
 	domaineParDefaut: DOMAINES[0]!.nom
@@ -300,7 +302,7 @@ const VUES: Readonly<
 			/* `univers` N'A PLUS LE JEU POUR DÉFAUT — le rail abrégé ne s'en dérive
 			   pas, et son état vide est un tableau vide, jamais les univers du jeu. */
 			{ cle: 'univers', defaut: [], autre: AUTRES_UNIVERS, inerte: true },
-			{ cle: 'domaines', socle: true, autre: AUTRES_DOMAINES },
+			{ cle: 'domaines', socle: true, autre: AUTRES_DOMAINES, inerte: true },
 			{ cle: 'compte', defaut: null, autre: AUTRE_COMPTE, marqueur: 'ZQ' },
 			{
 				cle: 'lotImport',

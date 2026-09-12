@@ -61,10 +61,16 @@ import {
 	ouvrirLAcces,
 	peutEcrireDansLUn,
 	resoudreLeChemin,
+	segmentsAffiches,
 	type AccesAuRangement
 } from '$lib/donnees/rangement';
 import { moteurPartage } from '$lib/recherche/acces';
-import { adresseDeDomaine, adresseDeNote, adresseDUnivers } from '$lib/rangement/adresses';
+import {
+	adresseDeDomaine,
+	adresseDeNote,
+	adresseDUnivers,
+	identifiantLisible
+} from '$lib/rangement/adresses';
 import { estUneMiseAJour } from './reprise';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
@@ -147,6 +153,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		/* LES CIBLES OFFERTES AU SÉLECTEUR — le périmètre est celui de l'ÉCRITURE,
 		   pas celui de la lecture. */
 		domainesOuEcrire: cibles,
+		destinationsOuEcrire: await destinationsOuEcrire(base, acces),
 		/* `UC-M12-02` — les univers d'accueil du domaine à créer, et le droit de le
 		   faire. La vue n'offre le scénario que si la liste n'est pas vide. */
 		universOuCreerUnDomaine: universDAccueil,
@@ -202,6 +209,44 @@ async function domainesOuEcrire(
 	return racines
 		.filter((r) => capacites(droitEffectif(acces, r.dossierId)).ecrireDesNotes)
 		.map((r) => ({ nom: r.nom, univers: r.univers, couleur: r.couleur }));
+}
+
+/**
+ * Les emplacements réellement inscriptibles, jusqu'au dixième niveau. La valeur
+ * transportée reste faite d'identifiants persistés et de segments d'adresse ; le
+ * libellé, lui, donne à voir toute l'arborescence à l'utilisateur.
+ */
+async function destinationsOuEcrire(base: Base, acces: AccesAuRangement) {
+	const rattachements = await base
+		.select({
+			domaineId: domaines.id,
+			domaine: domaines.nom,
+			domaineIdentifiant: domaines.identifiant,
+			univers: univers.nom,
+			universIdentifiant: univers.identifiant
+		})
+		.from(domaines)
+		.innerJoin(univers, eq(univers.id, domaines.universId));
+	const parDomaine = new Map(rattachements.map((r) => [r.domaineId, r]));
+
+	return acces.dossiers
+		.filter((dossier) => capacites(droitEffectif(acces, dossier.id)).ecrireDesNotes)
+		.map((dossier) => {
+			const rattachement = parDomaine.get(dossier.domaineId);
+			if (rattachement === undefined) return null;
+			const segments = segmentsAffiches(acces.dossiers, dossier.id);
+			return {
+				univers: rattachement.universIdentifiant,
+				universNom: rattachement.univers,
+				domaine: rattachement.domaineIdentifiant,
+				domaineNom: rattachement.domaine,
+				chemin: segments.map(identifiantLisible).join('/'),
+				libelle: [rattachement.univers, rattachement.domaine, ...segments].join(' › '),
+				niveau: (dossier.parentId === null ? 'domaine' : 'dossier') as 'domaine' | 'dossier'
+			};
+		})
+		.filter((destination) => destination !== null)
+		.sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
 }
 
 /**
