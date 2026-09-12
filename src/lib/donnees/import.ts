@@ -733,6 +733,31 @@ export function sansLePremierNiveau(fichiers: readonly FichierDepose[]): readonl
 	});
 }
 
+/**
+ * LES DOMAINES D'UN UNIVERS IMPORTÉ. Après retrait du dossier qui porte le nom de
+ * l'univers, chaque dossier direct nomme un domaine. Les fichiers restés directement
+ * à la racine ne peuvent pas devenir des notes orphelines : ils sont réunis dans un
+ * domaine qui porte le nom de l'univers. Si un dossier direct porte déjà ce nom, les
+ * deux provenances se rejoignent dans le même domaine.
+ */
+export function repartirLesFichiersDUnivers(
+	nomUnivers: string,
+	fichiers: readonly FichierDepose[]
+): ReadonlyMap<string, readonly FichierDepose[]> | null {
+	const groupes = new Map<string, FichierDepose[]>();
+	for (const fichier of fichiers) {
+		const coupe = fichier.chemin.indexOf('/');
+		if (coupe === fichier.chemin.length - 1) return null;
+		const nomDomaine = coupe === -1 ? nomUnivers : fichier.chemin.slice(0, coupe).trim();
+		if (nomDomaine === '') return null;
+		const chemin = coupe === -1 ? fichier.chemin : fichier.chemin.slice(coupe + 1);
+		const groupe = groupes.get(nomDomaine) ?? [];
+		groupe.push({ ...fichier, chemin });
+		groupes.set(nomDomaine, groupe);
+	}
+	return groupes;
+}
+
 export interface LigneDePlan {
 	readonly chemin: string;
 	readonly format: FormatDImport | null;
