@@ -200,25 +200,25 @@ describe('V-24 — l’import part de deux gestes simples', () => {
 	});
 
 	it('porte la case du mode strict, que RG-M12-03 exige et qu’aucune maquette n’offre', () => {
-		/* « … sauf si l'utilisateur a explicitement demandé un mode strict » : sans
-		   déclencheur, la règle n'est pas tenue. La case est à l'étape 1, le mode
-		   gouvernant le lot entier et non son dépôt. */
-		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: null });
-		expect(rendu).toContain('Refuser le lot entier si une ligne échoue');
+		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
+		expect(rendu).toContain('Refuser tout l’import si un fichier échoue');
 		expect(borneServie(rendu, 'champ-strict', 'label').ouvrante).not.toContain('hidden');
 	});
 
-	it('réunit toutes les granularités dans un seul sélecteur hiérarchique', () => {
+	it('donne à la note trois choix distincts : univers, domaine et dossier facultatif', () => {
 		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
+		expect(rendu).toContain('univers-note');
+		expect(rendu).toContain('domaine-note');
 		expect(rendu).toContain('destination-import');
-		expect(rendu).toContain('Zone Q › Contrats');
-		expect(rendu).toContain('Zone Q › Contrats › Prestataires');
-		expect(rendu).not.toContain('Nom du domaine à créer');
+		expect(rendu).toContain('Dossier');
+		expect(rendu).toContain('facultatif');
+		expect(rendu).not.toContain('Quel sera son parent');
 	});
 
-	it('explique le niveau produit à partir de la destination', () => {
+	it('ne mélange pas le parcours note avec la qualification d’un dossier', () => {
 		const rendu = corps('V-24', { ...SOCLE_V24, vecteur: { et: '2' } });
-		expect(rendu).toContain('Où faut-il le ranger');
+		expect(rendu).toContain('Choisissez une note, puis l’endroit précis');
+		expect(rendu).not.toContain('Emplacement parent');
 		expect(rendu).toContain('Choisissez une destination pour voir le rangement obtenu');
 	});
 
