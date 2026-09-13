@@ -1,0 +1,141 @@
+.galerie {
+	max-width: 1220px;
+	margin: auto;
+	padding: 32px 40px 80px;
+}
+.galerie-tete {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 24px;
+	padding-bottom: 32px;
+	border-bottom: 1px solid var(--c-trait);
+}
+.signature {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	color: var(--c-accent);
+	text-decoration: none;
+	font: 600 25px var(--f-lecture);
+}
+.repere {
+	font: 11px/1.6 var(--f-donnee);
+	color: var(--c-encre-3);
+	letter-spacing: 0.09em;
+	text-transform: uppercase;
+}
+.ouverture {
+	padding: 56px 0 40px;
+	max-width: 800px;
+}
+.ouverture h1 {
+	margin: 16px 0 24px;
+	font: 500 48px/1.2 var(--f-lecture);
+	letter-spacing: -0.035em;
+}
+.ouverture p {
+	font-size: 17px;
+	max-width: 64ch;
+	line-height: 1.7;
+	color: var(--c-encre-2);
+}
+.galerie a {
+	color: var(--c-accent);
+	text-underline-offset: 4px;
+}
+.liens {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 16px 24px;
+	margin-top: 24px;
+}
+.galerie .action {
+	padding: 13px 20px;
+	border-radius: 6px;
+	background: var(--c-accent);
+	color: var(--c-papier);
+	text-decoration: none;
+}
+.apercu {
+	margin: 0 0 56px;
+}
+.apercu img {
+	display: block;
+	width: 100%;
+	border: 1px solid var(--c-trait);
+	border-radius: 8px;
+}
+.apercu figcaption {
+	font-size: 13px;
+	color: var(--c-encre-3);
+	line-height: 1.6;
+	margin-top: 12px;
+}
+.section-tete {
+	margin-bottom: 24px;
+}
+.galerie h2 {
+	font: 500 28px/1.35 var(--f-lecture);
+	margin-bottom: 8px;
+}
+.section-tete p {
+	color: var(--c-encre-3);
+	line-height: 1.7;
+}
+.comparaisons,
+.situations {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 24px;
+	margin-bottom: 56px;
+}
+.comparaisons article {
+	border-top: 2px solid var(--c-accent-trait);
+	padding: 24px 0;
+}
+.galerie h3 {
+	font-size: 17px;
+	line-height: 1.5;
+	margin: 12px 0;
+}
+.comparaisons p {
+	line-height: 1.7;
+	color: var(--c-encre-2);
+}
+.situations {
+	border-top: 1px solid var(--c-trait);
+	padding-top: 12px;
+}
+.situations a {
+	display: block;
+	padding: 9px 0;
+	line-height: 1.5;
+	font-size: 14px;
+}
+.lecture {
+	padding-top: 24px;
+	border-top: 1px solid var(--c-trait);
+	max-width: 80ch;
+}
+.lecture p {
+	line-height: 1.8;
+	color: var(--c-encre-2);
+}
+@media (max-width: 760px) {
+	.galerie {
+		padding: 24px 20px 48px;
+	}
+	.galerie-tete {
+		flex-wrap: wrap;
+	}
+	.ouverture h1 {
+		font-size: 36px;
+	}
+	.comparaisons,
+	.situations {
+		grid-template-columns: 1fr;
+		gap: 8px;
+	}
+}
