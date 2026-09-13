@@ -52,6 +52,7 @@
 		surveiller={data.surveiller}
 		ecriture={data.ecriture}
 		administrateur={data.administrateur}
+		requetes={data.requetes}
 	/>
 {:else}
 	<!--

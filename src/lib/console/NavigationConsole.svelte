@@ -110,6 +110,9 @@
 			case 'templates':
 				void goto(resolve('/console/templates'));
 				return;
+			case 'requetes':
+				void goto(resolve('/console/requetes'));
+				return;
 			case 'comptes':
 				void goto(resolve('/console/comptes'));
 				return;
@@ -175,6 +178,7 @@
 				<div class="nav2__titre etiq">{groupe.nom}</div>
 				{#each groupe.sections as section (section.cle)}<button
 						class="nav2__lien"
+						class:rq-nav-ajout={section.cle === 'requetes'}
 						type="button"
 						aria-current={section.cle === courante ? 'page' : undefined}
 						onclick={() => allerA(section.cle)}
@@ -188,7 +192,8 @@
 								stroke-width="1.4"
 								>{#each section.pictogramme as t, rang (rang)}{@render trait(t)}{/each}</svg
 							></span
-						><span class="nav2__nomlien">{section.nom}</span>{#if section.compte !== undefined}<span
+						><span class="nav2__nomlien">{section.nom}</span
+						>{#if section.compte !== undefined && (section.cle !== 'requetes' || section.compte > 0)}<span
 								class="nav2__n">{section.compte}</span
 							>{/if}</button
 					>{/each}

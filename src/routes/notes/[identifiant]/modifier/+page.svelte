@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	/**
 	 * `/notes/{identifiant}/modifier` — V-17 Éditeur d'une note, modification. Six
 	 * propriétés viennent de la base, dont la NOTE REPRISE — celle que l'adresse désigne.
@@ -128,7 +129,9 @@
 			/* « Annuler » ramène à la LECTURE de la note qu'on modifiait — la
 			   destination que `docs/routes.md` donne à cette famille, et celle
 			   qu'un enregistrement réussi emprunte déjà. */
-			retour: adresseDeNote(page.params['identifiant'] ?? '')
+			retour: data.requete
+				? resolve('/console/requetes/[identifiant]', { identifiant: data.requete.id })
+				: adresseDeNote(page.params['identifiant'] ?? '')
 		});
 		/* LE BROUILLON LOCAL — et ici il est PROPOSÉ, jamais imposé : la note en base
 		   porte peut-être le travail d'un autre, et `enregistreeLe` dit à l'avis si le
@@ -172,6 +175,7 @@
      part en arrière-plan, le document reste, et le refus se peint dessus. -->
 <form method="POST" use:enhance={surEnvoi} bind:this={formulaire} style="display:contents">
 	<Vue
+		requete={data.requete}
 		domaines={page.data.domaines}
 		universDuCompte={data.noteModifiee.univers}
 		dossiersParDomaine={data.dossiersParDomaine}

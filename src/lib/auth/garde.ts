@@ -57,6 +57,9 @@ export const REGIMES: readonly { readonly prefixe: string; readonly regime: Regi
 	   intervention, l'anonyme comme le contributeur. */
 	{ prefixe: '/indisponibilite', regime: 'publique' },
 	{ prefixe: '/deconnexion', regime: 'deconnexion' },
+	{ prefixe: '/requetes/nouvelle', regime: 'publique' },
+	{ prefixe: '/requetes/transmise', regime: 'publique' },
+	{ prefixe: '/mes-requetes', regime: 'redirection' },
 	{ prefixe: '/recherche', regime: 'publique' },
 	/* ARB-007 A-05 — servie telle quelle, anonyme comme connecté. La note non
 	   publique y rend 404 V-04, par la résolution de la route, non par ici. */

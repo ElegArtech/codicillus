@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AccesRequete from '$lib/requetes/AccesRequete.svelte';
 	/**
 	 * V-02 — Recherche publique, sans session. Route `/recherche` en anonyme
 	 * (`docs/routes.md` §3.1) ; la même adresse sert V-08 en session.
@@ -540,7 +541,7 @@
 							>
 						</a>
 					</aside>
-				{/if}
+				{/if}<AccesRequete recherche={requete} />
 			</div>
 		</div>
 	</main>

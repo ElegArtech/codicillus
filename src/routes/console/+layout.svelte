@@ -16,6 +16,9 @@
 	const { children, data }: { children: import('svelte').Snippet; data: LayoutData } = $props();
 
 	setContext<EffectifsDeConsole>(CLE_EFFECTIFS, {
+		get requetes() {
+			return data.effectifs.requetes;
+		},
 		get univers() {
 			return data.effectifs.univers;
 		},

@@ -43,6 +43,7 @@
 	type IdentiteAffichee = { readonly [K in keyof UtilisateurCourant]: string };
 
 	interface Proprietes {
+		requetes?: { aEvaluer: number; personnelles: number; nouvelles: number };
 		revisions?: readonly { id: string | number; par: string; commentaire: string }[];
 		/** Le corpus lisible — la coquille en a besoin pour résoudre le fil. */
 		notes: readonly Note[];
@@ -75,6 +76,7 @@
 	};
 
 	const {
+		requetes = { aEvaluer: 0, personnelles: 0, nouvelles: 0 },
 		notes: corpus,
 		univers = [],
 		domaines = [],
@@ -356,6 +358,11 @@
 		</a>
 
 		<!-- ═══ 3. À SURVEILLER ═════════════════════════════════════════════════ -->
+		<div class="rq-acces">
+			<a class="rq-lien" href={resolve('/requetes/nouvelle')}
+				>Formuler une requête de documentation</a
+			>
+		</div>
 		<section class="carte" aria-labelledby="t-surveiller">
 			<div class="carte__tete">
 				<span class="etiq" id="t-surveiller">À surveiller</span>
@@ -442,6 +449,22 @@
 					{/if}
 				</div>
 			{/if}
+			{#if administrateur && requetes.aEvaluer > 0}<a
+					class="rq-signal"
+					href={resolve('/console/requetes')}
+					><span
+						><strong>{requetes.aEvaluer}</strong> requête{requetes.aEvaluer > 1 ? 's' : ''} de documentation
+						à évaluer</span
+					><span aria-hidden="true">›</span></a
+				>{/if}
+			{#if requetes.nouvelles > 0}<a class="rq-signal" href={resolve('/mes-requetes')}
+					><span
+						><strong>{requetes.nouvelles}</strong> nouvelle{requetes.nouvelles > 1 ? 's' : ''} décision{requetes.nouvelles >
+						1
+							? 's'
+							: ''} pour vos requêtes de documentation</span
+					><span aria-hidden="true">›</span></a
+				>{/if}
 		</section>
 
 		<!-- ═══ 3 bis. LA LISTE QU'UNE ALERTE OUVRE ═════════════════════════════ -->

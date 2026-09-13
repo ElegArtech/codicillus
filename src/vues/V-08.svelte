@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AccesRequete from '$lib/requetes/AccesRequete.svelte';
 	import type { Domaine, Note, Univers, UtilisateurCourant } from '../../seeds/corpus';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { chercher, nombreFr, segmenter } from '$lib/public/recherche';
@@ -722,6 +723,7 @@
 				<div class="esquisse esq-carte"></div>
 				<div class="esquisse esq-carte"></div>
 			</div>
+			<AccesRequete recherche={q} />
 		</div>
 	{/snippet}
 </Coquille>

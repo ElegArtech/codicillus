@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
+	import AccesRequete from '$lib/requetes/AccesRequete.svelte';
 	/**
 	 * V-01 — Accueil public, sans session. Route `/` en anonyme
 	 * (`docs/routes.md` §3.1) ; la même adresse sert V-07 en session.
@@ -37,6 +39,7 @@
 	const ROUTE_DU_GUIDE = '/guides/[identifiant]' as const;
 
 	interface Proprietes {
+		contenu?: Snippet;
 		vecteur: Record<string, string | boolean> | null;
 		notes: readonly Note[];
 		/**
@@ -49,7 +52,7 @@
 		portail: string;
 	}
 
-	const { vecteur, notes, portail }: Proprietes = $props();
+	const { contenu, vecteur, notes, portail }: Proprietes = $props();
 
 	/**
 	 * « OUVRIR UN TICKET D'ASSISTANCE » N'EST ÉMIS QUE S'IL MÈNE QUELQUE PART —
@@ -164,7 +167,9 @@
 	pas : elle composerait une adresse INTERNE sous la racine de déploiement. Tous
 	les autres liens de la vue y passent. -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
-<a class="saut-contenu" href="#recherche">Aller à la recherche</a>
+<a class="saut-contenu" href={contenu ? '#contenu' : '#recherche'}
+	>{contenu ? 'Aller au contenu' : 'Aller à la recherche'}</a
+>
 
 <div class="public app" id="app" data-etat={donneeEtat} data-guides={donneeGuides}>
 	<header class="chapeau">
@@ -182,177 +187,180 @@
 		<a class="btn btn--discret" href={resolve('/connexion')}>Se connecter</a>
 	</header>
 
-	<section class="hamecon">
-		<div class="hamecon__sur etiq">
-			{surtitre}
-		</div>
-		<h1>Les réponses aux questions qu'on pose au support.</h1>
-		<p class="hamecon__sous">
-			Accès aux applications, mots de passe, salles de réunion, réseau, postes de travail : les
-			guides écrits par les équipes techniques, ouverts à tous. Chaque guide indique la date à
-			laquelle il a été vérifié pour la dernière fois.
-		</p>
+	{#if !contenu}<section class="hamecon">
+			<div class="hamecon__sur etiq">
+				{surtitre}
+			</div>
+			<h1>Les réponses aux questions qu'on pose au support.</h1>
+			<p class="hamecon__sous">
+				Accès aux applications, mots de passe, salles de réunion, réseau, postes de travail : les
+				guides écrits par les équipes techniques, ouverts à tous. Chaque guide indique la date à
+				laquelle il a été vérifié pour la dernière fois.
+			</p>
 
-		<div class="champ-public" id="recherche">
-			<svg
-				width="24"
-				height="24"
-				viewBox="0 0 16 16"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.6"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></svg
-			>
-			<!-- svelte-ignore a11y_autofocus -->
-			<input
-				type="search"
-				id="saisie"
-				autocomplete="off"
-				spellcheck="false"
-				autofocus
-				value={saisie}
-				placeholder="Que cherchez-vous ?"
-				aria-label="Rechercher dans les guides publics"
-			/>
-			<button
-				class="champ-public__effacer"
-				id="effacer"
-				aria-label="Effacer la recherche"
-				hidden={!requete}
-			>
+			<div class="champ-public" id="recherche">
 				<svg
-					width="18"
-					height="18"
+					width="24"
+					height="24"
 					viewBox="0 0 16 16"
 					fill="none"
 					stroke="currentColor"
-					stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8" /></svg
+					stroke-width="1.6"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></svg
 				>
-			</button>
-		</div>
-
-		<div class="sous-champ">
-			<span class="rassurance">
-				<svg
-					width="15"
-					height="15"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"><path d="M3 8.5l3.5 3.5L13 4.5" /></svg
+				<!-- svelte-ignore a11y_autofocus -->
+				<input
+					type="search"
+					id="saisie"
+					autocomplete="off"
+					spellcheck="false"
+					autofocus
+					value={saisie}
+					placeholder="Que cherchez-vous ?"
+					aria-label="Rechercher dans les guides publics"
+				/>
+				<button
+					class="champ-public__effacer"
+					id="effacer"
+					aria-label="Effacer la recherche"
+					hidden={!requete}
 				>
-				Pas besoin de compte pour consulter
-			</span>
-			<span class="releve" id="releve">
-				<b>{publiques.length} {accord(publiques.length, 'guide public', 'guides publics')}</b> ·
-				<b>{publiesFrais}</b>
-				{accord(publiesFrais, 'vérifié')} il y a moins d'un mois
-			</span>
-		</div>
-	</section>
-
-	<main class="corps-public">
-		<!-- ---------- Guides populaires ---------- -->
-		<section id="bloc-guides">
-			<div class="section__tete">
-				<h2 class="section__nom" id="titre-liste">
-					{enRecherche ? 'Résultats' : 'Les guides les plus consultés'}
-				</h2>
-				<span class="etiq" id="sous-liste"
-					>{#if enRecherche}{resultats.length}
-						{accord(resultats.length, 'résultat')} dans les guides publics{:else if !listeEnErreur && !listeVide}{populaires.length}
-						{accord(populaires.length, 'guide ouvert à tous', 'guides ouverts à tous')}{/if}</span
-				>
+					<svg
+						width="18"
+						height="18"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8" /></svg
+					>
+				</button>
 			</div>
 
-			<div class="si-nominal" id="zone-liste">
-				{#if enRecherche}{#if resultats.length === 0}<div class="zone-vide">
-							<div class="zone-vide__titre">Aucun guide ne répond à cette question</div>
+			<div class="sous-champ">
+				<span class="rassurance">
+					<svg
+						width="15"
+						height="15"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"><path d="M3 8.5l3.5 3.5L13 4.5" /></svg
+					>
+					Pas besoin de compte pour consulter
+				</span>
+				<span class="releve" id="releve">
+					<b>{publiques.length} {accord(publiques.length, 'guide public', 'guides publics')}</b> ·
+					<b>{publiesFrais}</b>
+					{accord(publiesFrais, 'vérifié')} il y a moins d'un mois
+				</span>
+			</div>
+		</section>
+	{/if}
+	<main id="contenu" class="corps-public" class:rq-module={Boolean(contenu)}>
+		{#if contenu}{@render contenu()}{:else}
+			<!-- ---------- Guides populaires ---------- -->
+			<section id="bloc-guides">
+				<div class="section__tete">
+					<h2 class="section__nom" id="titre-liste">
+						{enRecherche ? 'Résultats' : 'Les guides les plus consultés'}
+					</h2>
+					<span class="etiq" id="sous-liste"
+						>{#if enRecherche}{resultats.length}
+							{accord(resultats.length, 'résultat')} dans les guides publics{:else if !listeEnErreur && !listeVide}{populaires.length}
+							{accord(populaires.length, 'guide ouvert à tous', 'guides ouverts à tous')}{/if}</span
+					>
+				</div>
+
+				<div class="si-nominal" id="zone-liste">
+					{#if enRecherche}{#if resultats.length === 0}<div class="zone-vide">
+								<div class="zone-vide__titre">Aucun guide ne répond à cette question</div>
+								<p>
+									Rien de public ne correspond à <em>« {requete} »</em>. L'assistance saura vous
+									répondre, et votre demande signalera le guide manquant.
+								</p>
+								{#if assistanceJoignable}<a class="btn btn--principal" href={portail}
+										>Ouvrir un ticket d'assistance</a
+									>{/if}
+							</div>{:else}
+							<!--
+							AUCUN BLANC ENTRE LES NŒUDS DE LA LISTE, et il doit le rester : le nom
+							accessible se construit sur `textContent`, où un blanc inséré par le
+							formateur se voit.
+						-->
+							<!-- prettier-ignore -->
+							<div class="res-public">{#each resultats as n (n.id)}<a class="res" href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
+							><h3 class="res__titre">{@render marque(n.titre, requete)}</h3><p class="res__extrait">{@render marque(n.extrait, requete)}</p><div class="res__pied"
+								>{@render temoin(n)}<span>{n.domaine}</span><span style="font-family:var(--f-donnee)">{nombreFr(n.vues)} {accord(n.vues, 'consultation')}</span
+							></div
+						></a>{/each}</div>
+							<!-- Bascule vers la recherche publique complète (V-02). -->
+							<div class="passe-v02">
+								Affiner par domaine, par type de guide ou par vivacité<a
+									class="btn"
+									href="{resolve('/recherche')}{suffixeDeRequete}">Ouvrir la recherche complète</a
+								>
+							</div>{/if}{:else if listeEnErreur}<!--
+						La recherche reste utilisable même si les guides échouent : une zone en
+						erreur ne fait pas tomber la page (RG-M18-04).
+					-->
+						<div class="zone-erreur">
+							<div class="zone-erreur__titre">La liste des guides ne s'affiche pas</div>
 							<p>
-								Rien de public ne correspond à <em>« {requete} »</em>. L'assistance saura vous
-								répondre, et votre demande signalera le guide manquant.
+								Le service qui établit le classement ne répond pas pour le moment. La recherche
+								ci-dessus fonctionne normalement : tapez votre question.
+							</p>
+							<button class="btn">Réessayer</button>
+						</div>{:else if listeVide}<div class="zone-vide">
+							<div class="zone-vide__titre">Aucun guide n'est encore publié</div>
+							<p>
+								Les équipes techniques n'ont pas encore ouvert de guide au public. En attendant,
+								l'assistance répond directement à vos questions.
 							</p>
 							{#if assistanceJoignable}<a class="btn btn--principal" href={portail}
 									>Ouvrir un ticket d'assistance</a
 								>{/if}
 						</div>{:else}
-						<!--
-							AUCUN BLANC ENTRE LES NŒUDS DE LA LISTE, et il doit le rester : le nom
-							accessible se construit sur `textContent`, où un blanc inséré par le
-							formateur se voit.
-						-->
+						<!-- Même raison que ci-dessus : aucun blanc entre les nœuds. -->
 						<!-- prettier-ignore -->
-						<div class="res-public">{#each resultats as n (n.id)}<a class="res" href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
-							><h3 class="res__titre">{@render marque(n.titre, requete)}</h3><p class="res__extrait">{@render marque(n.extrait, requete)}</p><div class="res__pied"
-								>{@render temoin(n)}<span>{n.domaine}</span><span style="font-family:var(--f-donnee)">{nombreFr(n.vues)} {accord(n.vues, 'consultation')}</span
-							></div
-						></a>{/each}</div>
-						<!-- Bascule vers la recherche publique complète (V-02). -->
-						<div class="passe-v02">
-							Affiner par domaine, par type de guide ou par vivacité<a
-								class="btn"
-								href="{resolve('/recherche')}{suffixeDeRequete}">Ouvrir la recherche complète</a
-							>
-						</div>{/if}{:else if listeEnErreur}<!--
-						La recherche reste utilisable même si les guides échouent : une zone en
-						erreur ne fait pas tomber la page (RG-M18-04).
-					-->
-					<div class="zone-erreur">
-						<div class="zone-erreur__titre">La liste des guides ne s'affiche pas</div>
-						<p>
-							Le service qui établit le classement ne répond pas pour le moment. La recherche
-							ci-dessus fonctionne normalement : tapez votre question.
-						</p>
-						<button class="btn">Réessayer</button>
-					</div>{:else if listeVide}<div class="zone-vide">
-						<div class="zone-vide__titre">Aucun guide n'est encore publié</div>
-						<p>
-							Les équipes techniques n'ont pas encore ouvert de guide au public. En attendant,
-							l'assistance répond directement à vos questions.
-						</p>
-						{#if assistanceJoignable}<a class="btn btn--principal" href={portail}
-								>Ouvrir un ticket d'assistance</a
-							>{/if}
-					</div>{:else}
-					<!-- Même raison que ci-dessus : aucun blanc entre les nœuds. -->
-					<!-- prettier-ignore -->
-					<div class="guides">{#each populaires as n, rang (n.id)}<a class="guide" href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
+						<div class="guides">{#each populaires as n, rang (n.id)}<a class="guide" href={resolve(ROUTE_DU_GUIDE, { identifiant: n.id })}
 						><span class="guide__rang">{String(rang + 1).padStart(2, '0')}</span><h3 class="guide__titre">{n.titre}</h3><p class="guide__extrait">{n.extrait}</p><div class="guide__pied"
 							>{@render temoin(n)}<span>{n.domaine}</span><span class="guide__vues">{nombreFr(n.vues)} {accord(n.vues, 'consultation')}</span
 						></div
 					></a>{/each}</div>{/if}
-			</div>
+				</div>
 
-			<div class="si-chargement guides" aria-hidden="true">
-				<div class="esquisse esq-guide"></div>
-				<div class="esquisse esq-guide"></div>
-				<div class="esquisse esq-guide"></div>
-			</div>
-		</section>
+				<div class="si-chargement guides" aria-hidden="true">
+					<div class="esquisse esq-guide"></div>
+					<div class="esquisse esq-guide"></div>
+					<div class="esquisse esq-guide"></div>
+				</div>
+			</section>
 
-		<!-- Repli vers l'assistance — L'ASIDE ENTIER EST GARDÉ, pas seulement son
+			<!-- Repli vers l'assistance — L'ASIDE ENTIER EST GARDÉ, pas seulement son
 			 lien : sans portail configuré, garder « Vous ne trouvez pas ? » et son
 			 paragraphe laisserait un titre qui pose une question sans issue. -->
-		{#if assistanceJoignable}
-			<aside class="repli">
-				<div>
-					<h2 class="repli__titre">Vous ne trouvez pas ?</h2>
-					<p class="repli__txt">
-						Ouvrez un ticket auprès de l'assistance. Indiquez ce que vous cherchiez : c'est souvent
-						ce qui déclenche l'écriture du guide manquant.
-					</p>
-				</div>
-				<a class="btn btn--principal" href={portail} id="ticket">
-					Ouvrir un ticket d'assistance
-					<svg
-						width="13"
-						height="13"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.6"><path d="M6 3h7v7M13 3L4 12" /></svg
-					>
-				</a>
-			</aside>
+			{#if assistanceJoignable}
+				<aside class="repli">
+					<div>
+						<h2 class="repli__titre">Vous ne trouvez pas ?</h2>
+						<p class="repli__txt">
+							Ouvrez un ticket auprès de l'assistance. Indiquez ce que vous cherchiez : c'est
+							souvent ce qui déclenche l'écriture du guide manquant.
+						</p>
+					</div>
+					<a class="btn btn--principal" href={portail} id="ticket">
+						Ouvrir un ticket d'assistance
+						<svg
+							width="13"
+							height="13"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.6"><path d="M6 3h7v7M13 3L4 12" /></svg
+						>
+					</a>
+				</aside>
+			{/if}
+			<AccesRequete />
 		{/if}
 	</main>
 

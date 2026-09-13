@@ -29,6 +29,7 @@ export type CleDeSection =
 	| 'fiches'
 	| 'relations'
 	| 'templates'
+	| 'requetes'
 	| 'comptes'
 	| 'imports'
 	| 'exports'
@@ -148,6 +149,12 @@ export function groupesDeConsole(vocabulaire: VocabulaireRendu): readonly Groupe
 						{ forme: 'rect', x: '2', y: '2.5', largeur: '12', hauteur: '11', rx: '1.4' },
 						{ forme: 'path', d: 'M2 6h12M6 6v7.5' }
 					]
+				},
+				{
+					cle: 'requetes',
+					nom: 'Requêtes de documentation',
+					compte: 0,
+					pictogramme: [{ forme: 'path', d: 'M3 2h7l3 3v9H3zM9 2v4h4M5 8h6M5 11h4' }]
 				}
 			]
 		},
@@ -218,7 +225,9 @@ export function nomDeSection(cle: CleDeSection, vocabulaire: VocabulaireRendu): 
  * compteur entre parenthèses quand la section en porte un (`V-27:3223`).
  */
 export function libelleDOption(section: SectionDeConsole): string {
-	return section.compte === undefined ? section.nom : `${section.nom} (${section.compte})`;
+	return section.compte === undefined || (section.cle === 'requetes' && section.compte === 0)
+		? section.nom
+		: `${section.nom} (${section.compte})`;
 }
 
 /** Le fil d'Ariane des vues de console — `["Accueil", "Console", <section>]`. */

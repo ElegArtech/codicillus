@@ -23,7 +23,7 @@
  */
 import { eq } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
-import type { Base } from '../base/acces';
+import type { Base, ExecuteurDeBase } from '../base/acces';
 import { corpsVide } from '../contenu/corps-vide';
 import { documentDepuisNoeud, noeudDepuisDocument } from '../edition/document';
 import {
@@ -560,6 +560,7 @@ export function estUneCollisionDIdentifiant(cause: unknown): boolean {
 }
 
 export interface DemandeDeCreation {
+	readonly apresInsertion?: (tx: ExecuteurDeBase, noteId: string) => Promise<void>;
 	readonly saisie: SaisieDeNote;
 	readonly cible: CibleDeCreation;
 	readonly identite: Identite;
@@ -708,6 +709,7 @@ export async function creerUneNote(
 					})
 					.returning({ id: notes.id });
 				const noteId = (inseres[0] as { id: string }).id;
+				await demande.apresInsertion?.(tx, noteId);
 
 				/* LA VERSION N° 1, composée par `versionDUnEnregistrement()` : la MÊME
 				   décision que celle de l'enregistrement, un second calcul divergerait et

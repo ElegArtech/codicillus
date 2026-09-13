@@ -1,3 +1,4 @@
+import { compteursDeRequetes } from '$lib/donnees/requetes';
 /**
  * LE CHARGEUR DE `/` — une adresse, deux branches : V-01 Accueil public sans
  * session, V-07 Accueil contributeur avec. La route est une, donc le chargeur est un.
@@ -86,6 +87,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	return {
 		...accueil,
+		requetes: await compteursDeRequetes(base, locals.identite),
 		administrateur,
 		vivacites: tableau?.notes ?? [],
 		/* LE SEUIL EST NOMMÉ À L'ÉCRAN — « Vérification prévue dans les 10 prochains

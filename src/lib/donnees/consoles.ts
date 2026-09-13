@@ -1,3 +1,4 @@
+import { compterRequetesAEvaluer } from './requetes';
 /**
  * La console — la résolution d'une adresse d'administration, droits compris. C'est le seul
  * point où les onze adresses de `/console/…` et `/bibliotheque` deviennent une ressource,
@@ -523,6 +524,7 @@ export async function lireLesEffectifsDeConsole(base: Base): Promise<EffectifsDe
 	]);
 
 	return {
+		requetes: await compterRequetesAEvaluer(base),
 		univers: u[0]?.combien ?? 0,
 		domaines: d[0]?.combien ?? 0,
 		notes: n[0]?.combien ?? 0,

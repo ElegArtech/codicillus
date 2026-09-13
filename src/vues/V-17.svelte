@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ContexteRequete from '$lib/requetes/ContexteRequete.svelte';
 	/**
 	 * V-17 — Éditeur d'une note (registre Référence).
 	 * Routes `/notes/nouvelle` et `/notes/{identifiant}/modifier` (`docs/routes.md`).
@@ -61,6 +62,7 @@
 	const motFicheMinuscule = $derived(motsDuProduit.ficheMin);
 
 	interface Proprietes {
+		requete?: { id: string; sujet: string; besoin: string } | null;
 		vecteur: Record<string, string | boolean> | null;
 		notes: readonly Note[];
 		/**
@@ -130,6 +132,7 @@
 	}
 
 	const {
+		requete = null,
 		vecteur,
 		notes: corpus,
 		univers = [],
@@ -398,6 +401,7 @@
 		<div class="colonne-redaction">
 			<!-- Avertissements — vides à l'ouverture : les deux avis de V-17, échec
 				d'enregistrement et doublon détecté, ne se posent qu'après un geste. -->
+			{#if requete}<ContexteRequete {requete} />{/if}
 			<div id="avis"></div>
 
 			<BandeauApercu
