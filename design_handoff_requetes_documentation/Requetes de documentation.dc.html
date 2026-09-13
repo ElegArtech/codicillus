@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<title>Codicillus — Requêtes de documentation</title>
+		<link rel="stylesheet" href="../static/polices/polices.css" />
+		<link rel="stylesheet" href="maquettes.css" />
+	</head>
+	<body>
+		<nav class="planche" aria-label="États de la maquette">
+			<strong>Requêtes de documentation</strong>
+			<a href="?vue=depot-public">Dépôt public</a>
+			<a href="?vue=accuse-public">Accusé public</a>
+			<a href="?vue=accueil">Accueil authentifié</a>
+			<a href="?vue=console-evaluation">À évaluer</a>
+			<a href="?vue=console-acceptee">Acceptée</a>
+			<a href="?vue=console-closes">Closes</a>
+			<a href="?vue=console-refus">Non-retenue</a>
+			<a href="?vue=suivi-demandeur">Retour demandeur</a>
+		</nav>
+
+		<section class="vue vue-public" data-vue="depot-public">
+			<header class="chapeau-public">
+				<div class="marque"><img src="../static/logo.png" alt="" /><b>Codicillus</b></div>
+				<a class="btn btn-discret" href="?vue=accueil">Se connecter</a>
+			</header>
+			<main class="public-main">
+				<div class="public-intro">
+					<span class="etiq">Documentation · Caisse des solidarités</span>
+					<h1>Les réponses aux questions qu'on pose au support.</h1>
+					<p>Des guides vérifiés, ouverts à tous, pour retrouver une réponse sans attendre.</p>
+					<label class="recherche-public">
+						<span aria-hidden="true">⌕</span>
+						<input value="restauration fichier" aria-label="Rechercher dans les guides publics" />
+					</label>
+				</div>
+
+				<section class="sans-resultat">
+					<span class="etiq">Aucun résultat</span>
+					<h2>Aucun guide ne répond à « restauration fichier »</h2>
+					<p>
+						L'assistance peut répondre maintenant. Si cette connaissance devrait rester disponible,
+						formulez une requête de documentation.
+					</p>
+					<div class="actions">
+						<button class="btn btn-principal" type="button">Ouvrir un ticket d'assistance</button>
+						<a class="btn" href="#formulaire">Formuler une requête</a>
+					</div>
+				</section>
+
+				<section class="formulaire-public" id="formulaire" aria-labelledby="titre-formulaire">
+					<header>
+						<div>
+							<span class="etiq">Requête de documentation</span>
+							<h2 id="titre-formulaire">Quelle connaissance manque ?</h2>
+						</div>
+						<a class="fermer" href="?vue=accuse-public" aria-label="Fermer">×</a>
+					</header>
+					<div class="contexte">
+						<span class="contexte-icone">⌕</span>
+						<div><span class="etiq">Recherche précédente</span><b>restauration fichier</b></div>
+						<span class="facultatif">Contexte facultatif</span>
+					</div>
+					<form id="demande-public">
+						<label class="champ">
+							<span class="champ-label">Sujet <i>obligatoire</i></span>
+							<input name="sujet" value="Restaurer un fichier supprimé" maxlength="160" required />
+							<small>Une phrase courte qui nomme ce qui devrait être documenté.</small>
+						</label>
+						<div class="avertissement">
+							<b>Ne saisissez aucune donnée personnelle.</b>
+							<span
+								>Pas de nom, numéro de dossier, adresse ou détail permettant d'identifier une
+								personne.</span
+							>
+						</div>
+						<label class="champ">
+							<span class="champ-label">Besoin <i>obligatoire</i></span>
+							<textarea name="besoin" maxlength="2000" required>
+Après une suppression accidentelle dans le lecteur partagé, je voudrais savoir combien de temps le fichier reste récupérable et qui peut le restaurer.</textarea>
+							<small
+								>Décrivez la situation et ce que vous auriez voulu trouver. 2 000 caractères
+								maximum.</small
+							>
+						</label>
+						<p class="note-anonyme">
+							Vous déposez cette requête sans compte. Elle sera évaluée, mais vous ne recevrez pas
+							de suivi individuel.
+						</p>
+						<div class="actions actions-droite">
+							<button class="btn" type="button" data-cible="accuse-public">Annuler</button>
+							<button class="btn btn-principal" type="submit">Envoyer la requête</button>
+						</div>
+					</form>
+				</section>
+			</main>
+			<footer class="pied-public">
+				<span class="etiq">Codicillus · Caisse des solidarités</span
+				><span>Confidentialité · Accessibilité</span>
+			</footer>
+		</section>
+
+		<section class="vue vue-public" data-vue="accuse-public">
+			<header class="chapeau-public">
+				<div class="marque"><img src="../static/logo.png" alt="" /><b>Codicillus</b></div>
+				<a class="btn btn-discret" href="?vue=accueil">Se connecter</a>
+			</header>
+			<main class="accuse">
+				<div class="accuse-marque" aria-hidden="true">✓</div>
+				<span class="etiq">Requête transmise</span>
+				<h1>Merci, votre besoin a été enregistré.</h1>
+				<p>« Restaurer un fichier supprimé » sera évalué par l'équipe qui maintient le corpus.</p>
+				<div class="encart-neutre">
+					<b>Dépôt anonyme</b>
+					<span
+						>Vous ne recevrez pas de suivi individuel. Si une note est diffusée, elle apparaîtra
+						dans la recherche publique.</span
+					>
+				</div>
+				<div class="actions">
+					<a class="btn btn-principal" href="?vue=depot-public">Revenir à l'accueil</a>
+					<button class="btn" type="button">Contacter l'assistance</button>
+				</div>
+			</main>
+		</section>
+
+		<section class="vue vue-interne" data-vue="accueil">
+			<header class="barre">
+				<button class="menu" aria-label="Ouvrir le menu">☰</button>
+				<div class="fil"><span>Accueil</span></div>
+				<label class="recherche-mini"
+					><span>⌕</span><input placeholder="Rechercher…" /><kbd>⌘ K</kbd></label
+				>
+				<button class="cloche" aria-label="3 notifications">♢<i>3</i></button>
+				<div class="avatar">AD</div>
+			</header>
+			<div class="interne">
+				<aside class="rail">
+					<div class="identite">
+						<img src="../static/logo.png" alt="" />
+						<div><b>Infrastructure</b><span>Base de connaissances</span></div>
+					</div>
+					<nav>
+						<a class="actif" href="?vue=accueil">⌂ <span>Accueil</span></a>
+						<a href="#">▱ <span>Bibliothèque</span></a>
+						<a href="#">⌁ <span>Cartographie</span></a>
+						<a href="?vue=console-evaluation">⚙ <span>Console</span></a>
+					</nav>
+					<a class="requete-rail" href="?vue=depot-public"><span>＋</span> Formuler une requête</a>
+					<div class="compte">
+						<span class="avatar petit">AD</span>
+						<div><b>Anaïs Durand</b><small>Administratrice</small></div>
+					</div>
+				</aside>
+				<main class="accueil">
+					<header class="salut">
+						<span class="etiq">Dimanche 13 septembre</span>
+						<h1>Bonjour Anaïs.</h1>
+						<p><b>48 notes</b> dans votre bibliothèque, dont <b>35 sont à jour.</b></p>
+					</header>
+					<label class="grande-recherche"
+						><span>⌕</span><input placeholder="Rechercher une note, une fiche, un signet…" /><kbd
+							>⌘ K</kbd
+						></label
+					>
+					<section class="carte attention">
+						<header><span class="etiq">À surveiller</span></header>
+						<div class="alertes">
+							<a href="#"
+								><span class="pastille orange">◇</span>
+								<div>
+									<b>3 notes nécessitent votre attention</b
+									><small>Leur période de validité est dépassée</small>
+								</div>
+								<i>›</i></a
+							>
+							<a href="?vue=console-evaluation"
+								><span class="pastille vert">▤</span>
+								<div>
+									<b>5 requêtes de documentation à évaluer</b
+									><small>La plus ancienne attend depuis 4 jours</small>
+								</div>
+								<i>›</i></a
+							>
+						</div>
+					</section>
+					<section class="carte mes-requetes">
+						<header>
+							<span class="etiq">Mes requêtes de documentation</span
+							><a href="?vue=depot-public">Formuler une requête</a>
+						</header>
+						<div class="ligne-requete">
+							<span class="etat diffusee">Diffusée</span>
+							<div>
+								<b>Restaurer un fichier supprimé</b
+								><small>Une réponse a été publiée aujourd'hui.</small>
+							</div>
+							<button class="btn" data-cible="suivi-demandeur">Voir la note</button>
+						</div>
+						<div class="ligne-requete">
+							<span class="etat refusee">Non retenue</span>
+							<div>
+								<b>Commander un badge visiteur permanent</b
+								><small>Un commentaire vous est destiné.</small>
+							</div>
+							<button class="btn" data-cible="suivi-demandeur">Lire le commentaire</button>
+						</div>
+						<div class="ligne-requete">
+							<span class="etat acceptee">Acceptée</span>
+							<div>
+								<b>Renouveler le certificat du proxy</b
+								><small>La réponse est en préparation.</small>
+							</div>
+							<span class="date">11 sept.</span>
+						</div>
+						<footer><a href="#">Voir mes 6 requêtes</a></footer>
+					</section>
+				</main>
+			</div>
+		</section>
+
+		<section class="vue vue-interne" data-vue="console-evaluation">
+			<header class="barre">
+				<button class="menu">☰</button>
+				<div class="fil">
+					<span>Accueil</span><i>›</i><span>Console</span><i>›</i><b>Requêtes de documentation</b>
+				</div>
+				<label class="recherche-mini"
+					><span>⌕</span><input placeholder="Rechercher…" /><kbd>⌘ K</kbd></label
+				>
+				<div class="avatar">AD</div>
+			</header>
+			<div class="console">
+				<aside class="nav-console">
+					<h2>Console</h2>
+					<p>Administration de l'instance</p>
+					<span class="etiq">Contenus</span>
+					<a href="#">Univers <i>3</i></a
+					><a href="#">Domaines <i>8</i></a
+					><a href="#">Types de note <i>5</i></a>
+					<span class="etiq">Pilotage</span>
+					<a class="actif" href="?vue=console-evaluation">Requêtes <i>5</i></a
+					><a href="#">Analytique</a> <span class="etiq">Système</span
+					><a href="#">Imports <i>2</i></a
+					><a href="#">Configuration</a>
+				</aside>
+				<main class="travail-console">
+					<header class="tete-section">
+						<div>
+							<span class="etiq">Pilotage du corpus</span>
+							<h1>Requêtes de documentation</h1>
+							<p>Évaluer les besoins formulés par les lecteurs et suivre leur réponse.</p>
+						</div>
+						<button class="btn">Exporter le journal</button>
+					</header>
+					<nav class="onglets">
+						<a class="actif" href="?vue=console-evaluation">À évaluer <i>5</i></a
+						><a href="?vue=console-acceptee">Acceptées <i>3</i></a
+						><a href="?vue=console-closes">Diffusées <i>18</i></a
+						><a href="?vue=console-closes">Non retenues <i>7</i></a>
+					</nav>
+					<div class="file-detail">
+						<section class="file">
+							<label class="filtre-file"
+								><span>⌕</span><input placeholder="Filtrer les requêtes"
+							/></label>
+							<article class="requete-item selection">
+								<span class="origine">PUBLIC · RECHERCHE</span>
+								<h3>Restaurer un fichier supprimé</h3>
+								<p>Après une suppression accidentelle dans le lecteur partagé…</p>
+								<footer><span>Il y a 4 jours</span><b>Non assignée</b></footer>
+							</article>
+							<article class="requete-item">
+								<span class="origine">COMPTE · AUTONOME</span>
+								<h3>Renouveler le certificat du proxy</h3>
+								<p>Le certificat arrive à expiration et je ne trouve pas…</p>
+								<footer><span>Il y a 2 jours</span><b>Réseau</b></footer>
+							</article>
+							<article class="requete-item">
+								<span class="origine">PUBLIC · GUIDE</span>
+								<h3>Identifier le propriétaire d'un partage</h3>
+								<p>Le guide explique la création mais pas comment retrouver…</p>
+								<footer><span>Hier</span><b>Non assignée</b></footer>
+							</article>
+						</section>
+						<section class="detail">
+							<header>
+								<span class="etat aevaluer">À évaluer</span
+								><span class="identifiant">REQ-0042</span>
+								<h2>Restaurer un fichier supprimé</h2>
+								<p class="meta">Déposée anonymement · 9 septembre 2026 à 14:32</p>
+							</header>
+							<div class="detail-bloc">
+								<span class="etiq">Besoin formulé</span>
+								<p class="besoin">
+									Après une suppression accidentelle dans le lecteur partagé, je voudrais savoir
+									combien de temps le fichier reste récupérable et qui peut le restaurer.
+								</p>
+							</div>
+							<div class="detail-bloc contexte-detail">
+								<span class="etiq">Contexte</span>
+								<dl>
+									<dt>Origine</dt>
+									<dd>Recherche publique</dd>
+									<dt>Mots recherchés</dt>
+									<dd>restauration fichier</dd>
+									<dt>Résultats servis</dt>
+									<dd>0</dd>
+								</dl>
+							</div>
+							<div class="qualification">
+								<label class="champ"
+									><span class="champ-label">Domaine responsable</span
+									><select>
+										<option>Choisir un domaine…</option>
+										<option selected>Postes de travail</option>
+									</select></label
+								><label class="champ"
+									><span class="champ-label">Commentaire interne</span
+									><textarea placeholder="Visible seulement dans la console"></textarea>
+								</label>
+							</div>
+							<footer class="decision">
+								<button class="btn btn-danger" type="button" data-cible="console-refus">
+									Ne pas retenir</button
+								><button class="btn btn-principal" type="button" data-cible="console-acceptee">
+									Accepter la requête
+								</button>
+							</footer>
+						</section>
+					</div>
+				</main>
+			</div>
+		</section>
+
+		<section class="vue vue-interne" data-vue="console-acceptee">
+			<header class="barre">
+				<button class="menu">☰</button>
+				<div class="fil">
+					<span>Accueil</span><i>›</i><span>Console</span><i>›</i><b>Requêtes de documentation</b>
+				</div>
+				<label class="recherche-mini"
+					><span>⌕</span><input placeholder="Rechercher…" /><kbd>⌘ K</kbd></label
+				>
+				<div class="avatar">AD</div>
+			</header>
+			<div class="console">
+				<aside class="nav-console">
+					<h2>Console</h2>
+					<p>Administration de l'instance</p>
+					<span class="etiq">Contenus</span><a href="#">Univers <i>3</i></a
+					><a href="#">Domaines <i>8</i></a
+					><a href="#">Types de note <i>5</i></a
+					><span class="etiq">Pilotage</span
+					><a class="actif" href="?vue=console-evaluation">Requêtes <i>5</i></a
+					><a href="#">Analytique</a><span class="etiq">Système</span
+					><a href="#">Imports <i>2</i></a
+					><a href="#">Configuration</a>
+				</aside>
+				<main class="travail-console">
+					<header class="tete-section">
+						<div>
+							<span class="etiq">Pilotage du corpus</span>
+							<h1>Requêtes de documentation</h1>
+							<p>Évaluer les besoins formulés par les lecteurs et suivre leur réponse.</p>
+						</div>
+					</header>
+					<nav class="onglets">
+						<a href="?vue=console-evaluation">À évaluer <i>5</i></a
+						><a class="actif" href="?vue=console-acceptee">Acceptées <i>3</i></a
+						><a href="?vue=console-closes">Diffusées <i>18</i></a
+						><a href="?vue=console-closes">Non retenues <i>7</i></a>
+					</nav>
+					<div class="file-detail">
+						<section class="file">
+							<article class="requete-item selection">
+								<span class="origine">POSTES DE TRAVAIL</span>
+								<h3>Restaurer un fichier supprimé</h3>
+								<p>Acceptée par Anaïs Durand · aujourd'hui</p>
+								<footer><span>Réponse en préparation</span><b>REQ-0042</b></footer>
+							</article>
+							<article class="requete-item">
+								<span class="origine">RÉSEAU</span>
+								<h3>Renouveler le certificat du proxy</h3>
+								<p>Acceptée par Malik Cherif · 11 sept.</p>
+								<footer><span>Aucune note associée</span><b>REQ-0038</b></footer>
+							</article>
+						</section>
+						<section class="detail">
+							<header>
+								<span class="etat acceptee">Acceptée</span><span class="identifiant">REQ-0042</span>
+								<h2>Restaurer un fichier supprimé</h2>
+								<p class="meta">Acceptée aujourd'hui par Anaïs Durand · Postes de travail</p>
+							</header>
+							<div class="progression">
+								<div class="fait">
+									<i>✓</i><span><b>Besoin accepté</b><small>13 septembre à 10:18</small></span>
+								</div>
+								<div class="trait"></div>
+								<div class="courant">
+									<i>2</i
+									><span><b>Réponse en préparation</b><small>Une note est associée</small></span>
+								</div>
+								<div class="trait"></div>
+								<div>
+									<i>3</i><span><b>Diffusion</b><small>Attend la publication</small></span>
+								</div>
+							</div>
+							<div class="note-associee">
+								<div>
+									<span class="etiq">Note associée</span>
+									<h3>Restaurer un fichier depuis le lecteur partagé</h3>
+									<p>Brouillon · Postes de travail / Assistance de proximité</p>
+								</div>
+								<button class="btn">Ouvrir la note</button>
+							</div>
+							<div class="detail-bloc">
+								<span class="etiq">Retour au demandeur</span>
+								<p>Cette requête est anonyme. Aucun suivi individuel ne sera envoyé.</p>
+							</div>
+							<footer class="decision">
+								<button class="btn">Dissocier la note</button
+								><button class="btn btn-principal" type="button" data-cible="console-closes">
+									Publier et marquer comme diffusée
+								</button>
+							</footer>
+						</section>
+					</div>
+				</main>
+			</div>
+		</section>
+
+		<section class="vue vue-interne" data-vue="console-closes">
+			<header class="barre">
+				<button class="menu">☰</button>
+				<div class="fil">
+					<span>Accueil</span><i>›</i><span>Console</span><i>›</i><b>Requêtes de documentation</b>
+				</div>
+				<label class="recherche-mini"
+					><span>⌕</span><input placeholder="Rechercher…" /><kbd>⌘ K</kbd></label
+				>
+				<div class="avatar">AD</div>
+			</header>
+			<div class="console">
+				<aside class="nav-console">
+					<h2>Console</h2>
+					<p>Administration de l'instance</p>
+					<span class="etiq">Contenus</span><a href="#">Univers <i>3</i></a
+					><a href="#">Domaines <i>8</i></a
+					><a href="#">Types de note <i>5</i></a
+					><span class="etiq">Pilotage</span
+					><a class="actif" href="?vue=console-evaluation">Requêtes <i>5</i></a
+					><a href="#">Analytique</a><span class="etiq">Système</span
+					><a href="#">Imports <i>2</i></a
+					><a href="#">Configuration</a>
+				</aside>
+				<main class="travail-console">
+					<header class="tete-section">
+						<div>
+							<span class="etiq">Pilotage du corpus</span>
+							<h1>Requêtes de documentation</h1>
+							<p>Les décisions restent consultables dans le journal.</p>
+						</div>
+						<button class="btn">Régler la conservation</button>
+					</header>
+					<nav class="onglets">
+						<a href="?vue=console-evaluation">À évaluer <i>5</i></a
+						><a href="?vue=console-acceptee">Acceptées <i>3</i></a
+						><a class="actif" href="?vue=console-closes">Diffusées <i>18</i></a
+						><a class="secondaire" href="#non-retenues">Non retenues <i>7</i></a>
+					</nav>
+					<section class="journal">
+						<header>
+							<label class="filtre-file"
+								><span>⌕</span><input placeholder="Rechercher dans le journal" /></label
+							><select>
+								<option>Tous les domaines</option>
+							</select>
+						</header>
+						<table>
+							<thead>
+								<tr>
+									<th>Requête</th>
+									<th>Décision</th>
+									<th>Réponse</th>
+									<th>Clôture</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td>
+										<b>Restaurer un fichier supprimé</b><small>REQ-0042 · dépôt anonyme</small>
+									</td>
+									<td><span class="etat diffusee">Diffusée</span></td>
+									<td><a href="#">Restaurer un fichier depuis le lecteur partagé</a></td>
+									<td>13 sept. · Anaïs Durand</td>
+								</tr>
+								<tr>
+									<td>
+										<b>Ajouter une imprimante sur macOS</b><small>REQ-0034 · Léa Martin</small>
+									</td>
+									<td><span class="etat diffusee">Diffusée</span></td>
+									<td><a href="#">Installer une imprimante réseau</a></td>
+									<td>8 sept. · Malik Cherif</td>
+								</tr>
+								<tr id="non-retenues">
+									<td>
+										<b>Commander un badge visiteur permanent</b><small>REQ-0031 · Léa Martin</small>
+									</td>
+									<td><span class="etat refusee">Non retenue</span></td>
+									<td><span class="muted">Demande individuelle, hors corpus</span></td>
+									<td>5 sept. · Anaïs Durand</td>
+								</tr>
+								<tr>
+									<td>
+										<b>Liste des numéros personnels de l'équipe</b
+										><small>REQ-0028 · dépôt anonyme</small>
+									</td>
+									<td><span class="etat refusee">Non retenue</span></td>
+									<td><span class="muted">Contenu inadapté au corpus</span></td>
+									<td>2 sept. · Anaïs Durand</td>
+								</tr>
+							</tbody>
+						</table>
+						<footer>
+							<span>25 requêtes closes</span><button class="btn">Charger la suite</button>
+						</footer>
+					</section>
+				</main>
+			</div>
+		</section>
+
+		<div class="superposition" data-superposition="console-refus" hidden>
+			<section class="dialogue" role="dialog" aria-modal="true" aria-labelledby="titre-refus">
+				<header>
+					<div>
+						<span class="etiq">Décision · REQ-0042</span>
+						<h2 id="titre-refus">Ne pas retenir cette requête</h2>
+					</div>
+					<a href="?vue=console-evaluation" aria-label="Fermer">×</a>
+				</header>
+				<div class="dialogue-corps">
+					<div class="rappel-requete">
+						<span class="etiq">Requête</span><b>Restaurer un fichier supprimé</b>
+					</div>
+					<label class="champ"
+						><span class="champ-label">Motif interne <i>obligatoire</i></span
+						><select>
+							<option>Choisir un motif…</option>
+							<option selected>Déjà couvert par le corpus</option>
+							<option>Hors périmètre</option>
+							<option>Demande individuelle</option>
+							<option>Besoin trop imprécis</option></select
+						><small>Ce motif reste dans le journal de la console.</small></label
+					>
+					<label class="champ"
+						><span class="champ-label">Commentaire interne</span
+						><textarea>
+La procédure existe déjà dans la note de récupération du lecteur partagé. La formulation doit être rapprochée de la recherche.</textarea
+						><small>Visible seulement par les personnes habilitées à évaluer.</small></label
+					>
+					<label class="champ"
+						><span class="champ-label">Commentaire au demandeur</span
+						><textarea>
+Une note répond déjà à ce besoin. Nous allons améliorer ses mots-clés pour qu'elle soit plus facile à retrouver.</textarea
+						><small
+							>Visible par le demandeur s'il était authentifié. Cette requête étant anonyme, aucun
+							retour ne sera envoyé.</small
+						></label
+					>
+				</div>
+				<footer>
+					<a class="btn" href="?vue=console-evaluation">Annuler</a
+					><a class="btn btn-danger" href="?vue=console-closes">Confirmer la non-retenue</a>
+				</footer>
+			</section>
+		</div>
+
+		<div class="superposition" data-superposition="suivi-demandeur" hidden>
+			<section class="dialogue suivi" role="dialog" aria-modal="true" aria-labelledby="titre-suivi">
+				<header>
+					<div>
+						<span class="etat refusee">Non retenue</span>
+						<h2 id="titre-suivi">Commander un badge visiteur permanent</h2>
+					</div>
+					<a href="?vue=accueil" aria-label="Fermer">×</a>
+				</header>
+				<div class="dialogue-corps">
+					<div class="chronologie">
+						<span class="fait"><i>✓</i><b>Déposée</b><small>8 septembre à 09:14</small></span
+						><span class="ligne"></span
+						><span class="refus"
+							><i>×</i><b>Non retenue</b><small>12 septembre à 16:40</small></span
+						>
+					</div>
+					<div class="message-retour">
+						<span class="etiq">Commentaire de l'équipe documentaire</span>
+						<p>
+							Cette demande concerne une situation individuelle. Le service Accueil et sécurité peut
+							vérifier votre besoin et vous indiquer la solution adaptée.
+						</p>
+					</div>
+					<div class="rappel-requete">
+						<span class="etiq">Votre besoin</span>
+						<p>
+							Je voudrais connaître la procédure pour obtenir un badge visiteur utilisable plusieurs
+							jours.
+						</p>
+					</div>
+					<p class="fin-suivi">
+						Cette décision clôt la requête. Pour obtenir une réponse personnelle, contactez
+						l'assistance.
+					</p>
+				</div>
+				<footer>
+					<a class="btn" href="?vue=accueil">Retour à mes requêtes</a
+					><button class="btn btn-principal">Contacter l'assistance</button>
+				</footer>
+			</section>
+		</div>
+
+		<script>
+			const params = new URLSearchParams(location.search);
+			const vue = params.get('vue') || 'depot-public';
+			document.documentElement.dataset.vue = vue;
+			if (params.get('capture') === '1') document.documentElement.dataset.capture = 'oui';
+			const baseVue =
+				vue === 'console-refus'
+					? 'console-evaluation'
+					: vue === 'suivi-demandeur'
+						? 'accueil'
+						: vue;
+			document.querySelectorAll('section[data-vue]').forEach((element) => {
+				element.hidden = element.dataset.vue !== baseVue;
+			});
+			document.querySelectorAll('[data-superposition]').forEach((element) => {
+				element.hidden = element.dataset.superposition !== vue;
+			});
+			document.querySelectorAll('[data-cible]').forEach((bouton) => {
+				bouton.addEventListener('click', () => {
+					location.href = '?vue=' + bouton.dataset.cible;
+				});
+			});
+			document.getElementById('demande-public')?.addEventListener('submit', (event) => {
+				event.preventDefault();
+				location.href = '?vue=accuse-public';
+			});
+			document
+				.querySelectorAll('a[href="#"], button:not([type="submit"]):not([data-cible])')
+				.forEach((element) => {
+					element.addEventListener('click', (event) => {
+						if (element.getAttribute('href') === '#') event.preventDefault();
+					});
+				});
+		</script>
+	</body>
+</html>
