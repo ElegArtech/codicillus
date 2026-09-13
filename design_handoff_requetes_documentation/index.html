@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Codicillus — Maquettes des requêtes de documentation</title>
+		<link rel="icon" href="assets/logo.png" />
+		<link rel="stylesheet" href="galerie.css" />
+		<script src="vues.js" defer></script>
+		<script src="galerie.js" defer></script>
+	</head>
+	<body>
+		<main class="galerie">
+			<header class="galerie-tete">
+				<a class="signature" href="prototype.html#vue=public"
+					><img src="assets/logo.png" width="32" height="32" alt="" />Codicillus</a
+				>
+				<span class="repere">Maquettes · 13 septembre 2026</span>
+			</header>
+			<div class="ouverture">
+				<span class="repere">Requêtes de documentation</span>
+				<h1>Un besoin proposé.<br />Une réponse suivie.</h1>
+				<p>
+					Déposer librement, évaluer en console, distinguer l’acceptation de la diffusion. Les
+					ajouts prennent place dans les vues réelles de Codicillus.
+				</p>
+				<div class="liens">
+					<a class="action" href="prototype.html#vue=console">Ouvrir la console</a
+					><a href="prototype.html#vue=public">Commencer par un dépôt public →</a>
+				</div>
+			</div>
+			<figure class="apercu">
+				<a href="prototype.html#vue=console"
+					><img
+						src="captures/07-console.png"
+						alt="Console complète : rail de Codicillus, onze sections existantes et ajout Requêtes de documentation."
+				/></a>
+				<figcaption>
+					La console complète. L’entrée « Requêtes de documentation » s’ajoute au groupe Contenus ;
+					les onze sections existantes gardent leur ordre, leurs libellés et leurs compteurs.
+				</figcaption>
+			</figure>
+			<section>
+				<div class="section-tete">
+					<h2>Les ajouts dans leur environnement</h2>
+					<p>Comparer chaque vue actuelle avec sa proposition.</p>
+				</div>
+				<div class="comparaisons">
+					<article>
+						<span class="repere">01 · Public</span>
+						<h3>Une entrée permanente et secondaire</h3>
+						<p>
+							Le besoin peut être proposé sans recherche et sans compte, y compris quand aucun guide
+							n’est publié.
+						</p>
+						<div class="liens">
+							<a href="prototype.html#vue=source&source=public">Vue actuelle</a
+							><a href="prototype.html#vue=public">Avec l’ajout →</a>
+						</div>
+					</article>
+					<article>
+						<span class="repere">02 · Accueil</span>
+						<h3>Deux signaux compacts</h3>
+						<p>
+							Une ligne d’évaluation pour les administrateurs ; une ligne d’actualité pour le
+							demandeur. Les compteurs de vivacité restent distincts.
+						</p>
+						<div class="liens">
+							<a href="prototype.html#vue=source&source=accueil">Vue actuelle</a
+							><a href="prototype.html#vue=accueil">Avec les ajouts →</a>
+						</div>
+					</article>
+					<article>
+						<span class="repere">03 · Console</span>
+						<h3>Un module dans la navigation complète</h3>
+						<p>
+							Quatre files, une qualification, une note associée, des commentaires séparés et un
+							historique de décisions.
+						</p>
+						<div class="liens">
+							<a href="prototype.html#vue=source&source=console">Vue actuelle</a
+							><a href="prototype.html#vue=console">Avec le module →</a>
+						</div>
+					</article>
+				</div>
+			</section>
+			<section>
+				<div class="section-tete">
+					<h2>Parcourir les situations</h2>
+					<p>
+						Les formulaires et décisions agissent sur le jeu de maquette dans cet onglet. Aucun
+						dépôt n’est envoyé à l’application.
+					</p>
+				</div>
+				<div class="situations">
+					<div>
+						<h3>Déposer un besoin</h3>
+						<a href="prototype.html#vue=depot-public">Formulaire anonyme autonome</a
+						><a href="prototype.html#vue=recherche-publique">Recherche publique sans résultat</a
+						><a href="prototype.html#vue=recherche-interne">Recherche interne avec résultats</a
+						><a href="prototype.html#vue=recherche-vide">Recherche interne sans résultat</a
+						><a href="prototype.html#vue=depot-interne&q=sauvegarde">Dépôt connecté avec contexte</a
+						><a href="prototype.html#vue=depot-public&etat=erreur">Erreurs de saisie</a
+						><a href="prototype.html#vue=depot-public&echec=1">Échec d’envoi puis nouvel essai</a>
+					</div>
+					<div>
+						<h3>Évaluer et répondre</h3>
+						<a href="prototype.html#vue=console&requete=r1">Accepter et qualifier</a
+						><a href="prototype.html#vue=console&requete=r2">Dépôt anonyme à évaluer</a
+						><a href="prototype.html#vue=console&requete=r6">Acceptée · note en brouillon</a
+						><a href="prototype.html#vue=editeur&requete=r6">Continuer dans l’éditeur existant</a
+						><a href="prototype.html#vue=console&requete=r7">Diffusée · réponse accessible</a
+						><a href="prototype.html#vue=console&requete=r8">Non retenue · commentaires séparés</a
+						><a href="prototype.html#vue=journal">Journal des décisions</a
+						><a href="prototype.html#vue=console&etat-vue=erreur">Échec de chargement de la file</a>
+					</div>
+					<div>
+						<h3>Suivre et commencer à vide</h3>
+						<a href="prototype.html#vue=mes-requetes">Suivi personnel et trois décisions</a
+						><a href="prototype.html#vue=accueil&role=lecteur"
+							>Accueil d’un lecteur sans administration</a
+						><a href="prototype.html#vue=accueil&vide=1">Installation neuve · aucun signal à zéro</a
+						><a href="prototype.html#vue=console&vide=1">Console vide · navigation complète</a
+						><a href="prototype.html#vue=mes-requetes&vide=1">Premier suivi personnel vide</a
+						><a href="prototype.html#vue=depot-public&vide=1"
+							>Jouer un premier dépôt à zéro donnée</a
+						>
+					</div>
+				</div>
+			</section>
+			<section class="lecture">
+				<h2>Jouer le parcours complet</h2>
+				<p>
+					Déposez une requête depuis l’accueil public ou connecté. Revenez au choix des vues, ouvrez
+					la console puis la requête : acceptez-la, associez une note ou rédigez-en une, publiez
+					puis confirmez la diffusion. Le suivi personnel montre les décisions destinées au compte
+					de démonstration.
+				</p>
+				<p>
+					Les liens « Vue actuelle » affichent les rendus extraits avant les ajouts. Les liens de
+					navigation vers les fonctions existantes ouvrent l’application locale dans un autre
+					onglet. Les changements du prototype sont conservés dans l’onglet ; un lien dédié permet
+					de réinitialiser les exemples.
+				</p>
+				<p>
+					Les états sans univers, domaine ni note proviennent d’une base distincte réellement migrée
+					vide. Le compte affiché est anonymisé. Les requêtes et leur historique sont des exemples
+					de maquette.
+				</p>
+				<p><a href="prototype.html#vue=accueil&reset=1">Réinitialiser les exemples</a></p>
+				<a href="README.md">Lire les décisions de maquette et le périmètre →</a>
+			</section>
+		</main>
+	</body>
+</html>

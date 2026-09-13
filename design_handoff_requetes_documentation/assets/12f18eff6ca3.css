@@ -1,0 +1,30 @@
+.panne.svelte-1j96wlh {
+	max-width: 44rem;
+	margin: 0px auto;
+	padding: 96px 24px;
+}
+.panne__code.svelte-1j96wlh {
+	margin: 0px 0px 8px;
+	font-size: 13px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--c-encre-3);
+}
+.panne__titre.svelte-1j96wlh {
+	margin: 0px 0px 12px;
+	font-size: 26px;
+	line-height: 1.25;
+	color: var(--c-encre);
+}
+.panne__txt.svelte-1j96wlh {
+	margin: 0px 0px 24px;
+	color: var(--c-encre-2);
+	line-height: 1.55;
+}
+.panne__gestes.svelte-1j96wlh {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+.svelte-1j96wlh {
+}
