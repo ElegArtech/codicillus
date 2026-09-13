@@ -1,3 +1,9 @@
+import {
+	requetePourEditeur,
+	associerCreationARequete,
+	ErreurDeRequete
+} from '$lib/donnees/requetes';
+import { erreurDeRoute } from '$lib/requetes/serveur';
 /**
  * `/notes/nouvelle` — LE CHARGEUR DE L'ÉDITEUR EN CRÉATION (V-17). « Connecté +
  * rédacteur », exigé PAR LE MÊME CHEMIN que l'inexistence : un lecteur reçoit 404, au
@@ -132,6 +138,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	   cause : `MESSAGE_INTROUVABLE`, au même octet (`$lib/donnees/amorcage`). */
 	if (!acces.trouve) error(404, await refusDEcriture(base, locals.identite));
 	const creation = acces.ressource;
+	const requete = await requetePourEditeur(
+		base,
+		locals.identite,
+		url.searchParams.get('requete')
+	).catch(erreurDeRoute);
 
 	/**
 	 * `?template=` — LE PARAMÈTRE DE `docs/routes.md:287`.
@@ -163,6 +174,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					: 'vierge'
 		},
 		templateDemande,
+		requete,
 		/**
 		 * LA MARQUE DU COMPTE, POUR LA CLÉ DU BROUILLON LOCAL (`RG-NF-02`). Ce n'est
 		 * PAS l'identifiant du compte : `ADR-006` interdit d'exposer au navigateur de
@@ -182,7 +194,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ locals, request }) => {
+	default: async ({ locals, request, url }) => {
 		const { base, contexte: lecture } = await contexte();
 		/* PORTE 1 — le refus est le MÊME que celui du chargeur, et il vient du même
 		   appel : il n'existe pas une règle de droit pour lire et une autre pour
@@ -190,6 +202,16 @@ export const actions: Actions = {
 		const acces = await resoudreLaCreationDeNote(base, locals.identite, lecture);
 		if (!acces.trouve) error(404, await refusDEcriture(base, locals.identite));
 
+		const requeteId = url.searchParams.get('requete');
+		if (requeteId) {
+			try {
+				await requetePourEditeur(base, locals.identite, requeteId);
+			} catch (cause) {
+				if (cause instanceof ErreurDeRequete && cause.statut !== 404)
+					return fail(cause.statut, { motif: cause.message });
+				erreurDeRoute(cause);
+			}
+		}
 		const formulaire = await request.formData();
 		const lue = lireLaSaisie(formulaire);
 		if (!lue.ok) return fail(400, { motif: lue.motif });
@@ -247,6 +269,12 @@ export const actions: Actions = {
 				nom: nomUnique(image.nom, noms)
 			}));
 			const fait = await creerUneNote(base, moteurPartage(), {
+				...(requeteId
+					? {
+							apresInsertion: (tx, noteId) =>
+								associerCreationARequete(tx, locals.identite, requeteId, noteId)
+						}
+					: {}),
 				saisie: lue.saisie,
 				cible,
 				identite: locals.identite,
@@ -277,6 +305,10 @@ export const actions: Actions = {
 			if (!fait.trouve) error(404, MESSAGE_INTROUVABLE);
 			identifiant = fait.ressource.identifiant;
 		} catch (cause) {
+			if (cause instanceof ErreurDeRequete) {
+				if (cause.statut !== 404) return fail(cause.statut, { motif: cause.message });
+				erreurDeRoute(cause);
+			}
 			/* PORTE 3 — un corps mal formé est REFUSÉ, jamais réparé (`ADR-003`), et
 			   le refus porte ses manquements : c'est ce que l'écran d'erreur de V-17
 			   a vocation à montrer, et c'est la forme que `/notes/{id}/modifier`
@@ -308,6 +340,11 @@ export const actions: Actions = {
 		   ELLE PORTE LE DRAPEAU D'ENREGISTREMENT — `RG-NF-03` : l'indexation de
 		   recherche est SOUMISE et non attendue (`ARB-060`), et la note n'est donc pas
 		   trouvable à la seconde où cette page s'affiche. La lecture, elle, l'est. */
-		redirect(303, adresseApresEnregistrement(adresseDeNote(identifiant)));
+		redirect(
+			303,
+			requeteId
+				? '/console/requetes/' + requeteId
+				: adresseApresEnregistrement(adresseDeNote(identifiant))
+		);
 	}
 };

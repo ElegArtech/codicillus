@@ -37,6 +37,7 @@ export const CLE_EFFECTIFS = Symbol.for('codicillus.effectifs-de-console');
  * silencieusement à zéro : un neuvième ajouté demain ne compilera pas sans sa lecture.
  */
 export interface EffectifsDeConsole {
+	readonly requetes: number;
 	readonly univers: number;
 	readonly domaines: number;
 	/** `types_de_note` — la nomenclature des notes, jamais celle des fiches. */

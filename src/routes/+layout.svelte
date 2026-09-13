@@ -9,6 +9,7 @@
 	// mécaniquement du premier bloc `<style>` de la maquette V-07 par
 	// `pnpm socle:extraire` ; il ne s'édite pas (ADR-002).
 	import '../socle.css';
+	import '../vues/Requetes.css';
 	/* LA FEUILLE DE LA PALETTE — montée ici parce que la palette l'est : une
 	   superposition invoquée depuis n'importe quelle route ne peut pas dépendre de la
 	   feuille de la vue courante. C'est le bloc « palette » de `src/vues/V-09.css`,

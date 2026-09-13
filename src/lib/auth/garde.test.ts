@@ -24,6 +24,10 @@ import {
 const CAS_DE_REGIME: readonly { readonly chemin: string; readonly attendu: string }[] = [
 	{ chemin: '/', attendu: 'publique' },
 	{ chemin: '/recherche', attendu: 'publique' },
+	{ chemin: '/requetes/nouvelle', attendu: 'publique' },
+	{ chemin: '/requetes/transmise', attendu: 'publique' },
+	{ chemin: '/mes-requetes', attendu: 'redirection' },
+	{ chemin: '/mes-requetes/une-requete', attendu: 'redirection' },
 	{ chemin: '/recherche?q=barman', attendu: 'publique' },
 	{ chemin: '/connexion', attendu: 'publique' },
 	{ chemin: '/mot-de-passe-oublie', attendu: 'publique' },

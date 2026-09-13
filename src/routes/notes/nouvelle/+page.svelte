@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	/**
 	 * `/notes/nouvelle` — V-17 Éditeur d'une note, création. Cinq propriétés viennent
 	 * de la BASE — corpus lisible, types de note, types de fiche et gabarits, tous
@@ -57,7 +58,9 @@
 	const { data, form }: { data: PageData; form: ActionData } = $props();
 
 	/** Le domaine demandé par l'adresse, à défaut celui du compte du jeu. */
-	const domaineDemande = $derived(page.url.searchParams.get('domaine'));
+	const domaineDemande = $derived(
+		page.url.searchParams.get('domaine') ?? (data.requete?.domaine || null)
+	);
 	/* LE COMPTE RÉEL, ET SON UNIVERS. Le repli était `MOI` — la constante du jeu
 	   de démonstration : l'éditeur affichait « Karim Belhadj » et un fil d'Ariane
 	   « Accueil › Production › Infrastructure » sur une instance qui n'a jamais
@@ -168,7 +171,7 @@
 		   Le champ est posé DIRECTEMENT plutôt que passé en propriété : le titre
 		   n'est pas un état de départ que le serveur décide, c'est une amorce que
 		   l'utilisateur va récrire — et `src/vues/` ne se touche pas (`ARB-063`). */
-		const titreDemande = page.url.searchParams.get('titre');
+		const titreDemande = data.requete?.sujet ?? page.url.searchParams.get('titre');
 		const champTitre = formulaire.querySelector<HTMLTextAreaElement>('#titre');
 		if (titreDemande !== null && titreDemande !== '' && champTitre !== null) {
 			champTitre.value = titreDemande;
@@ -226,10 +229,18 @@
 			surSaisie: () => gestes?.signalerUneModification(),
 			...(editeur === null ? {} : { editeur: () => editeur.document() })
 		});
+		if (data.requete) {
+			formulaire.querySelector<HTMLButtonElement>('#m-statut [data-val="Brouillon"]')?.click();
+			if (data.requete.publique)
+				formulaire.querySelector<HTMLButtonElement>('#m-visibilite [data-val="Publique"]')?.click();
+		}
+
 		gestes = cablerLesGestesDEdition(formulaire, {
 			document: () => editeur?.document() ?? DOCUMENT_VIDE,
 			resoudre: resolveurDuCorpusServi(data.notes),
-			retour: retourDAnnulation
+			retour: data.requete
+				? resolve('/console/requetes/[identifiant]', { identifiant: data.requete.id })
+				: retourDAnnulation
 		});
 		/* LE CHOIX DE DÉPART EST CÂBLÉ AVANT LE BROUILLON, ET IL NE S'OUVRE PLUS SEUL :
 		   c'est lui qui pose le champ de provenance où le brouillon repose le gabarit,
@@ -247,7 +258,10 @@
 			editeur === null
 				? null
 				: cablerLeBrouillonLocal(formulaire, {
-						cle: cleDeBrouillon(data.empreinteDuCompte, CIBLE_DE_CREATION),
+						cle: cleDeBrouillon(
+							data.empreinteDuCompte,
+							data.requete ? CIBLE_DE_CREATION + ':requete:' + data.requete.id : CIBLE_DE_CREATION
+						),
 						document: () => editeur.document(),
 						remplacer: (document) => editeur.remplacer(document),
 						/* LE GABARIT FAIT PARTIE DU BROUILLON : le squelette est dans le
@@ -261,7 +275,7 @@
 		   brouillon repris — le retour d'un changement de domaine — a répondu à la
 		   question ; la modale posée par-dessus le texte restauré n'était qu'un
 		   obstacle à écarter. */
-		if (brouillon === null || !brouillon.repris) choix.ouvrir();
+		if (!data.requete && (brouillon === null || !brouillon.repris)) choix.ouvrir();
 
 		/* L'AVERTISSEMENT DE DOUBLON — `RG-M05-03`. Il compare aux titres du corpus
 		   DÉJÀ SERVI, celui que le chargeur a filtré au périmètre de l'appelant. */
@@ -307,6 +321,7 @@
 	     REQUISE, et c'est ce qui garantit que l'écran de MODIFICATION ne peut
 	     plus oublier de servir le sien. -->
 	<Vue
+		requete={data.requete}
 		domaines={page.data.domaines}
 		{universDuCompte}
 		dossiersParDomaine={data.dossiersParDomaine}

@@ -1001,8 +1001,70 @@ export const tentativesDeConnexion = pgTable(
 	]
 );
 
+export const etatDeRequete = pgEnum('etat_de_requete', [
+	'a-evaluer',
+	'acceptee',
+	'diffusee',
+	'non-retenue'
+]);
+
+export const requetesDeDocumentation = pgTable(
+	'requetes_de_documentation',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		sujet: text('sujet').notNull(),
+		besoin: text('besoin').notNull(),
+		recherche: text('recherche').notNull().default(''),
+		origine: text('origine').notNull(),
+		demandeurId: uuid('demandeur_id').references(() => comptes.id, { onDelete: 'set null' }),
+		etat: etatDeRequete('etat').notNull().default('a-evaluer'),
+		domaineId: uuid('domaine_id').references(() => domaines.id, { onDelete: 'set null' }),
+		noteId: uuid('note_id').references(() => notes.id, { onDelete: 'set null' }),
+		commentaireInterne: text('commentaire_interne').notNull().default(''),
+		commentaireDemandeur: text('commentaire_demandeur').notNull().default(''),
+		revision: integer('revision').notNull().default(0),
+		revisionLue: integer('revision_lue').notNull().default(0),
+		creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow(),
+		modifieLe: timestamp('modifie_le', { withTimezone: true }).notNull().defaultNow(),
+		supprimeeLe: timestamp('supprimee_le', { withTimezone: true })
+	},
+	(t) => [
+		check('requetes_sujet_longueur', sql`char_length(${t.sujet}) BETWEEN 1 AND 160`),
+		check('requetes_besoin_longueur', sql`char_length(${t.besoin}) <= 2000`),
+		check(
+			'requetes_origine',
+			sql`${t.origine} IN ('accueil-public', 'recherche-publique', 'accueil-interne', 'recherche-interne')`
+		),
+		index('requetes_etat_idx')
+			.on(t.etat, t.creeLe.desc())
+			.where(sql`${t.supprimeeLe} IS NULL`),
+		index('requetes_demandeur_idx').on(t.demandeurId, t.modifieLe.desc())
+	]
+);
+
+export const evenementsDeRequete = pgTable(
+	'evenements_de_requete',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		requeteId: uuid('requete_id').references(() => requetesDeDocumentation.id, {
+			onDelete: 'set null'
+		}),
+		acteurId: uuid('acteur_id').references(() => comptes.id, { onDelete: 'set null' }),
+		geste: text('geste').notNull(),
+		commentaireDemandeur: text('commentaire_demandeur').notNull().default(''),
+		visibleDemandeur: boolean('visible_demandeur').notNull().default(false),
+		le: timestamp('le', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		index('evenements_requete_idx').on(t.requeteId, t.le.desc()),
+		index('evenements_requete_le_idx').on(t.le.desc())
+	]
+);
+
 /** Le schéma complet, tel que l'ORM et le contrôle de cohérence le lisent. */
 export const schema = {
+	requetesDeDocumentation,
+	evenementsDeRequete,
 	comptes,
 	univers,
 	domaines,

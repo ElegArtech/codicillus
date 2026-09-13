@@ -1002,6 +1002,7 @@
 					>Import</a
 				>{/if}
 			<div class="rail__menu-sep"></div>
+			<a class="rail__menu-lien" href={resolve('/mes-requetes')}>Mes requêtes de documentation</a>
 			<a class="rail__menu-lien" href={resolve('/mon-profil')}>Mon profil</a>
 			<a class="rail__menu-lien" href={resolve('/deconnexion')}>Se déconnecter</a>
 			<div class="rail__menu-version etiq">Codicillus {version}</div>

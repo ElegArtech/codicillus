@@ -12,7 +12,7 @@
    complet de cette adresse. L'attribut data-route est posé sur <html> par
    `src/hooks.server.ts` au rendu, et suivi par `+layout.svelte` à la bascule.
    ========================================================================== */
-@scope (html[data-route="/"]) {
+@scope (html:is([data-route="/"], [data-route^="/requetes/"])) {
 
 
 /* ==========================================================================

@@ -1,3 +1,5 @@
+import { requetePourEditeur, ErreurDeRequete } from '$lib/donnees/requetes';
+import { erreurDeRoute } from '$lib/requetes/serveur';
 /**
  * `/notes/{identifiant}/modifier` — LE CHARGEUR DE L'ÉDITEUR EN MODIFICATION (V-17).
  * « Connecté + rédacteur » : la note doit être LISIBLE et l'appelant doit avoir la
@@ -84,7 +86,7 @@ async function enregistreeLe(base: Base, identifiant: string): Promise<string | 
 	return ligne === undefined ? null : ligne.le.toISOString();
 }
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const { base, lecture } = await contexteDe();
 	const acces = await resoudreLEditionDUneNote(base, {
 		identifiant: params.identifiant,
@@ -97,6 +99,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	return {
 		vecteur: { cas: 'modif' },
+		requete: await requetePourEditeur(
+			base,
+			locals.identite,
+			url.searchParams.get('requete'),
+			params.identifiant
+		).catch(erreurDeRoute),
 		/* LA MARQUE DU COMPTE ET L'INSTANT DE LA BASE — les deux que le brouillon
 		   local demande : l'un pour que sa clé ne mélange pas deux personnes, l'autre
 		   pour qu'un brouillon plus ancien que la note ne s'impose pas. */
@@ -149,8 +157,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ params, locals, request }) => {
+	default: async ({ params, locals, request, url }) => {
 		const { base, lecture } = await contexteDe();
+		const requeteId = url.searchParams.get('requete');
+		if (requeteId) {
+			try {
+				await requetePourEditeur(base, locals.identite, requeteId, params.identifiant);
+			} catch (cause) {
+				if (cause instanceof ErreurDeRequete && cause.statut !== 404)
+					return fail(cause.statut, { motif: cause.message });
+				erreurDeRoute(cause);
+			}
+		}
 
 		/**
 		 * LE DROIT AVANT LA FORME. Une réponse qui distinguerait « champ mal formé »
@@ -256,6 +274,11 @@ export const actions: Actions = {
 		   LE DRAPEAU D'ENREGISTREMENT VOYAGE AVEC ELLE — `RG-NF-03` : l'indexation de
 		   recherche est SOUMISE et non attendue (`ARB-060`), et la note n'est donc pas
 		   trouvable à la seconde où cette page s'affiche. La lecture, elle, l'est. */
-		redirect(303, adresseApresEnregistrement('/notes/' + params.identifiant));
+		redirect(
+			303,
+			requeteId
+				? '/console/requetes/' + requeteId
+				: adresseApresEnregistrement('/notes/' + params.identifiant)
+		);
 	}
 };
