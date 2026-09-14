@@ -50,6 +50,23 @@ export const SCENARIO_DE_RACINE: ScenarioDImport = 'racine';
  */
 export const SCENARIO_PREPARE: ScenarioDImport = 'prepare';
 
+/**
+ * Le scénario d'un dépôt direct sur le rail.
+ *
+ * Un fichier isolé est une note ; plusieurs fichiers forment un lot importé dans
+ * l'emplacement visé. Leurs chemins relatifs décident seuls d'éventuels sous-dossiers :
+ * deux fichiers déposés à plat restent donc directement dans la cible. Un dépôt sur
+ * un univers conserve son sens propre : son premier niveau crée un domaine.
+ */
+export function scenarioDuDepotSurLeRail(
+	cible: 'univers' | 'domaine' | 'dossier',
+	nombreDeFichiers: number,
+	porteUnDossier: boolean
+): ScenarioDImport {
+	if (cible === 'univers') return SCENARIO_DE_DOMAINE;
+	return nombreDeFichiers === 1 && !porteUnDossier ? SCENARIO_LIVRE : SCENARIO_PREPARE;
+}
+
 export interface ScenarioNonLivre {
 	readonly id: ScenarioDImport;
 	readonly exigence: string;

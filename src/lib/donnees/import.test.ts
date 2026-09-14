@@ -708,6 +708,22 @@ describe('le classement d’un lot — RG-M12-04, et le lot ne s’arrête jamai
 		expect(plan.notes + plan.ignores + plan.echecs).toBe(LOT.length);
 	});
 
+	it('place deux PDF déposés à plat directement dans le dossier cible', () => {
+		const pdf = (chemin: string): FichierDepose => ({
+			chemin,
+			octets: 18,
+			texte: null,
+			binaire: new TextEncoder().encode('%PDF-1.7\n%%EOF\n')
+		});
+		const lot = classerLeLot('épreuve', [pdf('Premier.pdf'), pdf('Second.pdf')], SANS_SERVICE);
+
+		expect(lot.lignes).toHaveLength(2);
+		expect(lot.lignes.map(({ sort, segments }) => ({ sort, segments }))).toEqual([
+			{ sort: 'note', segments: [] },
+			{ sort: 'note', segments: [] }
+		]);
+	});
+
 	it('donne à chaque écart et à chaque échec son motif', () => {
 		const motifs = new Map(plan.lignes.map((l) => [l.chemin, l.motif]));
 		expect(motifs.get('Exploitation/Matrice.xlsx')).toBe('format-non-converti');
