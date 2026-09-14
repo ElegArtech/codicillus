@@ -79,6 +79,11 @@
 		get notes() {
 			return data.notes ?? [];
 		},
+		/* LES DOSSIERS RÉELS DU RAIL — leur table est la seule source qui puisse
+		   conserver un dossier vide dans la navigation. */
+		get dossiers() {
+			return data.dossiers ?? [];
+		},
 		/* LES CINQ DERNIÈRES NOTES CONSULTÉES PAR CE COMPTE. Le gel en écrit cinq
 		   en dur ; les servir aurait annoncé à chacun les lectures des autres.
 		   Vide sans session et sans consultation : la section ne se rend pas. */

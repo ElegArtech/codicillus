@@ -34,6 +34,7 @@ import {
 	univers
 } from '$lib/base/schema';
 import type { NoteDuRail, NoteRecente } from '$lib/coquille/identite';
+import type { DossierDuRail } from '$lib/coquille/arborescence';
 import { capaciteDEcriture } from '$lib/donnees/public';
 import { cleDeDomaine, type DesignationsDeRangement } from '$lib/rangement/adresses';
 import type { Base } from '$lib/base/acces';
@@ -216,6 +217,22 @@ function cheminsDeDossier(acces: AccesAuRangement): ReadonlyMap<string, string> 
 	return chemins;
 }
 
+/** Les dossiers visibles du rail, dossiers vides compris, depuis l'accès déjà ouvert. */
+function dossiersDuRail(
+	acces: AccesAuRangement,
+	domainesLisibles: readonly { id: string; nom: string; univers: string }[]
+): readonly DossierDuRail[] {
+	const domainesParId = new Map(domainesLisibles.map((d) => [d.id, d]));
+	const chemins = cheminsDeDossier(acces);
+	return acces.dossiers.flatMap((dossier) => {
+		const domaine = domainesParId.get(dossier.domaineId);
+		const chemin = chemins.get(dossier.id) ?? '';
+		if (domaine === undefined || chemin === '') return [];
+		if (!acces.perimetre.tout && !acces.perimetre.dossiers.has(dossier.id)) return [];
+		return [{ univers: domaine.univers, domaine: domaine.nom, chemin }];
+	});
+}
+
 /**
  * LES NOTES QUE LE RAIL POSE EN FEUILLES, et sur lesquelles il compte.
  *
@@ -315,6 +332,7 @@ async function arborescenceDeNavigation(
 	}[];
 	domaines: { nom: string; univers: string; couleur: string }[];
 	designations: DesignationsDeRangement;
+	dossiers: readonly DossierDuRail[];
 }> {
 	const lignesUnivers = await base
 		.select({
@@ -372,7 +390,8 @@ async function arborescenceDeNavigation(
 	return {
 		univers: universDesignes,
 		domaines: lisibles.map((d) => ({ nom: d.nom, univers: d.univers, couleur: d.couleur })),
-		designations
+		designations,
+		dossiers: dossiersDuRail(acces, lisibles)
 	};
 }
 
@@ -450,6 +469,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			/* L'ANONYME N'A PAS DE COQUILLE : ni arbre, ni récents. L'état vide, dit,
 			   plutôt qu'une absence de clé que la page d'erreur lirait `undefined`. */
 			notes: [] as readonly NoteDuRail[],
+			dossiers: [] as readonly DossierDuRail[],
 			recents: [] as readonly NoteRecente[],
 			version: VERSION_DU_PRODUIT,
 			...(await parametresDeCoquille(basePartagee()))
