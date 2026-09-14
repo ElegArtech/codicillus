@@ -14,7 +14,10 @@
 import { getContext } from 'svelte';
 import type { VocabulaireRendu } from '../vocabulaire';
 import { SANS_DESIGNATION, type DesignationsDeRangement } from '../rangement/adresses';
-import type { NoteDuRail as NoteDuRailPourContexte } from './arborescence';
+import type {
+	DossierDuRail as DossierDuRailPourContexte,
+	NoteDuRail as NoteDuRailPourContexte
+} from './arborescence';
 
 /** La clé du contexte. Une constante, jamais une chaîne recopiée. */
 export const CLE_IDENTITE = Symbol.for('codicillus.identite-de-coquille');
@@ -107,6 +110,8 @@ export interface IdentiteDeCoquille {
 	 * contenu d'un écran à l'autre. Vide hors gabarit racine.
 	 */
 	readonly notes?: readonly NoteDuRailPourContexte[] | undefined;
+	/** Les dossiers réels du rail, dossiers vides compris. */
+	readonly dossiers?: readonly DossierDuRailPourContexte[] | undefined;
 	/** Les cinq dernières notes consultées PAR CE COMPTE. Vide : pas de section. */
 	readonly recents?: readonly NoteRecente[] | undefined;
 	/**

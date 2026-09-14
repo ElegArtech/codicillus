@@ -10,10 +10,9 @@
  *   • les notes, par ordre alphabétique français, APRÈS les dossiers du même niveau.
  *
  * LES NOTES SONT DES FEUILLES DU RAIL, et c'est le principal ajout de la refonte :
- * la référence les montre, l'arbre s'arrêtait aux dossiers. Le dossier n'est pas une
- * table : il est porté par le chemin de chaque note (« Exploitation › Sauvegardes »),
- * et l'arborescence s'en déduit. Une note rangée dans un chemin crée tous les dossiers
- * de ce chemin, et se pose en feuille au bout.
+ * la référence les montre, l'arbre s'arrêtait aux dossiers. Les dossiers viennent de
+ * leur table, y compris quand ils sont vides ; les notes se posent ensuite en feuilles
+ * au bout de leur chemin.
  *
  * LES COMPTEURS SE DÉRIVENT DES MÊMES NOTES, jamais d'une colonne à part : un
  * compteur lu ailleurs que l'arbre qu'il compte finit par le contredire.
@@ -43,6 +42,14 @@ export interface NoteDuRail {
 	readonly domaine: string;
 	/** Le chemin de dossiers, segments séparés par `›`. Vide : à la racine. */
 	readonly dossier: string;
+}
+
+/** Un dossier réel du rail, sous la racine de son domaine. */
+export interface DossierDuRail {
+	readonly univers: string;
+	readonly domaine: string;
+	/** Les segments sous la racine, séparés par `›`. */
+	readonly chemin: string;
 }
 
 /** Le type d'un nœud : il décide de son icône, de son adresse et de son compteur. */
@@ -202,9 +209,23 @@ function segmentsDe(dossier: string): readonly string[] {
 export function arbreDuDomaine(
 	notes: readonly NoteDuRail[],
 	domaine: string,
-	univers = ''
+	univers = '',
+	dossiers: readonly DossierDuRail[] = []
 ): { readonly dossiers: readonly NoeudDeDossier[]; readonly notes: readonly NoeudDeNote[] } {
 	const racine = brouillonNeuf();
+	for (const dossier of dossiers) {
+		if (dossier.domaine !== domaine) continue;
+		if (univers !== '' && dossier.univers !== univers) continue;
+		let niveau = racine;
+		for (const segment of segmentsDe(dossier.chemin)) {
+			let branche = niveau.enfants.get(segment);
+			if (!branche) {
+				branche = brouillonNeuf();
+				niveau.enfants.set(segment, branche);
+			}
+			niveau = branche;
+		}
+	}
 	for (const note of notes) {
 		if (note.domaine !== domaine) continue;
 		if (univers !== '' && note.univers !== univers) continue;
@@ -229,9 +250,10 @@ export function arbreDuDomaine(
 export function dossiersDuDomaine(
 	notes: readonly NoteDuRail[],
 	domaine: string,
-	univers = ''
+	univers = '',
+	dossiers: readonly DossierDuRail[] = []
 ): readonly NoeudDeDossier[] {
-	return arbreDuDomaine(notes, domaine, univers).dossiers;
+	return arbreDuDomaine(notes, domaine, univers, dossiers).dossiers;
 }
 
 /**
@@ -243,11 +265,12 @@ export function dossiersDuDomaine(
 export function sectionsDuRail(
 	univers: readonly Univers[],
 	domaines: readonly Domaine[],
-	notes: readonly NoteDuRail[]
+	notes: readonly NoteDuRail[],
+	dossiers: readonly DossierDuRail[] = []
 ): readonly SectionDUnivers[] {
 	return universOrdonnes(univers).map((u) => {
 		const branches = domainesDe(domaines, u.nom).map((d) => {
-			const arbre = arbreDuDomaine(notes, d.nom, u.nom);
+			const arbre = arbreDuDomaine(notes, d.nom, u.nom, dossiers);
 			return {
 				nom: d.nom,
 				cle: `d:${d.nom}`,

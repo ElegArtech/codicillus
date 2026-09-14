@@ -257,6 +257,7 @@
 
 	/** Les feuilles de l'arbre, et les cinq récents — voir `universEffectif`. */
 	const notesDuRail = $derived(identite?.notes ?? []);
+	const dossiersDuRail = $derived(identite?.dossiers ?? []);
 	const recents = $derived(identite?.recents ?? []);
 
 	/**
@@ -289,7 +290,7 @@
 	/** L'arborescence du rail — univers, domaines, dossiers, et les notes en feuilles. */
 	const sections = $derived(
 		railRendu(
-			sectionsDuRail(universEffectif, domainesEffectifs, notesDuRail),
+			sectionsDuRail(universEffectif, domainesEffectifs, notesDuRail, dossiersDuRail),
 			pageDuRail,
 			brancheEnChargement,
 			designations
