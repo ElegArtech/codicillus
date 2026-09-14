@@ -141,6 +141,17 @@ describe('le motif de refus d’une destination — les deux polarités', () => 
 		expect(motifDeRefusDeDestination(ARBRE, 'a', 'b')).toBeNull();
 	});
 
+	it('accepte la racine d’un autre domaine qui laisse la branche sous le plafond', () => {
+		const autreRacine: LigneDeDossier = {
+			id: 'autre-racine',
+			parentId: null,
+			domaineId: 'autre-domaine',
+			nom: 'Autre domaine',
+			profondeur: 1
+		};
+		expect(motifDeRefusDeDestination([...ARBRE, autreRacine], 'a', autreRacine.id)).toBeNull();
+	});
+
 	it('RG-STR-05 — refuse le dossier lui-même', () => {
 		expect(motifDeRefusDeDestination(ARBRE, 'a', 'a')).toBe(DEPLACE_DANS_LUI_MEME);
 	});

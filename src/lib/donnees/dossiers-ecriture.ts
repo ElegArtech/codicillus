@@ -18,7 +18,7 @@
  * fait cesser de résoudre l'ancienne adresse — et celles de tous les descendants. Le
  * produit ne pose ni redirection ni alias.
  */
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import { comptes, dossiers, droitsDeDossier, notes } from '../base/schema';
@@ -119,7 +119,7 @@ export function depasseLePlafond(hauteur: number): string {
  * La PLUS STRICTE est retenue — une acceptation de trop se paierait en `500` quand
  * `RG-STR-04` veut un message explicite.
  *
- * @param lignes les dossiers du SEUL domaine concerné — voir l'en-tête
+ * @param lignes les dossiers du domaine source et, si elle diffère, de la destination
  */
 export function motifDeRefusDeDestination(
 	lignes: readonly LigneDeDossier[],
@@ -392,12 +392,15 @@ export const REFUS_MUET: RefusDEcriture = Object.freeze({ fait: false, message: 
 export interface DeplacementFait {
 	readonly fait: true;
 	readonly segments: readonly string[];
+	/** Les notes dont le chemin ou le domaine a changé, à réindexer après la transaction. */
+	readonly notes: readonly string[];
 }
 
 export interface DemandeDeDeplacement {
 	readonly dossierId: string;
 	readonly destinationId: string;
 	readonly nom: string;
+	/** Le domaine source et, pour un déplacement transversal, le domaine de destination. */
 	readonly lignes: readonly LigneDeDossier[];
 	readonly droit: (dossierId: string) => DroitDeDossier | null;
 }
@@ -455,11 +458,67 @@ export async function renommerOuDeplacerUnDossier(
 
 	const nouvelleProfondeur = destination.profondeur + 1;
 	const ecart = nouvelleProfondeur - dossier.profondeur;
-	const descendants = sousArbre(demande.lignes, dossier.id).filter((d) => d.id !== dossier.id);
+	const branche = sousArbre(demande.lignes, dossier.id);
+	const descendants = branche.filter((d) => d.id !== dossier.id);
 	const freres = demande.lignes.filter((d) => d.parentId === destination.id && d.id !== dossier.id);
 	const maintenant = new Date();
+	const changeDeDomaine = dossier.domaineId !== destination.domaineId;
+	const notesDeplacees = await base
+		.select({ id: notes.id, identifiant: notes.identifiant, dossierId: notes.dossierId })
+		.from(notes)
+		.where(
+			inArray(
+				notes.dossierId,
+				branche.map((d) => d.id)
+			)
+		);
 
 	await base.transaction(async (tx) => {
+		if (changeDeDomaine && notesDeplacees.length > 0) {
+			/* Les deux clés étrangères composites ne sont pas différables. Les notes se
+			   posent donc, dans CETTE transaction, sur la destination valide avant que
+			   tout le sous-arbre change de domaine en une seule instruction. Elles
+			   retrouvent ensuite leur dossier d'origine, dont l'identifiant est stable. */
+			await tx
+				.update(notes)
+				.set({
+					domaineId: destination.domaineId,
+					dossierId: destination.id,
+					modifieLe: maintenant
+				})
+				.where(
+					inArray(
+						notes.id,
+						notesDeplacees.map((n) => n.id)
+					)
+				);
+		}
+
+		if (changeDeDomaine) {
+			const identifiantsDeLaBranche = branche.map((d) => d.id);
+			await tx
+				.update(dossiers)
+				.set({
+					domaineId: destination.domaineId,
+					parentId: sql`case when ${dossiers.id} = ${dossier.id} then ${destination.id} else ${dossiers.parentId} end`,
+					profondeur: sql`${dossiers.profondeur} + ${ecart}`,
+					position: sql`case when ${dossiers.id} = ${dossier.id} then ${freres.length} else ${dossiers.position} end`,
+					modifieLe: maintenant
+				})
+				.where(inArray(dossiers.id, identifiantsDeLaBranche));
+
+			for (const dossierDeNote of new Set(notesDeplacees.map((n) => n.dossierId))) {
+				const identifiants = notesDeplacees
+					.filter((n) => n.dossierId === dossierDeNote)
+					.map((n) => n.id);
+				await tx
+					.update(notes)
+					.set({ dossierId: dossierDeNote })
+					.where(inArray(notes.id, identifiants));
+			}
+			return;
+		}
+
 		await tx
 			.update(dossiers)
 			.set({
@@ -487,10 +546,23 @@ export async function renommerOuDeplacerUnDossier(
 
 	/* Le chemin d'arrivée est recomposé sur les lignes TELLES QU'ELLES SONT
 	   DÉSORMAIS, par la remontée de `rangement.ts` — jamais par une seconde. */
+	const idsDeLaBranche = new Set(branche.map((d) => d.id));
 	const apres = demande.lignes.map((d) =>
-		d.id === dossier.id ? { ...d, nom, parentId: destination.id } : d
+		idsDeLaBranche.has(d.id)
+			? {
+					...d,
+					domaineId: destination.domaineId,
+					nom: d.id === dossier.id ? nom : d.nom,
+					parentId: d.id === dossier.id ? destination.id : d.parentId,
+					profondeur: d.profondeur + ecart
+				}
+			: d
 	);
-	return { fait: true, segments: segmentsAffiches(apres, dossier.id) };
+	return {
+		fait: true,
+		segments: segmentsAffiches(apres, dossier.id),
+		notes: notesDeplacees.map((n) => n.identifiant)
+	};
 }
 
 /**

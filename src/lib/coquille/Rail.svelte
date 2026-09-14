@@ -198,7 +198,7 @@
 	let confirmationDeSuppression = $state('');
 	let suppressionEnCours = $state(false);
 	let erreurDeSuppression = $state<string | null>(null);
-	let noteDeplacee = $state<CibleContextuelle | null>(null);
+	let elementDeplace = $state<CibleContextuelle | null>(null);
 	let cibleDeDepot = $state<string | null>(null);
 	let importEnCours = $state(false);
 	let renommage = $state<{
@@ -514,15 +514,18 @@
 	}
 
 	function commencerLeDeplacement(evenement: DragEvent, cible: CibleContextuelle): void {
-		if (!ecriture || cible.type !== 'note' || cible.identifiant === null) {
+		const sourceValide =
+			(cible.type === 'note' && cible.identifiant !== null) ||
+			(cible.type === 'dossier' && cible.cible !== null);
+		if (!ecriture || !sourceValide) {
 			evenement.preventDefault();
 			return;
 		}
-		noteDeplacee = cible;
+		elementDeplace = cible;
 		menuContextuel = null;
 		if (evenement.dataTransfer !== null) {
 			evenement.dataTransfer.effectAllowed = 'move';
-			evenement.dataTransfer.setData('text/plain', cible.identifiant);
+			evenement.dataTransfer.setData('text/plain', cleDeCible(cible));
 		}
 	}
 
@@ -531,8 +534,9 @@
 		cible: CibleContextuelle,
 		cle: string
 	): void {
-		const externe = noteDeplacee === null && transfertDeFichiers(evenement);
-		if ((!externe && noteDeplacee === null) || !peutRecevoirUnDepot(cible)) return;
+		const externe = elementDeplace === null && transfertDeFichiers(evenement);
+		if (externe ? !peutRecevoirUnDepot(cible) : elementDeplace === null || !peutRecevoir(cible))
+			return;
 		evenement.preventDefault();
 		cibleDeDepot = cle;
 		if (evenement.dataTransfer !== null)
@@ -556,42 +560,89 @@
 			: cible.cible.dossierAffiche.join(' › ');
 	}
 
-	async function deposerLaNote(evenement: DragEvent, cible: CibleContextuelle): Promise<void> {
-		if (noteDeplacee === null && transfertDeFichiers(evenement)) {
+	async function deposerLElement(evenement: DragEvent, cible: CibleContextuelle): Promise<void> {
+		if (elementDeplace === null && transfertDeFichiers(evenement)) {
 			await importerLeDepot(evenement, cible);
 			return;
 		}
-		if (noteDeplacee === null || noteDeplacee.identifiant === null || !peutRecevoir(cible)) return;
+		if (elementDeplace === null || !peutRecevoir(cible)) return;
 		evenement.preventDefault();
-		const note = noteDeplacee;
+		const source = elementDeplace;
 		const destination = cible.cible;
 		cibleDeDepot = null;
 		if (destination === null) return;
 
-		const memeDomaine = note.cible?.domaine === destination.domaine;
-		const origine = note.cible?.dossierAffiche.join(' › ') ?? '';
+		const memeDomaine = source.cible?.domaine === destination.domaine;
+		const origine = source.cible?.dossierAffiche.join(' › ') ?? '';
 		const destinationAffichee =
 			cible.type === 'domaine' ? '' : destination.dossierAffiche.join(' › ');
-		if (memeDomaine && origine === destinationAffichee) {
-			noteDeplacee = null;
+		const parentDeLaSource = source.cible?.dossierAffiche.slice(0, -1).join(' › ') ?? '';
+		if (
+			memeDomaine &&
+			(source.type === 'note'
+				? origine === destinationAffichee
+				: parentDeLaSource === destinationAffichee)
+		) {
+			elementDeplace = null;
 			return;
 		}
 
 		const formulaire = new FormData();
-		formulaire.set('univers', destination.univers);
-		formulaire.set('domaine', destination.domaineAffiche);
-		formulaire.set('dossier', dossierDeDestination(cible));
+		let adresse: string;
+		let sourceEstLaPageCourante = false;
+		if (source.type === 'dossier') {
+			formulaire.set('nouveauNom', source.nom);
+			formulaire.set('destination-univers', destination.univers);
+			formulaire.set('destination-domaine', destination.domaine);
+			formulaire.set(
+				'destination-chemin',
+				cible.type === 'dossier' ? destination.chemin.join('/') : ''
+			);
+			adresse = adresseDeRenommage(source);
+			sourceEstLaPageCourante =
+				source.cible !== null &&
+				page.url.pathname ===
+					resolve(ROUTE_DOSSIER, {
+						univers: source.cible.univers,
+						domaine: source.cible.domaine,
+						chemin: source.cible.chemin.join('/')
+					});
+		} else {
+			if (source.identifiant === null) return;
+			formulaire.set('univers', destination.univers);
+			formulaire.set('domaine', destination.domaineAffiche);
+			formulaire.set('dossier', dossierDeDestination(cible));
+			adresse = `${adresseDeNote(source)}/modifier`;
+		}
 		try {
-			const reponse = await fetch(`${adresseDeNote(note)}/modifier`, {
+			const reponse = await fetch(adresse, {
 				method: 'POST',
 				body: formulaire
 			});
 			if (!reponse.ok) throw new Error('deplacement refuse');
-			await invalidateAll();
+			if (sourceEstLaPageCourante && source.type === 'dossier') {
+				await goto(
+					resolve(ROUTE_DOSSIER, {
+						univers: destination.univers,
+						domaine: destination.domaine,
+						chemin: [
+							...(cible.type === 'dossier' ? destination.chemin : []),
+							identifiantLisible(source.nom)
+						].join('/')
+					}),
+					{ invalidateAll: true }
+				);
+			} else {
+				await invalidateAll();
+			}
 		} catch {
-			window.alert("La note n'a pas pu être déplacée vers ce dossier.");
+			window.alert(
+				source.type === 'dossier'
+					? "Le dossier n'a pas pu être déplacé vers cette destination."
+					: "La note n'a pas pu être déplacée vers ce dossier."
+			);
 		} finally {
-			noteDeplacee = null;
+			elementDeplace = null;
 		}
 	}
 
@@ -670,7 +721,7 @@
 	}
 
 	function terminerLeDeplacement(): void {
-		noteDeplacee = null;
+		elementDeplace = null;
 		cibleDeDepot = null;
 	}
 
@@ -695,7 +746,8 @@
 		<div
 			class="noeud"
 			class:noeud--courant={n.page}
-			class:noeud--deplace={noteDeplacee?.identifiant === n.identifiant}
+			class:noeud--deplace={elementDeplace !== null &&
+				cleDeCible(elementDeplace) === cleDeCible(cibleDeNoeud(n))}
 			class:noeud--depot={cibleDeDepot === n.cle}
 			data-ouvert={n.ouvert ? 'oui' : undefined}
 		>
@@ -726,13 +778,13 @@
 								})
 							: resolve(ROUTE_DOMAINE, { univers: n.cible.univers, domaine: n.cible.domaine })}
 				aria-current={n.page ? 'page' : undefined}
-				draggable={ecriture && n.type === 'note'}
+				draggable={ecriture && (n.type === 'note' || n.type === 'dossier')}
 				oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDeNoeud(n))}
 				ondragstart={(evenement) => commencerLeDeplacement(evenement, cibleDeNoeud(n))}
 				ondragend={terminerLeDeplacement}
 				ondragover={(evenement) => survolerLaDestination(evenement, cibleDeNoeud(n), n.cle)}
 				ondragleave={(evenement) => quitterLaDestination(evenement, n.cle)}
-				ondrop={(evenement) => deposerLaNote(evenement, cibleDeNoeud(n))}
+				ondrop={(evenement) => deposerLElement(evenement, cibleDeNoeud(n))}
 				><Pictogramme
 					traits={iconeDeNoeud(n.type)}
 					taille="16"
@@ -870,7 +922,7 @@
 									)}
 								ondragleave={(evenement) =>
 									quitterLaDestination(evenement, `univers:${section.cible?.univers ?? ''}`)}
-								ondrop={(evenement) => deposerLaNote(evenement, cibleDUnivers(section))}
+								ondrop={(evenement) => deposerLElement(evenement, cibleDUnivers(section))}
 								><span class="noeud__teinte" style="color:{section.couleur}"
 									><Pictogramme
 										traits={glypheDUnivers(section.glyphe)}
