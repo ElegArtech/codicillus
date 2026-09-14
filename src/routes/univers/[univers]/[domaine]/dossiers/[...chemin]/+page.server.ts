@@ -27,6 +27,7 @@ import { basePartagee } from '$lib/base/acces';
 import { accesALaConsole } from '$lib/donnees/consoles';
 import { dossiers } from '$lib/base/schema';
 import { moteurPartage } from '$lib/recherche/acces';
+import { entretenirLIndex } from '$lib/recherche/entretien';
 import { env } from '$env/dynamic/private';
 import { adresseDeDomaine, adresseDeDossier, identifiantLisible } from '$lib/rangement/adresses';
 import {
@@ -462,24 +463,71 @@ export const actions: Actions = {
 		const formulaire = await request.formData();
 		const brutNom = formulaire.get('nouveauNom');
 		const brutDestination = formulaire.get('destination');
-		const destination =
+		let destination =
 			typeof brutDestination === 'string' && brutDestination !== ''
 				? brutDestination
 				: (dossier.parentId ?? '');
+		let domaineDArrivee = domaine;
+		let lignesDuDeplacement = lignes;
 
-		const fait = await renommerOuDeplacerUnDossier(basePartagee(), {
+		/* Le dialogue de la page transmet l'identifiant interne d'une destination du
+		   même domaine. Le rail, lui, connaît les ADRESSES de tous les domaines : ces
+		   trois champs résolvent donc la cible côté serveur, sans exposer d'identifiant
+		   de base dans l'arborescence. */
+		const universDArrivee = formulaire.get('destination-univers');
+		const domaineDArriveeBrut = formulaire.get('destination-domaine');
+		if (
+			typeof universDArrivee === 'string' &&
+			universDArrivee !== '' &&
+			typeof domaineDArriveeBrut === 'string' &&
+			domaineDArriveeBrut !== ''
+		) {
+			const cible = await lireDomaineParIdentifiants(
+				basePartagee(),
+				universDArrivee,
+				domaineDArriveeBrut
+			);
+			if (cible === null) error(404, MESSAGE_INTROUVABLE);
+			const modulesDeLaCible = await lireModulesDuDomaine(basePartagee(), cible.id);
+			if (!moduleActif(modulesDeLaCible, 'dossiers')) error(404, MESSAGE_INTROUVABLE);
+
+			const lignesDeLaCible = dossiersDuDomaine(acces, cible.id);
+			const cheminBrut = formulaire.get('destination-chemin');
+			const chemin =
+				typeof cheminBrut === 'string' ? cheminBrut.split('/').filter((s) => s !== '') : [];
+			const dossierDArrivee =
+				chemin.length === 0
+					? (lignesDeLaCible.find((d) => d.parentId === null) ?? null)
+					: resoudreLeChemin(lignesDeLaCible, chemin);
+			if (dossierDArrivee === null) error(404, MESSAGE_INTROUVABLE);
+
+			destination = dossierDArrivee.id;
+			domaineDArrivee = cible;
+			lignesDuDeplacement = cible.id === domaine.id ? lignes : [...lignes, ...lignesDeLaCible];
+		}
+
+		const base = basePartagee();
+		const fait = await renommerOuDeplacerUnDossier(base, {
 			dossierId: dossier.id,
 			destinationId: destination,
 			nom: typeof brutNom === 'string' ? brutNom : '',
-			lignes,
+			lignes: lignesDuDeplacement,
 			droit: (id) => droitEffectif(acces, id)
 		});
 		if (!fait.fait) {
 			if (fait.message === '') error(404, MESSAGE_INTROUVABLE);
 			return fail(422, { deplacement: fait.message });
 		}
+		if (fait.notes.length > 0) await entretenirLIndex(base, moteurPartage(), fait.notes);
 
-		redirect(303, adresseDeDossier(domaine.universIdentifiant, domaine.identifiant, fait.segments));
+		redirect(
+			303,
+			adresseDeDossier(
+				domaineDArrivee.universIdentifiant,
+				domaineDArrivee.identifiant,
+				fait.segments
+			)
+		);
 	},
 
 	/**
