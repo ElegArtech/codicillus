@@ -29,7 +29,7 @@
 	import { identifiantLisible } from '$lib/rangement/adresses';
 	import { accord } from '$lib/vocabulaire';
 	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
-	import { SCENARIO_DE_DOMAINE, SCENARIO_LIVRE } from '$lib/donnees/scenarios-d-import';
+	import { scenarioDuDepotSurLeRail } from '$lib/donnees/scenarios-d-import';
 	import {
 		AUCUNE_PAGE,
 		railRendu,
@@ -597,6 +597,7 @@
 
 	async function importerLeDepot(evenement: DragEvent, cible: CibleContextuelle): Promise<void> {
 		if (importEnCours || !peutRecevoirUnDepot(cible) || evenement.dataTransfer === null) return;
+		if (cible.type === 'note') return;
 		evenement.preventDefault();
 		cibleDeDepot = null;
 		const transfert = evenement.dataTransfer;
@@ -619,7 +620,7 @@
 		}
 
 		const corps = new FormData();
-		corps.set('scenario', cible.type === 'univers' ? SCENARIO_DE_DOMAINE : SCENARIO_LIVRE);
+		corps.set('scenario', scenarioDuDepotSurLeRail(cible.type, fichiers.length, porteUnDossier));
 		if (cible.type === 'univers') {
 			corps.set('univers-cible', cible.cible?.univers ?? '');
 		} else {
