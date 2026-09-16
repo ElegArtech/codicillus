@@ -8,8 +8,9 @@ RACINE_SAUVEGARDES=${1:-"$DEPOT_CODICILLUS/.local/sauvegardes"}
 mkdir -p "$RACINE_SAUVEGARDES"
 RACINE_SAUVEGARDES=$(cd "$RACINE_SAUVEGARDES" && pwd)
 JEU=$(mktemp -d "$RACINE_SAUVEGARDES/$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")
-APP_ACTIVE=$(docker compose ps --status running --services app)
-relancer() { if [[ -n "$APP_ACTIVE" ]]; then docker compose start app; fi; }
+APP_ACTIVE=$(docker compose ps --status running -q app)
+# Reprendre le conteneur suspendu sans rejouer les dépendances d'initialisation.
+relancer() { if [[ -n "$APP_ACTIVE" ]]; then docker start "$APP_ACTIVE" > /dev/null; fi; }
 trap relancer EXIT
 if [[ -n "$APP_ACTIVE" ]]; then docker compose stop app; fi
 
