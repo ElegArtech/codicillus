@@ -34,12 +34,6 @@ export interface OptionsDeLaLecture {
 	readonly registre: Registre;
 	/** `RG-M05-08` / `P-09` — sans le droit d'écrire, aucun geste n'est posé. */
 	readonly ecriture: boolean;
-	/**
-	 * Où mène « Exporter », ou `null` quand l'appelant ne peut pas exporter :
-	 * `RG-M13-03` le réserve à l'administrateur, et une entrée sans destination se
-	 * RETIRE.
-	 */
-	readonly exports: string | null;
 }
 
 /**
@@ -290,16 +284,21 @@ export function cablerLaLecture(
 	}
 
 	/**
-	 * « EXPORTER » — LE PÉRIMÈTRE DE L'EXPORT EST LE DOMAINE, PAS LA NOTE : aucune
-	 * adresse ne rend une note seule (`RG-M13-01`), et `/console/exports` est l'écran
-	 * qui l'offre. SANS LE DROIT DE CONSOLE, L'ENTRÉE EST RETIRÉE et non laissée
-	 * morte : la route rend 404 à qui n'est pas administrateur, et `P-03` n'admet pas
-	 * un geste visible qui ne mène nulle part.
+	 * « EXPORTER » — LA NOTE COURANTE, et non le domaine. L'export de réversibilité
+	 * reste dans la console ; ce geste ouvre un choix Markdown/PDF propre à la note.
 	 */
-	const ouExporter = options.exports;
-	for (const exporter of boutonsNommes(document, 'Exporter')) {
-		if (ouExporter === null) exporter.remove();
-		else agir(exporter, () => aller(ouExporter));
+	const boiteDExport = document.querySelector<HTMLDialogElement>('dialog#exporter-note');
+	if (boiteDExport !== null) {
+		for (const exporter of boutonsNommes(document, 'Exporter')) {
+			agir(exporter, () => {
+				exporter.closest('.menu-barre')?.removeAttribute('data-ouvert');
+				boiteDExport.showModal();
+			});
+		}
+		agir(boiteDExport.querySelector('[data-fermer-export]'), () => boiteDExport.close());
+		agir(boiteDExport, (evenement) => {
+			if (evenement.target === boiteDExport) boiteDExport.close();
+		});
 	}
 
 	/* Le panneau en erreur : « Réessayer » redemande la page, ce qui est
