@@ -72,6 +72,18 @@
 				cible.removeEventListener('click', ecoute);
 			});
 		}
+		function surEntree(cible: HTMLInputElement | null, faire: () => void): void {
+			if (cible === null) return;
+			const ecoute = (evenement: KeyboardEvent): void => {
+				if (evenement.key !== 'Enter' || evenement.isComposing) return;
+				evenement.preventDefault();
+				faire();
+			};
+			cible.addEventListener('keydown', ecoute);
+			debranchements.push(() => {
+				cible.removeEventListener('keydown', ecoute);
+			});
+		}
 
 		/* 1. Aucun bouton du gel ne soumet par accident. */
 		for (const bouton of Array.from(formulaire.querySelectorAll('button'))) {
@@ -96,6 +108,39 @@
 		const champDep = formulaire.querySelector<HTMLInputElement>('#dep-nom');
 		const champSup = formulaire.querySelector<HTMLInputElement>('#sup-saisie');
 		const validerSup = formulaire.querySelector<HTMLButtonElement>('#sup-valider');
+
+		/*
+		 * ENTRÉE DANS UN DIALOGUE EST UNE VALIDATION, PAS UNE ACTION ANONYME.
+		 *
+		 * Tous les dialogues vivent dans le même formulaire POST et leurs boutons sont
+		 * neutralisés plus haut. Le navigateur conserve néanmoins sa soumission implicite
+		 * quand un champ texte reçoit Entrée : sans soumetteur câblé, il postait vers la
+		 * page courante, qui ne porte aucune action par défaut, puis affichait la page
+		 * introuvable. Un clic passait, Entrée cassait : c'était l'intermittence observée.
+		 *
+		 * Les soumissions créées par `soumettreVers()` portent `data-cable-action` et
+		 * doivent traverser sans interception. Toutes les autres sont rabattues sur le
+		 * dialogue actuellement ouvert ; hors dialogue, elles sont seulement neutralisées.
+		 */
+		const surSoumissionImplicite = (evenement: SubmitEvent): void => {
+			if (
+				evenement.submitter instanceof HTMLButtonElement &&
+				evenement.submitter.hasAttribute('data-cable-action')
+			)
+				return;
+			evenement.preventDefault();
+			if (dlgCreer?.open) {
+				soumettreVers(formulaire, '?/creerSousDossier');
+			} else if (dlgDeplacer?.open) {
+				soumettreVers(formulaire, '?/renommerOuDeplacer');
+			} else if (dlgSupprimer?.open && validerSup?.disabled === false) {
+				soumettreVers(formulaire, '?/supprimer');
+			}
+		};
+		formulaire.addEventListener('submit', surSoumissionImplicite);
+		debranchements.push(() => {
+			formulaire.removeEventListener('submit', surSoumissionImplicite);
+		});
 		if (data.vecteur.creation === true) {
 			if (champCreer !== null) champCreer.value = '';
 			dlgCreer?.showModal();
@@ -172,6 +217,9 @@
 		surClic(formulaire.querySelector('#creer-valider'), () => {
 			soumettreVers(formulaire, '?/creerSousDossier');
 		});
+		surEntree(champCreer, () => {
+			soumettreVers(formulaire, '?/creerSousDossier');
+		});
 
 		/* 6. Renommer ou déplacer — `V-13:2308`-`2313`. Le nom est resélectionné,
 		   comme au gel : on renomme plus souvent qu'on ne déplace. */
@@ -181,6 +229,9 @@
 			champDep?.select();
 		});
 		surClic(formulaire.querySelector('#dep-valider'), () => {
+			soumettreVers(formulaire, '?/renommerOuDeplacer');
+		});
+		surEntree(champDep, () => {
 			soumettreVers(formulaire, '?/renommerOuDeplacer');
 		});
 
@@ -209,6 +260,9 @@
 		}
 		surClic(validerSup, () => {
 			soumettreVers(formulaire, '?/supprimer');
+		});
+		surEntree(champSup, () => {
+			if (validerSup?.disabled === false) soumettreVers(formulaire, '?/supprimer');
 		});
 
 		/* 8. GÉRER LES DROITS — `#a-droits`, le geste que le gel dessinait sans lui
