@@ -42,7 +42,12 @@ describe('export unitaire d’une note', () => {
 			registre: 'operationnel',
 			document
 		});
-		expect(new TextDecoder().decode(octets.slice(0, 8))).toMatch(/^%PDF-/u);
+		const source = new TextDecoder('latin1').decode(octets);
+		expect(source).toMatch(/^%PDF-/u);
 		expect(octets.length).toBeGreaterThan(1_000);
+		/* Le WOFF2 variable d'origine produisait un sous-ensemble vide et des pages
+		   blanches. L'export doit embarquer la fonte TrueType statique dédiée. */
+		expect(source).toContain('DejaVuSerif');
+		expect(source).toContain('/FontFile2');
 	});
 });

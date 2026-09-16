@@ -22,6 +22,19 @@ const LIBELLE_DU_REGISTRE: Readonly<Record<Registre, string>> = {
 	operationnel: 'Opérationnel'
 };
 
+/**
+ * Les fontes variables du site sont servies en WOFF2 au navigateur, mais PDFKit
+ * produit un sous-ensemble vide depuis elles, même converties en TrueType. Le PDF
+ * emploie donc deux fontes TrueType statiques dédiées, livrées avec l'application.
+ */
+function policePdf(fichier: string): string | null {
+	const candidats = [
+		resolve('static/polices/pdf', fichier),
+		resolve('build/client/polices/pdf', fichier)
+	];
+	return candidats.find((chemin) => existsSync(chemin)) ?? null;
+}
+
 /** Le nom téléchargé : stable, lisible, et sans séparateur de chemin. */
 export function nomDuRegistreExporte(
 	titre: string,
@@ -49,26 +62,6 @@ export function exporterLeRegistreEnMarkdown(entree: RegistreAExporter): string 
 			: serialiserEnMarkdown(entree.document).trimEnd();
 	const tete = `# ${entree.titre}\n\n> Registre : ${LIBELLE_DU_REGISTRE[entree.registre]}`;
 	return corps === '' ? `${tete}\n` : `${tete}\n\n${corps}\n`;
-}
-
-/**
- * La police du produit est livrée avec l'application. En développement elle vit
- * dans `static`, et dans le paquet Node construit elle vit dans `build/client`.
- */
-function policeDuProduit(): string | null {
-	const candidats = [
-		resolve('static/polices/literata-400-normal-latin-ext.woff2'),
-		resolve('build/client/polices/literata-400-normal-latin-ext.woff2')
-	];
-	return candidats.find((chemin) => existsSync(chemin)) ?? null;
-}
-
-function policeMonospace(): string | null {
-	const candidats = [
-		resolve('static/polices/jetbrains-mono-400-normal-latin-ext.woff2'),
-		resolve('build/client/polices/jetbrains-mono-400-normal-latin-ext.woff2')
-	];
-	return candidats.find((chemin) => existsSync(chemin)) ?? null;
 }
 
 /**
@@ -150,9 +143,9 @@ export function exporterLeRegistreEnPdf(
 		document.on('error', refuser);
 		document.on('end', () => accepter(Uint8Array.from(Buffer.concat(morceaux))));
 
-		const texte = policeDuProduit();
-		const mono = policeMonospace();
-		document.registerFont('Texte', texte ?? 'Helvetica');
+		const texte = policePdf('DejaVuSerif.ttf');
+		const mono = policePdf('DejaVuSansMono.ttf');
+		document.registerFont('Texte', texte ?? 'Times-Roman');
 		document.registerFont('Mono', mono ?? 'Courier');
 
 		document.font('Texte').fontSize(22).fillColor('#172326').text(entree.titre);
