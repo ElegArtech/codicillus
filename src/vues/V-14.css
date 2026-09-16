@@ -257,6 +257,31 @@
 }
 .menu-note__lien:hover { background: var(--c-papier-2); }
 
+/* L'export unitaire reste dans la lecture ; les archives de domaine restent dans
+   la console. La boîte ne reprend que les jetons du socle. */
+.export-note {
+  width: min(520px, calc(100vw - 32px)); padding: 0;
+  border: 1px solid var(--c-trait-fort); border-radius: var(--r-3);
+  background: var(--c-papier); color: var(--c-encre); box-shadow: var(--o-flotte);
+}
+.export-note::backdrop { background: rgba(17, 17, 17, .5); }
+.export-note__boite { padding: var(--e-5); }
+.export-note__boite h2 { margin: var(--e-2) 0 var(--e-2); font-size: var(--t-t2); }
+.export-note__boite > p:not(.etiq) { margin: 0; color: var(--c-encre-2); line-height: 1.55; }
+.export-note__formats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e-3); margin-top: var(--e-5); }
+.export-note__format {
+  display: flex; flex-direction: column; gap: var(--e-1); min-width: 0;
+  padding: var(--e-4); border: 1px solid var(--c-trait); border-radius: var(--r-2);
+  color: var(--c-encre); text-decoration: none; background: var(--c-papier-2);
+}
+.export-note__format:hover { border-color: var(--c-accent); background: var(--c-accent-voile); }
+.export-note__format strong { color: var(--c-accent); }
+.export-note__format span { color: var(--c-encre-3); font-size: var(--t-petit); line-height: 1.4; }
+.export-note__pied { display: flex; justify-content: flex-end; margin-top: var(--e-5); }
+@media (max-width: 520px) {
+  .export-note__formats { grid-template-columns: 1fr; }
+}
+
 /* --- La colonne de contexte ------------------------------------------------
    Elle ne déclare pas `display` non plus : sous 1180 px le socle la sort du
    flux et la rend en tiroir. */

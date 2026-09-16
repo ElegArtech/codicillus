@@ -32,9 +32,6 @@
 
 	const { data }: { data: PageData } = $props();
 
-	/** L'écran d'export — le seul du produit, et son périmètre est le domaine. */
-	const ADRESSE_DES_EXPORTS = '/console/exports';
-
 	/**
 	 * LES TYPES DE RELATION, DANS LA FORME QUE LE DIALOGUE LIT : `d-relation`
 	 * remplit son sélecteur par `Object.entries(typesRelation)`. Le chargeur sert
@@ -69,6 +66,11 @@
 	 * l'historique la vise par son adresse.
 	 */
 	const adresse = $derived(`/notes/${data.lecture.note.id}`);
+	const requeteDuRegistre = $derived(
+		data.lecture.registre === 'operationnel' ? '?registre=operationnel' : ''
+	);
+	const exportMarkdown = $derived(`${adresse}/exporter/markdown${requeteDuRegistre}`);
+	const exportPdf = $derived(`${adresse}/exporter/pdf${requeteDuRegistre}`);
 
 	let formulaire: HTMLFormElement;
 
@@ -123,10 +125,7 @@
 			identifiant: data.lecture.note.id,
 			/* Les trois gestes de vivacité visent le registre AFFICHÉ, et lui seul. */
 			registre: data.lecture.registre,
-			ecriture: data.vecteur.droits === 'ecriture',
-			/* `RG-M13-03` — l'export est réservé à l'administrateur. Pour les
-			   autres, l'entrée n'a pas de destination, et le câblage la retire. */
-			exports: data.administrateur ? ADRESSE_DES_EXPORTS : null
+			ecriture: data.vecteur.droits === 'ecriture'
 		});
 		const defaireLoupe = cablerLaLoupe(formulaire.ownerDocument);
 		return () => {
@@ -693,6 +692,33 @@
 		notifications={data.notifications}
 	/>
 </form>
+
+<!-- L'export d'une note est distinct de l'archive de domaine de la console. -->
+<dialog class="export-note" id="exporter-note" aria-labelledby="exporter-note-titre">
+	<div class="export-note__boite">
+		<p class="etiq">Exporter la note</p>
+		<h2 id="exporter-note-titre">Choisir un format</h2>
+		<p>
+			Le registre {data.lecture.registre === 'reference' ? 'Référence' : 'Opérationnel'} de « {data
+				.lecture.note.titre} » sera téléchargé séparément.
+		</p>
+		<div class="export-note__formats">
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- adresse composée pour le registre courant -->
+			<a class="export-note__format" href={exportMarkdown} download>
+				<strong>Markdown</strong>
+				<span>Texte éditable au format .md</span>
+			</a>
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- adresse composée pour le registre courant -->
+			<a class="export-note__format" href={exportPdf} download>
+				<strong>PDF</strong>
+				<span>Document paginé prêt à partager</span>
+			</a>
+		</div>
+		<div class="export-note__pied">
+			<button class="btn" type="button" data-fermer-export>Annuler</button>
+		</div>
+	</div>
+</dialog>
 
 <!--
 	LA BOÎTE « AJOUTER UNE RELATION », HORS DU FORMULAIRE — ET C'EST DÉLIBÉRÉ. Elle
