@@ -867,7 +867,11 @@
 	{/if}
 {/snippet}
 
-<aside class="rail" aria-label="Navigation principale">
+<aside
+	class="rail"
+	class:rail--deplacement={elementDeplace !== null || cibleDeDepot !== null}
+	aria-label="Navigation principale"
+>
 	<!-- LA CROIX DU TIROIR — rendue toujours, visible sous 1024 px seulement, où le
 	     rail est un tiroir. Le voile ferme aussi ; les deux gestes existent. -->
 	<button class="rail__fermer" type="button" data-fermer-tiroir aria-label="Fermer la navigation"
