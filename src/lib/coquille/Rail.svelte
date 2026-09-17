@@ -543,6 +543,7 @@
 		if (externe ? !peutRecevoirUnDepot(cible) : elementDeplace === null || !peutRecevoir(cible))
 			return;
 		evenement.preventDefault();
+		evenement.stopPropagation();
 		cibleDeDepot = cle;
 		if (evenement.dataTransfer !== null)
 			evenement.dataTransfer.dropEffect = externe ? 'copy' : 'move';
@@ -567,11 +568,13 @@
 
 	async function deposerLElement(evenement: DragEvent, cible: CibleContextuelle): Promise<void> {
 		if (elementDeplace === null && transfertDeFichiers(evenement)) {
+			evenement.stopPropagation();
 			await importerLeDepot(evenement, cible);
 			return;
 		}
 		if (elementDeplace === null || !peutRecevoir(cible)) return;
 		evenement.preventDefault();
+		evenement.stopPropagation();
 		const source = elementDeplace;
 		const destination = cible.cible;
 		cibleDeDepot = null;
@@ -781,6 +784,8 @@
 					type="button"
 					aria-expanded={n.ouvert}
 					aria-label="Déplier {n.nom}"
+					ondragover={(evenement) => survolerLaDestination(evenement, cibleDeNoeud(n), n.cle)}
+					ondrop={(evenement) => deposerLElement(evenement, cibleDeNoeud(n))}
 					><svg
 						width="10"
 						height="10"
@@ -789,7 +794,12 @@
 						stroke="currentColor"
 						stroke-width="2"><path d="M6 3l5 5-5 5" /></svg
 					></button
-				>{:else}<span class="noeud__vide"></span>{/if}<a
+				>{:else}<span
+					class="noeud__vide"
+					role="group"
+					ondragover={(evenement) => survolerLaDestination(evenement, cibleDeNoeud(n), n.cle)}
+					ondrop={(evenement) => deposerLElement(evenement, cibleDeNoeud(n))}
+				></span>{/if}<a
 				class="noeud__nom"
 				href={n.type === 'note'
 					? resolve(ROUTE_NOTE, { identifiant: n.identifiant ?? '' })
@@ -808,6 +818,8 @@
 				oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDeNoeud(n))}
 				ondragstart={(evenement) => commencerLeDeplacement(evenement, cibleDeNoeud(n))}
 				ondragend={terminerLeDeplacement}
+				ondragover={(evenement) => survolerLaDestination(evenement, cibleDeNoeud(n), n.cle)}
+				ondrop={(evenement) => deposerLElement(evenement, cibleDeNoeud(n))}
 				><Pictogramme
 					traits={iconeDeNoeud(n.type)}
 					taille="16"
@@ -932,6 +944,13 @@
 									type="button"
 									aria-expanded={section.ouvert}
 									aria-label="Déplier {section.nom}"
+									ondragover={(evenement) =>
+										survolerLaDestination(
+											evenement,
+											cibleDUnivers(section),
+											`univers:${section.cible?.univers ?? ''}`
+										)}
+									ondrop={(evenement) => deposerLElement(evenement, cibleDUnivers(section))}
 									><svg
 										width="10"
 										height="10"
@@ -940,13 +959,30 @@
 										stroke="currentColor"
 										stroke-width="2"><path d="M6 3l5 5-5 5" /></svg
 									></button
-								>{:else}<span class="noeud__vide"></span>{/if}<a
+								>{:else}<span
+									class="noeud__vide"
+									role="group"
+									ondragover={(evenement) =>
+										survolerLaDestination(
+											evenement,
+											cibleDUnivers(section),
+											`univers:${section.cible?.univers ?? ''}`
+										)}
+									ondrop={(evenement) => deposerLElement(evenement, cibleDUnivers(section))}
+								></span>{/if}<a
 								class="noeud__nom"
 								href={section.cible === null
 									? '#'
 									: resolve(ROUTE_UNIVERS, { univers: section.cible.univers })}
 								aria-current={section.page ? 'page' : undefined}
 								oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDUnivers(section))}
+								ondragover={(evenement) =>
+									survolerLaDestination(
+										evenement,
+										cibleDUnivers(section),
+										`univers:${section.cible?.univers ?? ''}`
+									)}
+								ondrop={(evenement) => deposerLElement(evenement, cibleDUnivers(section))}
 								><span class="noeud__teinte" style="color:{section.couleur}"
 									><Pictogramme
 										traits={glypheDUnivers(section.glyphe)}
