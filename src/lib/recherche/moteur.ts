@@ -80,12 +80,24 @@ export type RegimeDeTache =
 	| 'soumettre';
 
 /**
+ * Le défaut du client est de cinq secondes. Une reconstruction de quelques centaines
+ * de notes le dépasse déjà sur le VPS et faisait échouer l'initialisation alors que la
+ * tâche finissait normalement juste après. L'attente reste bornée, mais à la mesure
+ * d'une commande d'exploitation plutôt que d'une requête interactive.
+ */
+const DELAI_DUNE_TACHE_ATTENDUE_MS = 60_000;
+
+/**
  * Attend la fin d'une tâche du moteur et LÈVE si elle n'a pas réussi. Un échec
  * d'indexation silencieux est le pire des états : l'index paraît alimenté et ne
  * l'est pas, et la recherche rend moins que le corpus sans que rien ne le dise.
  */
-export async function attendre(tache: Promise<unknown> & { waitTask: () => Promise<Task> }) {
-	const finie = await tache.waitTask();
+export async function attendre(
+	tache: Promise<unknown> & {
+		waitTask: (options?: { readonly timeout?: number }) => Promise<Task>;
+	}
+) {
+	const finie = await tache.waitTask({ timeout: DELAI_DUNE_TACHE_ATTENDUE_MS });
 	if (finie.status !== 'succeeded') {
 		throw new Error(
 			`tâche « ${finie.type} » du moteur en état « ${finie.status} » : ` +
