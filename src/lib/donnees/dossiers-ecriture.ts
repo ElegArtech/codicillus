@@ -21,7 +21,16 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
-import { comptes, dossiers, droitsDeDossier, notes } from '../base/schema';
+import {
+	comptes,
+	domaines,
+	dossiers,
+	droitsDeDossier,
+	lotsDImport,
+	modulesDeDomaine,
+	notes,
+	requetesDeDocumentation
+} from '../base/schema';
 import {
 	capacites,
 	chaineDAncetres,
@@ -141,6 +150,26 @@ export function motifDeRefusDeDestination(
 
 	const hauteur = hauteurDuSousArbre(lignes, dossierId);
 	if (destination.profondeur + 1 + hauteur > PROFONDEUR_MAX) return depasseLePlafond(hauteur);
+	return null;
+}
+
+/** Le refus éventuel quand la racine d'un domaine devient un dossier d'un autre domaine. */
+export function motifDeConversionDUnDomaine(
+	lignes: readonly LigneDeDossier[],
+	racineSourceId: string,
+	racineDestinationId: string,
+	nom: string
+): string | null {
+	if (racineSourceId === racineDestinationId) return DEPLACE_DANS_LUI_MEME;
+	const source = lignes.find((d) => d.id === racineSourceId && d.parentId === null);
+	const destination = lignes.find((d) => d.id === racineDestinationId && d.parentId === null);
+	if (source === undefined || destination === undefined) return DESTINATION_MANQUANTE;
+	const hauteur = hauteurDuSousArbre(lignes, source.id);
+	if (destination.profondeur + 1 + hauteur > PROFONDEUR_MAX) return depasseLePlafond(hauteur);
+	const segment = identifiantLisible(nom);
+	if (lignes.some((d) => d.parentId === destination.id && identifiantLisible(d.nom) === segment)) {
+		return nomDejaPris(nom);
+	}
 	return null;
 }
 
@@ -563,6 +592,150 @@ export async function renommerOuDeplacerUnDossier(
 		segments: segmentsAffiches(apres, dossier.id),
 		notes: notesDeplacees.map((n) => n.identifiant)
 	};
+}
+
+export type IssueDeConversionDUnDomaine =
+	| { readonly fait: true; readonly notes: readonly string[] }
+	| { readonly fait: false; readonly message: string };
+
+/**
+ * Convertir un domaine en dossier d'un autre domaine.
+ *
+ * La racine du domaine source devient un dossier ordinaire de la racine de destination :
+ * son identifiant reste stable, de même que ceux de tous ses descendants. Les notes et les
+ * droits suivent donc leur dossier sans être recréés. Le domaine source n'est supprimé qu'à
+ * la fin de la transaction, une fois toutes ses références utiles réaffectées.
+ */
+export async function convertirUnDomaineEnDossier(
+	base: Base,
+	demande: { readonly sourceId: string; readonly destinationId: string }
+): Promise<IssueDeConversionDUnDomaine> {
+	if (demande.sourceId === demande.destinationId) {
+		return { fait: false, message: 'Un domaine ne peut pas être déplacé dans lui-même.' };
+	}
+
+	const domainesTrouves = await base
+		.select({ id: domaines.id, nom: domaines.nom })
+		.from(domaines)
+		.where(inArray(domaines.id, [demande.sourceId, demande.destinationId]));
+	const source = domainesTrouves.find((d) => d.id === demande.sourceId);
+	const destination = domainesTrouves.find((d) => d.id === demande.destinationId);
+	if (source === undefined || destination === undefined) return REFUS_MUET;
+
+	const modulesDeDestination = await base
+		.select({ module: modulesDeDomaine.module })
+		.from(modulesDeDomaine)
+		.where(eq(modulesDeDomaine.domaineId, destination.id));
+	if (!modulesDeDestination.some((m) => m.module === 'dossiers')) {
+		return {
+			fait: false,
+			message: 'Activez le module Dossiers sur le domaine de destination avant ce déplacement.'
+		};
+	}
+
+	const lignes = await base
+		.select({
+			id: dossiers.id,
+			domaineId: dossiers.domaineId,
+			parentId: dossiers.parentId,
+			nom: dossiers.nom,
+			profondeur: dossiers.profondeur,
+			position: dossiers.position
+		})
+		.from(dossiers)
+		.where(inArray(dossiers.domaineId, [source.id, destination.id]));
+	const racineSource = lignes.find((d) => d.domaineId === source.id && d.parentId === null);
+	const racineDestination = lignes.find(
+		(d) => d.domaineId === destination.id && d.parentId === null
+	);
+	if (racineSource === undefined || racineDestination === undefined) return REFUS_MUET;
+
+	const branche = sousArbre(lignes, racineSource.id);
+	const motif = motifDeConversionDUnDomaine(
+		lignes,
+		racineSource.id,
+		racineDestination.id,
+		source.nom
+	);
+	if (motif !== null) return { fait: false, message: motif };
+
+	const notesDeplacees = await base
+		.select({ id: notes.id, identifiant: notes.identifiant, dossierId: notes.dossierId })
+		.from(notes)
+		.where(
+			inArray(
+				notes.dossierId,
+				branche.map((d) => d.id)
+			)
+		);
+	const position = lignes.filter((d) => d.parentId === racineDestination.id).length;
+	const maintenant = new Date();
+
+	await base.transaction(async (tx) => {
+		/* Le rattachement à un domaine est conservé : il suit la destination au lieu
+		   d'être vidé comme lors d'une suppression. Les références de suivi font de même. */
+		await tx
+			.update(comptes)
+			.set({ domaineId: destination.id })
+			.where(eq(comptes.domaineId, source.id));
+		await tx
+			.update(lotsDImport)
+			.set({ domaineId: destination.id })
+			.where(eq(lotsDImport.domaineId, source.id));
+		await tx
+			.update(requetesDeDocumentation)
+			.set({ domaineId: destination.id })
+			.where(eq(requetesDeDocumentation.domaineId, source.id));
+
+		if (notesDeplacees.length > 0) {
+			await tx
+				.update(notes)
+				.set({
+					domaineId: destination.id,
+					dossierId: racineDestination.id,
+					modifieLe: maintenant
+				})
+				.where(
+					inArray(
+						notes.id,
+						notesDeplacees.map((n) => n.id)
+					)
+				);
+		}
+
+		await tx
+			.update(dossiers)
+			.set({
+				domaineId: destination.id,
+				nom: sql`case when ${dossiers.id} = ${racineSource.id} then ${source.nom} else ${dossiers.nom} end`,
+				parentId: sql`case when ${dossiers.id} = ${racineSource.id} then ${racineDestination.id} else ${dossiers.parentId} end`,
+				profondeur: sql`${dossiers.profondeur} + 1`,
+				position: sql`case when ${dossiers.id} = ${racineSource.id} then ${position} else ${dossiers.position} end`,
+				modifieLe: maintenant
+			})
+			.where(
+				inArray(
+					dossiers.id,
+					branche.map((d) => d.id)
+				)
+			);
+
+		for (const dossierDeNote of new Set(notesDeplacees.map((n) => n.dossierId))) {
+			await tx
+				.update(notes)
+				.set({ dossierId: dossierDeNote })
+				.where(
+					inArray(
+						notes.id,
+						notesDeplacees.filter((n) => n.dossierId === dossierDeNote).map((n) => n.id)
+					)
+				);
+		}
+
+		await tx.delete(domaines).where(eq(domaines.id, source.id));
+	});
+
+	return { fait: true, notes: notesDeplacees.map((n) => n.identifiant) };
 }
 
 /**

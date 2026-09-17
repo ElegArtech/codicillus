@@ -502,7 +502,11 @@
 	}
 
 	function peutRecevoir(cible: CibleContextuelle): boolean {
-		return ecriture && (cible.type === 'domaine' || cible.type === 'dossier');
+		if (!ecriture) return false;
+		if (elementDeplace?.type === 'domaine') {
+			return admin && cible.type === 'domaine' && cleDeCible(cible) !== cleDeCible(elementDeplace);
+		}
+		return cible.type === 'domaine' || cible.type === 'dossier';
 	}
 
 	function transfertDeFichiers(evenement: DragEvent): boolean {
@@ -516,7 +520,8 @@
 	function commencerLeDeplacement(evenement: DragEvent, cible: CibleContextuelle): void {
 		const sourceValide =
 			(cible.type === 'note' && cible.identifiant !== null) ||
-			(cible.type === 'dossier' && cible.cible !== null);
+			(cible.type === 'dossier' && cible.cible !== null) ||
+			(cible.type === 'domaine' && admin && cible.cible !== null);
 		if (!ecriture || !sourceValide) {
 			evenement.preventDefault();
 			return;
@@ -590,7 +595,21 @@
 		const formulaire = new FormData();
 		let adresse: string;
 		let sourceEstLaPageCourante = false;
-		if (source.type === 'dossier') {
+		if (source.type === 'domaine') {
+			if (source.cible === null) return;
+			formulaire.set(CHAMP_UNIVERS_CIBLE, source.cible.univers);
+			formulaire.set(CHAMP_DOMAINE_CIBLE, source.cible.domaine);
+			formulaire.set('destination-univers', destination.univers);
+			formulaire.set('destination-domaine', destination.domaine);
+			adresse = `${resolve('/console/domaines')}?/convertirEnDossier`;
+			const adresseSource = resolve(ROUTE_DOMAINE, {
+				univers: source.cible.univers,
+				domaine: source.cible.domaine
+			});
+			sourceEstLaPageCourante =
+				page.url.pathname === adresseSource ||
+				page.url.pathname.startsWith(`${adresseSource}/dossiers/`);
+		} else if (source.type === 'dossier') {
 			formulaire.set('nouveauNom', source.nom);
 			formulaire.set('destination-univers', destination.univers);
 			formulaire.set('destination-domaine', destination.domaine);
@@ -620,13 +639,13 @@
 				body: formulaire
 			});
 			if (!reponse.ok) throw new Error('deplacement refuse');
-			if (sourceEstLaPageCourante && source.type === 'dossier') {
+			if (sourceEstLaPageCourante && source.type !== 'note') {
 				await goto(
 					resolve(ROUTE_DOSSIER, {
 						univers: destination.univers,
 						domaine: destination.domaine,
 						chemin: [
-							...(cible.type === 'dossier' ? destination.chemin : []),
+							...(source.type === 'dossier' && cible.type === 'dossier' ? destination.chemin : []),
 							identifiantLisible(source.nom)
 						].join('/')
 					}),
@@ -637,9 +656,11 @@
 			}
 		} catch {
 			window.alert(
-				source.type === 'dossier'
-					? "Le dossier n'a pas pu être déplacé vers cette destination."
-					: "La note n'a pas pu être déplacée vers ce dossier."
+				source.type === 'domaine'
+					? "Le domaine n'a pas pu être converti en dossier à cette destination."
+					: source.type === 'dossier'
+						? "Le dossier n'a pas pu être déplacé vers cette destination."
+						: "La note n'a pas pu être déplacée vers ce dossier."
 			);
 		} finally {
 			elementDeplace = null;
@@ -778,7 +799,8 @@
 								})
 							: resolve(ROUTE_DOMAINE, { univers: n.cible.univers, domaine: n.cible.domaine })}
 				aria-current={n.page ? 'page' : undefined}
-				draggable={ecriture && (n.type === 'note' || n.type === 'dossier')}
+				draggable={ecriture &&
+					(n.type === 'note' || n.type === 'dossier' || (n.type === 'domaine' && admin))}
 				oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDeNoeud(n))}
 				ondragstart={(evenement) => commencerLeDeplacement(evenement, cibleDeNoeud(n))}
 				ondragend={terminerLeDeplacement}

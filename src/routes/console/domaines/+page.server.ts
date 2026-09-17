@@ -37,10 +37,12 @@ import {
 	resoudreLaConsole
 } from '$lib/donnees/consoles';
 import { moteurPartage } from '$lib/recherche/acces';
+import { entretenirLIndex } from '$lib/recherche/entretien';
 import type { Actions, PageServerLoad } from './$types';
-import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import { lireDomaineParIdentifiants, MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import { CATALOGUE_DE_MODULES } from '$lib/rangement/modules';
 import { env } from '$env/dynamic/private';
+import { convertirUnDomaineEnDossier } from '$lib/donnees/dossiers-ecriture';
 
 /**
  * LE CATALOGUE DES SIX MODULES ACTIVABLES SUR UN DOMAINE — LU, JAMAIS RECOPIÉ.
@@ -88,6 +90,41 @@ function consoleOuverte(locals: App.Locals): void {
 }
 
 export const actions: Actions = {
+	/**
+	 * Le dépôt d'un domaine sur un autre le convertit en dossier enfant. Ce geste est
+	 * réservé à la console parce qu'il retire un domaine de la structure, mais il ne
+	 * détruit pas son corpus : l'écriture transactionnelle déplace toute sa branche.
+	 */
+	convertirEnDossier: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const base = basePartagee();
+		const source = await lireDomaineParIdentifiants(
+			base,
+			String(champs.get(CHAMP_UNIVERS_CIBLE) ?? ''),
+			String(champs.get(CHAMP_DOMAINE_CIBLE) ?? '')
+		);
+		const destination = await lireDomaineParIdentifiants(
+			base,
+			String(champs.get('destination-univers') ?? ''),
+			String(champs.get('destination-domaine') ?? '')
+		);
+		if (source === null || destination === null) error(404, MESSAGE_INTROUVABLE);
+
+		const resultat = await convertirUnDomaineEnDossier(base, {
+			sourceId: source.id,
+			destinationId: destination.id
+		});
+		if (!resultat.fait) {
+			if (resultat.message === '') error(404, MESSAGE_INTROUVABLE);
+			return fail(422, { deplacement: resultat.message });
+		}
+		if (resultat.notes.length > 0) {
+			await entretenirLIndex(base, moteurPartage(), resultat.notes);
+		}
+		return { converti: true };
+	},
+
 	/**
 	 * SUPPRIMER UN DOMAINE ET TOUT SON CONTENU — `RG-M14-02` à `05`.
 	 *
