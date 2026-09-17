@@ -64,7 +64,7 @@ export interface NoeudDeNote {
 
 export interface NoeudDeDossier {
 	readonly nom: string;
-	/** Identité de branche, telle que la maquette la nomme : `f:<domaine>:<segment>…`. */
+	/** Identité de branche : univers, domaine et chemin complet du dossier. */
 	readonly cle: string;
 	readonly enfants: readonly NoeudDeDossier[];
 	/** Les notes rangées DIRECTEMENT dans ce dossier. */
@@ -73,7 +73,7 @@ export interface NoeudDeDossier {
 
 export interface NoeudDeDomaine {
 	readonly nom: string;
-	/** Identité de branche : `d:<domaine>`. */
+	/** Identité de branche : univers et domaine. */
 	readonly cle: string;
 	readonly enfants: readonly NoeudDeDossier[];
 	/** Les notes rangées à la racine du domaine. */
@@ -175,15 +175,18 @@ function brouillonNeuf(): Brouillon {
 
 const parNom = (a: { nom: string }, b: { nom: string }): number => a.nom.localeCompare(b.nom, 'fr');
 
-function figer(niveau: Map<string, Brouillon>, prefixe: string): readonly NoeudDeDossier[] {
+function figer(
+	niveau: Map<string, Brouillon>,
+	chemin: readonly string[]
+): readonly NoeudDeDossier[] {
 	return [...niveau.entries()]
 		.sort(([a], [b]) => a.localeCompare(b, 'fr'))
 		.map(([nom, brouillon]) => {
-			const cle = `${prefixe}:${nom}`;
+			const cheminDuDossier = [...chemin, nom];
 			return {
 				nom,
-				cle,
-				enfants: figer(brouillon.enfants, cle),
+				cle: `f:${JSON.stringify(cheminDuDossier)}`,
+				enfants: figer(brouillon.enfants, cheminDuDossier),
 				notes: [...brouillon.notes].sort(parNom)
 			};
 		});
@@ -241,7 +244,7 @@ export function arbreDuDomaine(
 		niveau.notes.push({ nom: note.titre, cle: `n:${note.id}`, identifiant: note.id });
 	}
 	return {
-		dossiers: figer(racine.enfants, `f:${domaine}`),
+		dossiers: figer(racine.enfants, [univers, domaine]),
 		notes: [...racine.notes].sort(parNom)
 	};
 }
@@ -273,7 +276,7 @@ export function sectionsDuRail(
 			const arbre = arbreDuDomaine(notes, d.nom, u.nom, dossiers);
 			return {
 				nom: d.nom,
-				cle: `d:${d.nom}`,
+				cle: `d:${JSON.stringify([u.nom, d.nom])}`,
 				enfants: arbre.dossiers,
 				notes: arbre.notes,
 				compte: notes.filter((n) => n.univers === u.nom && n.domaine === d.nom).length
@@ -311,11 +314,18 @@ export const AUCUNE_PAGE: PageCourante = {
 	surLUnivers: false
 };
 
+function commencePar(chemin: readonly string[], prefixe: readonly string[]): boolean {
+	return (
+		prefixe.length <= chemin.length && prefixe.every((segment, rang) => chemin[rang] === segment)
+	);
+}
+
 /**
  * Applique à l'arborescence l'état de la page courante et celui d'une branche en
- * chargement. Un nœud dont le nom figure dans le chemin est mis en évidence, le
- * dernier segment porte en plus `aria-current="page"`, et les ancêtres se déplient.
- * Une note est active quand son identifiant est celui de la note ouverte.
+ * chargement. Un nœud est mis en évidence lorsque son chemin complet est un préfixe
+ * de la page dans le même univers ; le chemin exact porte `aria-current="page"` et
+ * ses ancêtres se déplient. Une note est active quand son identifiant est celui de
+ * la note ouverte.
  */
 export function rendreNoeuds(
 	noeuds: readonly (NoeudDeDomaine | NoeudDeDossier)[],
@@ -337,8 +347,6 @@ export function rendreNoeuds(
 	 */
 	designations: DesignationsDeRangement = SANS_DESIGNATION
 ): readonly NoeudRendu[] {
-	const courant = page.chemin;
-	const dernier = courant.length ? courant[courant.length - 1] : null;
 	return noeuds.map((n) => {
 		/* Un nœud de DOMAINE ouvre un domaine ; un nœud de DOSSIER prolonge le
 		   chemin du domaine déjà ouvert. */
@@ -358,7 +366,8 @@ export function rendreNoeuds(
 				rendreNote(note, page, univers, domaineDuNoeud, cheminDuNoeud, designations)
 			)
 		];
-		const estCourant = courant.includes(n.nom);
+		const cheminComplet = [domaineDuNoeud, ...cheminDuNoeud];
+		const estCourant = page.univers === univers && commencePar(page.chemin, cheminComplet);
 		return {
 			nom: n.nom,
 			cle: n.cle,
@@ -387,7 +396,7 @@ export function rendreNoeuds(
 			/* LA LIGNE ACTIVE EST LE DERNIER SEGMENT DU CHEMIN — sauf quand une note
 			   est ouverte : le chemin d'une note est celui de son RANGEMENT, et son
 			   dernier dossier n'est alors pas la page, la note l'est. */
-			page: page.note === null && dernier !== null && n.nom === dernier,
+			page: page.note === null && estCourant && page.chemin.length === cheminComplet.length,
 			chargement: n.cle === brancheEnChargement
 		};
 	});

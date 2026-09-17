@@ -283,14 +283,18 @@
 
 	function notesDirectes(c: readonly string[]): readonly Note[] {
 		const cible = cheminTexte(c);
-		return corpus.filter((n) => n.domaine === DOMAINE && n.dossier === cible);
+		return corpus.filter(
+			(n) => n.univers === UNIVERS_DU_DOMAINE && n.domaine === DOMAINE && n.dossier === cible
+		);
 	}
 
 	function notesRecursives(c: readonly string[]): readonly Note[] {
 		const prefixe = cheminTexte(c);
 		return corpus.filter(
 			(n) =>
-				n.domaine === DOMAINE && (n.dossier === prefixe || n.dossier.startsWith(`${prefixe} ›`))
+				n.univers === UNIVERS_DU_DOMAINE &&
+				n.domaine === DOMAINE &&
+				(n.dossier === prefixe || n.dossier.startsWith(`${prefixe} ›`))
 		);
 	}
 

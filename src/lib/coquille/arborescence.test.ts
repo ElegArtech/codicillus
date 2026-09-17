@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arbreDuDomaine } from './arborescence';
+import { arbreDuDomaine, railRendu, sectionsDuRail } from './arborescence';
 
 describe('arborescence du rail', () => {
 	it('conserve un dossier vide et ses parents', () => {
@@ -51,5 +51,39 @@ describe('arborescence du rail', () => {
 				identifiant: 'procedure-restauration'
 			}
 		]);
+	});
+
+	it('distingue deux dossiers homonymes placés dans deux univers', () => {
+		const sections = sectionsDuRail(
+			[
+				{ nom: 'DPS', couleur: '#123456', glyphe: 'serveur', description: '' },
+				{ nom: 'Support', couleur: '#654321', glyphe: 'serveur', description: '' }
+			],
+			[
+				{ nom: 'Exploitation', univers: 'DPS', couleur: '#123456' },
+				{ nom: 'Communication', univers: 'Support', couleur: '#654321' }
+			],
+			[],
+			[
+				{ univers: 'DPS', domaine: 'Exploitation', chemin: 'Publier' },
+				{ univers: 'Support', domaine: 'Communication', chemin: 'Publier' }
+			]
+		);
+		const rendu = railRendu(
+			sections,
+			{
+				univers: 'DPS',
+				chemin: ['Exploitation', 'Publier'],
+				note: null,
+				surLUnivers: false
+			},
+			null
+		);
+		const dossierDps = rendu[0]?.domaines[0]?.enfants[0];
+		const dossierSupport = rendu[1]?.domaines[0]?.enfants[0];
+
+		expect(dossierDps).toMatchObject({ nom: 'Publier', courant: true, page: true });
+		expect(dossierSupport).toMatchObject({ nom: 'Publier', courant: false, page: false });
+		expect(dossierDps?.cle).not.toBe(dossierSupport?.cle);
 	});
 });

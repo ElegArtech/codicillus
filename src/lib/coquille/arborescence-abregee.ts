@@ -88,11 +88,10 @@ export interface SectionAbregeeRendue {
  */
 
 /**
- * Applique le chemin de la page courante à l'arborescence abrégée, à la propriété
- * près comme le script des 26 maquettes : le nœud homonyme de chaque nom du chemin
- * est mis en évidence, le DERNIER segment porte en plus `aria-current="page"`, et
- * le nœud et TOUS ses ancêtres se déplient. Le libellé du chevron n'est pas touché
- * — d'où `deplie`.
+ * Applique le chemin complet de la page courante à l'arborescence abrégée : chaque
+ * préfixe exact est mis en évidence, le chemin entier porte en plus
+ * `aria-current="page"`, et ses ancêtres se déplient. Le libellé du chevron n'est
+ * pas touché — d'où `deplie`.
  */
 export function rendreNoeudsAbreges(
 	noeuds: readonly NoeudAbrege[],
@@ -103,10 +102,10 @@ export function rendreNoeudsAbreges(
 	/** La table qui traduit un nom en identifiant d'adresse — voir `./arborescence.ts`. */
 	designations: DesignationsDeRangement = SANS_DESIGNATION
 ): readonly NoeudAbregeRendu[] {
-	const dernier = courant.length ? courant[courant.length - 1] : null;
 	return noeuds.map((n) => {
 		const domaineDuNoeud = domaine ?? n.nom;
 		const cheminDuNoeud = domaine === null ? [] : [...chemin, n.nom];
+		const cheminComplet = [domaineDuNoeud, ...cheminDuNoeud];
 		const enfants = rendreNoeudsAbreges(
 			n.enfants,
 			courant,
@@ -115,7 +114,9 @@ export function rendreNoeudsAbreges(
 			cheminDuNoeud,
 			designations
 		);
-		const estCourant = courant.includes(n.nom);
+		const estCourant =
+			cheminComplet.length <= courant.length &&
+			cheminComplet.every((segment, rang) => courant[rang] === segment);
 		return {
 			nom: n.nom,
 			/* LES PARTIES, PAS L'ADRESSE COMPOSÉE. `resolve()` de SvelteKit n'admet
@@ -134,7 +135,7 @@ export function rendreNoeudsAbreges(
 			deplie: n.deplie,
 			ouvert: n.deplie || estCourant || enfants.some((e) => e.ouvert),
 			courant: estCourant,
-			page: dernier !== null && n.nom === dernier
+			page: estCourant && courant.length === cheminComplet.length
 		};
 	});
 }
