@@ -384,6 +384,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .noeud__chevron:hover { color: var(--c-encre); }
 .noeud__chevron svg { transition: transform var(--m-vif); }
 .noeud[data-ouvert="oui"] > .noeud__chevron svg { transform: rotate(90deg); }
+/* Pendant un déplacement, la ligne reçoit le pointeur jusque sous le chevron :
+   la zone réellement déposée reste ainsi identique à la zone surlignée. */
+.rail--deplacement .noeud__chevron,
+.rail--deplacement .noeud__vide { pointer-events: none; }
 /* L'espaceur d'une feuille : la place du chevron, pour que les icônes s'alignent. */
 .noeud__vide { width: 20px; flex: none; }
 
