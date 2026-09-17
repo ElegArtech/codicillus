@@ -49,8 +49,10 @@ import {
 	hauteurDuSousArbre,
 	libelleDOrigine,
 	lireLesDroitsDUnDossier,
+	motifDeConversionDUnDomaine,
 	motifDeRefusDeDestination,
 	niveauDeDroitDepuisLaSaisie,
+	nomDejaPris,
 	origineDUnDroit,
 	retirerUnDroitDeDossier,
 	sousArbre,
@@ -175,6 +177,46 @@ describe('le motif de refus d’une destination — les deux polarités', () => 
 
 	it('refuse une destination inconnue sans prétendre savoir pourquoi', () => {
 		expect(motifDeRefusDeDestination(ARBRE, 'a', 'nulle-part')).toBe(DESTINATION_MANQUANTE);
+	});
+});
+
+describe('la conversion d’un domaine en dossier', () => {
+	const destination: LigneDeDossier = {
+		id: 'racine-destination',
+		parentId: null,
+		domaineId: 'destination',
+		nom: 'Destination',
+		profondeur: 1
+	};
+
+	it('accepte une racine complète sous la racine d’un autre domaine', () => {
+		expect(
+			motifDeConversionDUnDomaine([...ARBRE, destination], 'racine', destination.id, 'Domaine')
+		).toBeNull();
+	});
+
+	it('refuse un dossier frère qui occupe déjà la même adresse', () => {
+		const homonyme = {
+			id: 'homonyme',
+			parentId: destination.id,
+			domaineId: destination.domaineId,
+			nom: 'Dômaine',
+			profondeur: 2
+		} satisfies LigneDeDossier;
+		expect(
+			motifDeConversionDUnDomaine(
+				[...ARBRE, destination, homonyme],
+				'racine',
+				destination.id,
+				'Domaine'
+			)
+		).toBe(nomDejaPris('Domaine'));
+	});
+
+	it('refuse le dépôt d’un domaine sur lui-même', () => {
+		expect(motifDeConversionDUnDomaine(ARBRE, 'racine', 'racine', 'Domaine')).toBe(
+			DEPLACE_DANS_LUI_MEME
+		);
 	});
 });
 
