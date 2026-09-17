@@ -766,11 +766,15 @@
 	<li data-cle={n.cle} data-ouvert={n.ouvert ? 'oui' : 'non'}>
 		<div
 			class="noeud"
+			role="group"
 			class:noeud--courant={n.page}
 			class:noeud--deplace={elementDeplace !== null &&
 				cleDeCible(elementDeplace) === cleDeCible(cibleDeNoeud(n))}
 			class:noeud--depot={cibleDeDepot === n.cle}
 			data-ouvert={n.ouvert ? 'oui' : undefined}
+			ondragover={(evenement) => survolerLaDestination(evenement, cibleDeNoeud(n), n.cle)}
+			ondragleave={(evenement) => quitterLaDestination(evenement, n.cle)}
+			ondrop={(evenement) => deposerLElement(evenement, cibleDeNoeud(n))}
 		>
 			{#if n.enfants.length}<button
 					class="noeud__chevron"
@@ -804,9 +808,6 @@
 				oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDeNoeud(n))}
 				ondragstart={(evenement) => commencerLeDeplacement(evenement, cibleDeNoeud(n))}
 				ondragend={terminerLeDeplacement}
-				ondragover={(evenement) => survolerLaDestination(evenement, cibleDeNoeud(n), n.cle)}
-				ondragleave={(evenement) => quitterLaDestination(evenement, n.cle)}
-				ondrop={(evenement) => deposerLElement(evenement, cibleDeNoeud(n))}
 				><Pictogramme
 					traits={iconeDeNoeud(n.type)}
 					taille="16"
@@ -911,10 +912,20 @@
 					<li data-ouvert={section.ouvert ? 'oui' : 'non'} style="--teinte:{section.couleur}">
 						<div
 							class="noeud noeud--univers"
+							role="group"
 							class:noeud--courant={section.page}
 							class:noeud--branche={section.courant && !section.page}
 							class:noeud--depot={cibleDeDepot === `univers:${section.cible?.univers ?? ''}`}
 							data-ouvert={section.ouvert ? 'oui' : undefined}
+							ondragover={(evenement) =>
+								survolerLaDestination(
+									evenement,
+									cibleDUnivers(section),
+									`univers:${section.cible?.univers ?? ''}`
+								)}
+							ondragleave={(evenement) =>
+								quitterLaDestination(evenement, `univers:${section.cible?.univers ?? ''}`)}
+							ondrop={(evenement) => deposerLElement(evenement, cibleDUnivers(section))}
 						>
 							{#if section.domaines.length}<button
 									class="noeud__chevron"
@@ -936,15 +947,6 @@
 									: resolve(ROUTE_UNIVERS, { univers: section.cible.univers })}
 								aria-current={section.page ? 'page' : undefined}
 								oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDUnivers(section))}
-								ondragover={(evenement) =>
-									survolerLaDestination(
-										evenement,
-										cibleDUnivers(section),
-										`univers:${section.cible?.univers ?? ''}`
-									)}
-								ondragleave={(evenement) =>
-									quitterLaDestination(evenement, `univers:${section.cible?.univers ?? ''}`)}
-								ondrop={(evenement) => deposerLElement(evenement, cibleDUnivers(section))}
 								><span class="noeud__teinte" style="color:{section.couleur}"
 									><Pictogramme
 										traits={glypheDUnivers(section.glyphe)}
