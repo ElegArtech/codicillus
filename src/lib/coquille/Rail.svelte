@@ -19,7 +19,7 @@
 	 * 404 n'est pas émise. « + Créer un univers » mène à la console et n'est donc émise
 	 * qu'à l'administrateur ; « Import » demande de pouvoir écrire quelque part.
 	 */
-	import { getContext, tick } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import { deserialize } from '$app/forms';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { base as racineDesAssets, resolve } from '$app/paths';
@@ -137,6 +137,24 @@
 						designations
 					))
 	);
+	let replie = $state(false);
+	onMount(() => {
+		try {
+			replie = localStorage.getItem('codicillus-rail-replie') === 'oui';
+		} catch {
+			// La navigation reste disponible si le stockage est désactivé.
+		}
+	});
+	function basculerLeRail(): void {
+		replie = !replie;
+		fermerLeMenu();
+		try {
+			localStorage.setItem('codicillus-rail-replie', replie ? 'oui' : 'non');
+		} catch {
+			// Le choix reste valable pour cet écran.
+		}
+	}
+
 	const compteAffiche = $derived(compte ?? identite?.compte ?? COMPTE_VIDE);
 	const recentsAffiches = $derived(recents ?? identite?.recents ?? []);
 
@@ -869,6 +887,7 @@
 
 <aside
 	class="rail"
+	class:rail--replie={replie}
 	class:rail--deplacement={elementDeplace !== null || cibleDeDepot !== null}
 	aria-label="Navigation principale"
 >
@@ -884,7 +903,34 @@
 			stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8" /></svg
 		></button
 	>
-	<a class="rail__marque" href={accueilCourant ? '#' : resolve('/')}>
+	<button
+		class="rail__bascule"
+		type="button"
+		aria-label={replie ? 'Déplier la navigation' : 'Replier la navigation'}
+		title={replie ? 'Déplier la navigation' : 'Replier la navigation'}
+		aria-expanded={!replie}
+		onclick={basculerLeRail}
+	>
+		<svg
+			width="16"
+			height="16"
+			viewBox="0 0 16 16"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="1.5"
+			aria-hidden="true"
+		>
+			<rect x="1.5" y="2" width="13" height="12" rx="2" />
+			<path d="M6 2v12" />
+			<path d={replie ? 'm9 6 2 2-2 2' : 'm11 6-2 2 2 2'} />
+		</svg>
+	</button>
+	<a
+		class="rail__marque"
+		aria-label="Codicillus — Accueil"
+		title="Codicillus — Accueil"
+		href={accueilCourant ? '#' : resolve('/')}
+	>
 		<img class="rail__sceau" src={`${racineDesAssets}/logo.png`} alt="" width="36" height="36" />
 		<span class="rail__identite">
 			<span class="rail__nom">Codicillus</span>
@@ -897,7 +943,13 @@
 		`.recherche` et lui passe le clic ; sans script, il mène à `/recherche`. C'est
 		un LIEN et non un `div[role=button]` : la destination de repli est réelle.
 	-->
-	<a class="recherche" id="ouvrir-recherche" href={resolve('/recherche')}>
+	<a
+		class="recherche"
+		id="ouvrir-recherche"
+		aria-label="Rechercher"
+		title="Rechercher"
+		href={resolve('/recherche')}
+	>
 		<svg
 			width="15"
 			height="15"
@@ -978,6 +1030,8 @@
 								href={section.cible === null
 									? '#'
 									: resolve(ROUTE_UNIVERS, { univers: section.cible.univers })}
+								aria-label={section.nom}
+								title={section.nom}
 								aria-current={section.page ? 'page' : undefined}
 								oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDUnivers(section))}
 								ondragover={(evenement) =>
@@ -1020,7 +1074,7 @@
 	<!-- AUCUN COMPTE, AUCUNE CONSULTATION : PAS DE SECTION. Une zone « Récents »
 	     vide n'apprend rien ; elle n'est simplement pas rendue. -->
 	{#if recentsAffiches.length > 0}
-		<div class="rail__zone">
+		<div class="rail__zone rail__zone--recents">
 			<div class="rail__titre etiq">Récents</div>
 			<ul class="rail__recents">
 				{#each recentsAffiches as note (note.identifiant)}
