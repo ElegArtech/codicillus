@@ -465,12 +465,13 @@
 			class="contexte-replie__ouvrir"
 			type="button"
 			aria-label="Déplier le contexte"
+			title="Déplier le contexte"
 			aria-controls="contexte-note"
 			aria-expanded="false"
 			bind:this={boutonDeplier}
 			onclick={deplierLeContexte}
 		>
-			{@render ic('M6 3l5 5-5 5', 15)}
+			{@render ic('M2 2.5h12v11H2zM10 2.5v11', 16)}
 		</button>
 
 		<!-- ═══════════ Colonne de contexte — tiroir sous 1180 px ═══════════════ -->
@@ -487,12 +488,13 @@
 				class="contexte__replier"
 				type="button"
 				aria-label="Replier le contexte"
+				title="Replier le contexte"
 				aria-controls="contexte-note"
 				aria-expanded="true"
 				bind:this={boutonReplier}
 				onclick={replierLeContexte}
 			>
-				{@render ic('M10 3L5 8l5 5', 15)}
+				{@render ic('M2 2.5h12v11H2zM10 2.5v11', 16)}
 			</button>
 
 			<!-- eslint-disable svelte/no-navigation-without-resolve -- adresses composées par la route -->
