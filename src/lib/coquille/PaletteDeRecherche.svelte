@@ -31,7 +31,7 @@
 	 * `src/socle.css` pour le témoin de fraîcheur.
 	 */
 	import { onMount, tick } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { naviguer } from '$lib/volets/navigation';
 	import { resolve } from '$app/paths';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
 	import { adresseDeNote } from '$lib/rangement/adresses';
@@ -211,7 +211,7 @@
 		const adresse = new URL(resolve('/notes/nouvelle'), window.location.origin);
 		adresse.searchParams.set('titre', requeteServie);
 		fermer();
-		window.location.assign(adresse);
+		void naviguer(adresse.pathname + adresse.search);
 	}
 
 	function effacer(): void {
@@ -237,8 +237,7 @@
 		/* L'adresse vient d'`adresseDeNote()`, la fabrique unique du rangement ; la
 		   règle inspecte l'expression et ne peut pas la suivre jusque-là. La faire
 		   repasser par `resolve()` ajouterait une seconde source de vérité. */
-		// eslint-disable-next-line svelte/no-navigation-without-resolve
-		void goto(adresseDeNote(id));
+		void naviguer(adresseDeNote(id));
 	}
 
 	function surLeClavierDeLaBoite(evenement: KeyboardEvent): void {

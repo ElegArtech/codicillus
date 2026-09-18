@@ -247,6 +247,8 @@ export function cablerLeBrouillonLocal(
 ): BrouillonCable {
 	const document = formulaire.ownerDocument;
 	const fenetre = document.defaultView;
+	const volet = fenetre?.frameElement?.getAttribute('data-volet');
+	const cle = options.cle + (volet ? ':' + volet : '');
 	const stockage = options.stockage ?? stockageDeLaFenetre(fenetre);
 	const maintenant = options.maintenant ?? (() => new Date());
 	const inerte: BrouillonCable = {
@@ -270,7 +272,7 @@ export function cablerLeBrouillonLocal(
 		/* LE GABARIT EST DEMANDÉ À L'ÉCRITURE, JAMAIS RETENU AU CÂBLAGE : le champ qui
 		   le porte est posé par le choix de départ, qui peut être câblé après nous. */
 		const gabarit = options.gabarit?.() ?? '';
-		const ecrit = ecrireLeBrouillon(stockage, options.cle, {
+		const ecrit = ecrireLeBrouillon(stockage, cle, {
 			titre: champTitre?.value ?? '',
 			corps: options.document(),
 			le: le.toISOString(),
@@ -291,7 +293,7 @@ export function cablerLeBrouillonLocal(
 			clearTimeout(minuterie);
 			minuterie = null;
 		}
-		effacerLeBrouillon(stockage, options.cle);
+		effacerLeBrouillon(stockage, cle);
 		retirerUnAvis(formulaire, CLE_D_AVIS);
 	};
 
@@ -314,7 +316,7 @@ export function cablerLeBrouillonLocal(
 	};
 
 	const repris = proposerLaReprise(formulaire, {
-		brouillon: lireLeBrouillon(stockage, options.cle),
+		brouillon: lireLeBrouillon(stockage, cle),
 		enregistreeLe: options.enregistreeLe ?? null,
 		restaurer,
 		vider,

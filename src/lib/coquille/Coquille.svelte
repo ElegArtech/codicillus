@@ -10,6 +10,7 @@
 	 * sous P-1 en entier (ADR-002).
 	 */
 	import type { Snippet } from 'svelte';
+	import { estGlobale } from '$lib/volets/navigation';
 	import type { Domaine, Note, Univers } from '../../../seeds/corpus';
 	import { resolve } from '$app/paths';
 	import { adresseDeNote, adressesParLesNoms } from '$lib/rangement/adresses';
@@ -36,6 +37,7 @@
 	}
 
 	interface Proprietes {
+		menuDeNote?: boolean;
 		/** Le chemin de la page, du premier segment au titre courant. */
 		fil: readonly string[];
 		/** Le chemin de rangement mis en évidence dans le rail, du domaine au dernier dossier. */
@@ -151,6 +153,7 @@
 	}
 
 	const {
+		menuDeNote = false,
 		fil,
 		courant = [],
 		notes,
@@ -428,7 +431,16 @@
 	/>
 
 	<div class="cadre">
-		<BarreSuperieure {fil} cibles={ciblesDuFil} accueil={resolve('/')} actions={actionsDEntete} />
+		<BarreSuperieure
+			{menuDeNote}
+			fractionnementOffert={identite !== undefined &&
+				!estGlobale(page.url.pathname) &&
+				!/\/(modifier|operationnel|nouvelle)$/.test(page.url.pathname)}
+			{fil}
+			cibles={ciblesDuFil}
+			accueil={resolve('/')}
+			actions={actionsDEntete}
+		/>
 
 		{#if classeEnveloppe}<div class={classeEnveloppe}>
 				{#if avantContenu}{@render avantContenu()}{/if}

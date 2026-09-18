@@ -20,6 +20,7 @@
 	   les voit toutes. */
 	import '../diagramme.css';
 	import { onMount, setContext } from 'svelte';
+	import Volets from '$lib/volets/Volets.svelte';
 	import { page } from '$app/state';
 	import PaletteDeRecherche from '$lib/coquille/PaletteDeRecherche.svelte';
 	import { cablerLaCoquille } from '$lib/cablage/coquille';
@@ -227,6 +228,10 @@
 	});
 </script>
 
-{@render children()}
+<Volets
+	session={data.session ?? false}
+	compte={data.compte?.courriel ?? ''}
+	ecriture={data.ecriture ?? false}>{@render children()}</Volets
+>
 
 {#if data.session}<PaletteDeRecherche bind:this={palette} ecriture={data.ecriture} />{/if}
