@@ -314,14 +314,18 @@
   width: 32px; height: 32px; border: 1px solid var(--c-trait);
   border-radius: var(--r-2); background: var(--c-papier); color: var(--c-encre-3);
   cursor: pointer; place-items: center;
-}
-.contexte__replier {
-  display: grid; margin: -12px 0 var(--e-3) auto;
-}
-.contexte-replie__ouvrir {
-  display: none; position: fixed; z-index: 20;
+  position: fixed; z-index: 20;
   top: calc(var(--h-entete) + var(--e-4)); right: var(--e-3);
   box-shadow: var(--o-pose);
+}
+.contexte__replier {
+  display: grid;
+}
+.contexte-replie__ouvrir {
+  display: none;
+}
+@media (min-width: 1180px) {
+  .contexte { padding-top: 60px; }
 }
 .contexte__replier:hover,
 .contexte-replie__ouvrir:hover {
