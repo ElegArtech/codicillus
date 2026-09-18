@@ -903,40 +903,25 @@
 			stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8" /></svg
 		></button
 	>
-	<button
-		class="rail__bascule"
-		type="button"
-		aria-label={replie ? 'Déplier la navigation' : 'Replier la navigation'}
-		title={replie ? 'Déplier la navigation' : 'Replier la navigation'}
-		aria-expanded={!replie}
-		onclick={basculerLeRail}
-	>
-		<svg
-			width="16"
-			height="16"
-			viewBox="0 0 16 16"
-			fill="none"
-			stroke="currentColor"
-			stroke-width="1.5"
-			aria-hidden="true"
+	<div class="rail__marque">
+		<button
+			class="rail__bascule"
+			type="button"
+			aria-label={replie ? 'Déplier la navigation' : 'Replier la navigation'}
+			title={replie ? 'Déplier la navigation' : 'Replier la navigation'}
+			aria-expanded={!replie}
+			onclick={basculerLeRail}
 		>
-			<rect x="1.5" y="2" width="13" height="12" rx="2" />
-			<path d="M6 2v12" />
-			<path d={replie ? 'm9 6 2 2-2 2' : 'm11 6-2 2 2 2'} />
-		</svg>
-	</button>
-	<a
-		class="rail__marque"
-		aria-label="Codicillus — Accueil"
-		title="Codicillus — Accueil"
-		href={accueilCourant ? '#' : resolve('/')}
-	>
-		<img class="rail__sceau" src={`${racineDesAssets}/logo.png`} alt="" width="36" height="36" />
-		<span class="rail__identite">
+			<img class="rail__sceau" src={`${racineDesAssets}/logo.png`} alt="" width="36" height="36" />
+		</button>
+		<a class="rail__accueil-mobile" aria-label="Codicillus — Accueil" href={resolve('/')}>
+			<img class="rail__sceau" src={`${racineDesAssets}/logo.png`} alt="" width="36" height="36" />
+		</a>
+		<a class="rail__identite" href={accueilCourant ? '#' : resolve('/')}>
 			<span class="rail__nom">Codicillus</span>
 			<span class="rail__accroche">Vos connaissances. Vivantes.</span>
-		</span>
-	</a>
+		</a>
+	</div>
 
 	<!--
 		LE CHAMP DE RECHERCHE OUVRE LA PALETTE — `$lib/cablage/coquille.ts` reconnaît
