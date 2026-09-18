@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ActionsDuVolet from '$lib/volets/ActionsDuVolet.svelte';
 	import type { Domaine, Note, Univers } from '../../seeds/corpus';
 	import type { CompteAffiche } from '$lib/coquille/identite';
 	import type { Notification } from '$lib/coquille/notifications';
@@ -214,11 +215,13 @@
 				<div class="menu-barre__sep"></div>
 				<button class="menu-note__danger" type="button">Supprimer</button>
 			{/if}
+			<ActionsDuVolet />
 		</div>
 	</div>
 {/snippet}
 
 <Coquille
+	menuDeNote
 	classeContenu={affichee.sommaire.length === 0 ? 'lecture lecture--sans-sommaire' : 'lecture'}
 	cibleEvitement="article"
 	fil={['Accueil', ...rangement, note.titre]}

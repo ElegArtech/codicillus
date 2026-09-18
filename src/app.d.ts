@@ -42,7 +42,9 @@ declare global {
 		}
 
 		// interface PageData {}
-		// interface PageState {}
+		interface PageState {
+			volets?: import('$lib/volets/navigation').Disposition;
+		}
 		// interface Platform {}
 	}
 }

@@ -1,3 +1,4 @@
+import { naviguer } from '$lib/volets/navigation';
 /**
  * Le câblage de la coquille — la barre supérieure, ses deux menus, sa recherche, le mode
  * concentration, le dépliage du rail et la pile de notifications.
@@ -134,7 +135,9 @@ function retirerLaNotification(bulle: Element): void {
  */
 export function cablerLaCoquille(document: Document, contexte: ContexteDeCoquille): () => void {
 	const cibles = destinations(contexte);
-	const aller = (adresse: string): void => document.location.assign(adresse);
+	const aller = (adresse: string): void => {
+		void naviguer(adresse);
+	};
 
 	/* `P-03` — les entrées sans destination sont RETIRÉES, pas laissées mortes. */
 	const elaguer = (): void => {

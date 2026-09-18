@@ -16,8 +16,11 @@
 	 * mêmes entrées, plus Cartographie, Carte mentale, Signets, Import et Console.
 	 */
 	import type { Snippet } from 'svelte';
+	import ActionsDuVolet from '$lib/volets/ActionsDuVolet.svelte';
 
 	interface Proprietes {
+		menuDeNote?: boolean;
+		fractionnementOffert?: boolean;
 		/** Le chemin de la page, du premier segment au titre courant. */
 		fil: readonly string[];
 		/**
@@ -37,7 +40,14 @@
 		actions?: Snippet | undefined;
 	}
 
-	const { fil, cibles = [], accueil, actions }: Proprietes = $props();
+	const {
+		fil,
+		cibles = [],
+		accueil,
+		actions,
+		menuDeNote = false,
+		fractionnementOffert = false
+	}: Proprietes = $props();
 
 	/**
 	 * LA MAISON REMPLACE LE PREMIER SEGMENT quand il s'appelle « Accueil » : la
@@ -99,5 +109,18 @@
 				>{/if}{/each}
 	</nav>
 
-	{#if actions}<div class="barre__actions">{@render actions()}</div>{/if}
+	<div class="barre__actions">
+		{#if actions}{@render actions()}{/if}
+		{#if fractionnementOffert && !menuDeNote}
+			<div class="menu-barre menu-volet">
+				<button
+					class="btn btn--carre"
+					type="button"
+					aria-label="Actions du volet"
+					aria-expanded="false">⋯</button
+				>
+				<div class="menu-barre__liste menu-barre__liste--droite"><ActionsDuVolet /></div>
+			</div>
+		{/if}
+	</div>
 </header>
