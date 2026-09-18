@@ -1098,17 +1098,17 @@ textarea.saisie { resize: vertical; min-height: 84px; line-height: 1.5; }
 
 /* Navigation réduite : les destinations restent accessibles par leurs icônes. */
 .rail__bascule {
-  display: none; align-items: center; justify-content: center;
-  width: 28px; height: 28px; flex: none;
-  border: 1px solid var(--c-trait); border-radius: var(--r-2);
-  background: var(--c-papier); color: var(--c-encre-3); cursor: pointer;
+  display: none; flex: none; padding: 0; border: 0;
+  border-radius: var(--r-3); background: transparent; cursor: pointer;
 }
-.rail__bascule:hover { background: var(--c-survol); color: var(--c-encre); }
+.rail__bascule:hover { background: var(--c-survol); }
+.rail__identite { text-decoration: none; color: inherit; }
+.rail__accueil-mobile { flex: none; }
 @media (min-width: 1024px) {
-  .rail__bascule { display: flex; align-self: flex-end; margin-bottom: var(--e-2); }
+  .rail__bascule { display: block; }
+  .rail__accueil-mobile { display: none; }
   .app:has(> .rail--replie):not([data-rail="ferme"]) { grid-template-columns: 76px minmax(0, 1fr); }
   .rail--replie { padding-inline: 16px; }
-  .rail--replie .rail__bascule { align-self: center; }
   .rail--replie .rail__marque { justify-content: center; }
   .rail--replie .rail__identite,
   .rail--replie .recherche__txt,
