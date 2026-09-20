@@ -17,6 +17,7 @@
 	 * nomme.
 	 */
 	import { onMount } from 'svelte';
+	import { cablerLesTableursIntegres } from '$lib/fichiers/tableurs-integres';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import type { SubmitFunction } from '@sveltejs/kit';
@@ -98,7 +99,9 @@
 			resoudre: resolveurDuCorpusServi(data.notes),
 			retour: adresse
 		});
+		const defaireTableurs = cablerLesTableursIntegres(formulaire);
 		return () => {
+			defaireTableurs();
 			gestes?.defaire();
 			defaireLesActions();
 			defaireLEditeur();

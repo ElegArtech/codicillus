@@ -148,7 +148,9 @@ describe('le catalogue des formats — STACK §4.6', () => {
 
 	it('écarte ce que la table de STACK ne porte pas', () => {
 		expect(VOIE_PAR_FORMAT.doc).toBe('ecarte');
-		expect(VOIE_PAR_FORMAT.xlsx).toBe('ecarte');
+		expect(VOIE_PAR_FORMAT.xls).toBe('integre');
+		expect(VOIE_PAR_FORMAT.xlsx).toBe('integre');
+		expect(VOIE_PAR_FORMAT.ods).toBe('integre');
 		expect(VOIE_PAR_FORMAT.zip).toBe('ecarte');
 	});
 
@@ -686,7 +688,7 @@ describe('le classement d’un lot — RG-M12-04, et le lot ne s’arrête jamai
 			texte: '# Consignes\n\nDe nuit.',
 			binaire: null
 		},
-		{ chemin: 'Exploitation/Matrice.xlsx', octets: 42, texte: null, binaire: null },
+		{ chemin: 'Exploitation/Ancien.doc', octets: 42, texte: null, binaire: null },
 		{ chemin: 'Exploitation/Restauration.docx', octets: 42, texte: null, binaire: null },
 		{ chemin: 'Exploitation/vide.txt', octets: 0, texte: '', binaire: null },
 		{ chemin: 'Exploitation/archive.rar', octets: 42, texte: null, binaire: null },
@@ -726,7 +728,7 @@ describe('le classement d’un lot — RG-M12-04, et le lot ne s’arrête jamai
 
 	it('donne à chaque écart et à chaque échec son motif', () => {
 		const motifs = new Map(plan.lignes.map((l) => [l.chemin, l.motif]));
-		expect(motifs.get('Exploitation/Matrice.xlsx')).toBe('format-non-converti');
+		expect(motifs.get('Exploitation/Ancien.doc')).toBe('format-non-converti');
 		expect(motifs.get('Exploitation/vide.txt')).toBe('fichier-vide');
 		expect(motifs.get('Exploitation/archive.rar')).toBe('format-inconnu');
 		expect(motifs.get('Exploitation/illisible.md')).toBe('contenu-illisible');
@@ -1303,7 +1305,7 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 					'---\ntitre: Restauration\netiquettes: [barman]\nvoir: [deja-pris, inconnue]\n---\nLe corps.',
 				binaire: null
 			},
-			{ chemin: 'Exploitation/Matrice.xlsx', octets: 42, texte: null, binaire: null },
+			{ chemin: 'Exploitation/Ancien.doc', octets: 42, texte: null, binaire: null },
 			{ chemin: 'Reseau/Adressage.txt', octets: 42, texte: 'Plan.', binaire: null }
 		],
 		SANS_SERVICE
@@ -1471,7 +1473,7 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		expect(rapport.total).toBe(3);
 		expect(rapport.notesCreees).toBe(2);
 		expect(rapport.ignores).toBe(1);
-		expect(rapport.lignes.find((l) => l.chemin.endsWith('.xlsx'))?.motif).toBe(
+		expect(rapport.lignes.find((l) => l.chemin.endsWith('.doc'))?.motif).toBe(
 			'format-non-converti'
 		);
 	});
@@ -1608,5 +1610,44 @@ describe('le recensement des manques', () => {
 			expect(manque.ceQuiManque).not.toBe('');
 			expect(manque.motif).not.toBe('');
 		}
+	});
+});
+
+describe('les tableurs autonomes dans l’arborescence', () => {
+	it.each([
+		['xls', 'application/vnd.ms-excel'],
+		['xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+		['ods', 'application/vnd.oasis.opendocument.spreadsheet']
+	])('importe un %s sans service de conversion ni note préalable', (format, typeMedia) => {
+		const nom = `Budget.${format}`;
+		const lot = classerLeLot(
+			'Tableurs',
+			[
+				{
+					chemin: `Finances/${nom}`,
+					octets: 4,
+					texte: null,
+					binaire: new Uint8Array([0x50, 0x4b, 3, 4])
+				}
+			],
+			SANS_SERVICE
+		);
+		const entree = lot.lignes[0];
+		expect(entree).toMatchObject({
+			sort: 'note',
+			voie: 'integre',
+			titre: 'Budget',
+			segments: ['Finances'],
+			pieceIntegree: { nom, typeMedia },
+			corps: {
+				type: 'doc',
+				content: [
+					{
+						type: 'pieceJointe',
+						attrs: { nom, typeMedia, src: `/notes/budget/pieces-jointes/${nom}` }
+					}
+				]
+			}
+		});
 	});
 });

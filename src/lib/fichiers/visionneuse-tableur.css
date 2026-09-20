@@ -129,3 +129,52 @@ dialog[data-visionneuse].visionneuse--agrandie [data-visionneuse-corps] {
 	left: 0;
 	min-width: 7ch;
 }
+
+.tableur-integre {
+	margin: var(--e-4) 0;
+	border: 1px solid var(--c-trait);
+	border-radius: var(--r-3);
+	overflow: hidden;
+}
+
+.tableur-integre__tete {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--e-2);
+	padding: var(--e-3);
+	border-bottom: 1px solid var(--c-trait);
+}
+
+.tableur-integre__tete strong {
+	flex: 1;
+	overflow-wrap: anywhere;
+}
+
+.tableur-integre__corps {
+	height: 70vh;
+	min-height: calc(var(--h-entete) * 6);
+}
+
+.tableur-integre__dialogue {
+	width: calc(100vw - var(--e-5));
+	max-width: none;
+	max-height: calc(100dvh - var(--e-5));
+	padding: 0;
+	border: 1px solid var(--c-trait-fort);
+	border-radius: var(--r-3);
+	background: var(--c-papier);
+}
+
+.tableur-integre__dialogue::backdrop {
+	background: var(--c-encre);
+	opacity: 0.55;
+}
+
+.tableur-integre__dialogue .tableur-integre {
+	margin: 0;
+}
+
+.tableur-integre__dialogue .tableur-integre__corps {
+	height: calc(100dvh - var(--h-entete) - var(--e-6));
+}

@@ -665,3 +665,28 @@ describe('les noms de chemin — l’arborescence revient exacte, ou elle ne rev
 		);
 	});
 });
+
+describe('les tableurs autonomes dans une archive', () => {
+	it.each([
+		['xls', 'application/vnd.ms-excel'],
+		['xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+		['ods', 'application/vnd.oasis.opendocument.spreadsheet']
+	])('conserve le corps intégré et les octets %s à l’aller-retour', (format, typeMedia) => {
+		const nom = `Budget.${format}`;
+		const cas = note({
+			corpsReference: doc({
+				type: 'pieceJointe',
+				attrs: { src: `/notes/n-cas/pieces-jointes/${nom}`, nom, typeMedia }
+			}),
+			piecesJointes: [
+				{
+					nom,
+					typeMedia,
+					deposeeLe: '2026-09-20T00:00:00.000Z',
+					octets: new Uint8Array([1, 2, 3, 4])
+				}
+			]
+		});
+		expect(reimporterLArchive(exporterLeDomaine(domaineDe([cas])).octets).notes[0]).toEqual(cas);
+	});
+});

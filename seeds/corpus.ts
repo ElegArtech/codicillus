@@ -367,7 +367,9 @@ export type FormatDImport =
 	| 'pdf'
 	| 'md'
 	| 'txt'
+	| 'xls'
 	| 'xlsx'
+	| 'ods'
 	| 'png'
 	| 'jpg'
 	| 'jpeg'
@@ -1913,11 +1915,11 @@ export const LOT_IMPORT: LotDImport = {
 		{ c: 'Exploitation/Sauvegardes/Restauration MariaDB.docx', f: 'docx', o: 96, s: 'note' },
 		{ c: 'Exploitation/Sauvegardes/Purge des sauvegardes.docx', f: 'docx', o: 61, s: 'note' },
 		{
-			c: 'Exploitation/Sauvegardes/Matrice serveurs.xlsx',
-			f: 'xlsx',
+			c: 'Exploitation/Sauvegardes/Anciennes consignes.doc',
+			f: 'doc',
 			o: 42,
 			s: 'ignore',
-			m: "Les tableurs ne sont pas convertis en notes. Déposez-le en pièce jointe d'une note existante."
+			m: 'Ce format ancien n’est pas pris en charge. Enregistrez le fichier en DOCX avant de l’importer.'
 		},
 		{
 			c: 'Exploitation/Sauvegardes/ancien/Restauration PostgreSQL.docx',
@@ -2004,7 +2006,9 @@ export const FORMATS_IMPORT: Partial<Record<FormatDImport, string>> = {
 	pdf: 'PDF',
 	md: 'Markdown',
 	txt: 'Texte brut',
-	xlsx: 'Tableur',
+	xls: 'Tableur Excel (XLS)',
+	xlsx: 'Tableur Excel (XLSX)',
+	ods: 'Tableur OpenDocument (ODS)',
 	png: 'Image',
 	zip: 'Archive'
 };

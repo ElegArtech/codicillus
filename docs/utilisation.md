@@ -59,9 +59,17 @@ sur les mots-clés ; installer un service de modèles ne l'active pas.
 
 ## Importer et exporter
 
-L'import accepte du Markdown et du texte. Le service de conversion ajoute les formats bureautiques
-pris en charge, notamment DOCX, PPTX et PDF. Le résultat d'une conversion dépend de la structure du
-fichier ; vérifier les notes obtenues avant de les considérer comme une référence.
+L'import accepte du Markdown et du texte. Les PDF, images et tableurs XLS, XLSX et ODS peuvent
+être importés directement dans un domaine ou un dossier : chaque fichier apparaît dans
+l'arborescence et s'ouvre dans la zone de lecture, sans devoir le joindre à une note existante.
+L'import d'un dossier conserve leur rangement.
+
+La lecture des tableurs permet de changer de feuille, parcourir les cellules et agrandir la grille.
+Elle affiche les valeurs enregistrées, sans recalcul des formules. Le téléchargement conserve le
+fichier original, avec sa mise en forme et ses graphiques.
+
+Le service de conversion ajoute les formats DOCX et PPTX. Le résultat d'une conversion dépend de
+la structure du fichier ; vérifier les notes obtenues avant de les considérer comme une référence.
 
 L'interface d'import permet de choisir le rangement et de consulter les résultats par fichier.
 Les exports se trouvent dans la console. Un export de contenu facilite un transfert de corpus ;

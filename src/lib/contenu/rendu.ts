@@ -16,6 +16,7 @@
  *  3. LE RENDU GRAPHIQUE D'UN DIAGRAMME est celui de Mermaid, côté client. Le serveur émet
  *     la source et l'alternative textuelle de `P-06` — écart déclaré.
  */
+import { formeDeLecture } from '../fichiers/affichage';
 import { identifiantLisible } from '../rangement/adresses';
 import {
 	analyserDocument,
@@ -375,6 +376,16 @@ function rendreImage(image: Image): string {
  */
 function rendrePieceJointe(bloc: PieceJointeIntegree): string {
 	const { src, nom, typeMedia } = bloc.attrs;
+	if (formeDeLecture(typeMedia, nom) === 'tableur') {
+		return (
+			`<figure class="figure piece-integree tableur-integre" data-tableur-integre>` +
+			`<figcaption class="tableur-integre__tete"><strong>${echapper(nom)}</strong>` +
+			`<button type="button" class="btn btn--discret" data-agrandir-tableur>Agrandir</button>` +
+			`<a class="btn btn--discret" href="${echapper(src)}" download="${echapper(nom)}">Télécharger</a></figcaption>` +
+			`<div class="tableur-integre__corps" data-tableur-adresse="${echapper(src)}">` +
+			`<p class="tableur__message" role="status">Chargement du tableur…</p></div></figure>`
+		);
+	}
 	const secours =
 		`<a class="piece-integree__hors-cadre" href="${echapper(src)}">` +
 		`Ouvrir ${echapper(nom)}</a>`;
