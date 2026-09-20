@@ -223,6 +223,8 @@
 	let erreurDeSuppression = $state<string | null>(null);
 	let elementDeplace = $state<CibleContextuelle | null>(null);
 	let notesSelectionnees = $state<CibleContextuelle[]>([]);
+	let ancreDeSelection = $state<CibleContextuelle | null>(null);
+	let notesDeplacees = $state<CibleContextuelle[]>([]);
 	let cibleDeDepot = $state<string | null>(null);
 	let brancheSurvolee: string | null = null;
 	let ouvertureAuSurvol: ReturnType<typeof setTimeout> | undefined;
@@ -340,6 +342,14 @@
 		);
 	}
 
+	function noteDeplacee(cible: CibleContextuelle): boolean {
+		return (
+			cible.type === 'note' &&
+			cible.identifiant !== null &&
+			notesDeplacees.some((note) => note.identifiant === cible.identifiant)
+		);
+	}
+
 	function memeDossierDeNote(a: CibleContextuelle, b: CibleContextuelle): boolean {
 		return (
 			a.cible !== null &&
@@ -350,26 +360,61 @@
 		);
 	}
 
+	function notesDuMemeDossier(reference: CibleContextuelle): CibleContextuelle[] {
+		const notes: CibleContextuelle[] = [];
+		function visiter(noeuds: readonly NoeudRendu[]): void {
+			for (const noeud of noeuds) {
+				const cible = cibleDeNoeud(noeud);
+				if (cible.type === 'note' && memeDossierDeNote(reference, cible)) notes.push(cible);
+				visiter(noeud.enfants);
+			}
+		}
+		for (const section of arbre) visiter(section.domaines);
+		return notes;
+	}
+
 	function selectionnerLaNote(evenement: MouseEvent, cible: CibleContextuelle): void {
 		if (cible.type !== 'note' || (!evenement.shiftKey && !evenement.ctrlKey && !evenement.metaKey))
 			return;
 		evenement.preventDefault();
 		evenement.stopPropagation();
+		if (evenement.shiftKey) {
+			if (ancreDeSelection === null || !memeDossierDeNote(ancreDeSelection, cible)) {
+				ancreDeSelection = cible;
+				notesSelectionnees = [cible];
+				return;
+			}
+			const notes = notesDuMemeDossier(cible);
+			const debut = notes.findIndex((note) => note.identifiant === ancreDeSelection?.identifiant);
+			const fin = notes.findIndex((note) => note.identifiant === cible.identifiant);
+			if (debut === -1 || fin === -1) {
+				ancreDeSelection = cible;
+				notesSelectionnees = [cible];
+				return;
+			}
+			notesSelectionnees = notes.slice(Math.min(debut, fin), Math.max(debut, fin) + 1);
+			return;
+		}
+
+		const premiere = notesSelectionnees[0];
+		if (premiere !== undefined && !memeDossierDeNote(premiere, cible)) {
+			notesSelectionnees = [cible];
+			ancreDeSelection = cible;
+			return;
+		}
 		if (noteSelectionnee(cible)) {
 			notesSelectionnees = notesSelectionnees.filter(
 				(note) => note.identifiant !== cible.identifiant
 			);
-			return;
+		} else {
+			notesSelectionnees = [...notesSelectionnees, cible];
 		}
-		const premiere = notesSelectionnees[0];
-		notesSelectionnees =
-			premiere === undefined || memeDossierDeNote(premiere, cible)
-				? [...notesSelectionnees, cible]
-				: [cible];
+		ancreDeSelection = cible;
 	}
 
 	function effacerLaSelectionDeNotes(): void {
 		notesSelectionnees = [];
+		ancreDeSelection = null;
 	}
 
 	function renommageDe(cible: CibleContextuelle): boolean {
@@ -618,7 +663,15 @@
 			return;
 		}
 		elementDeplace = cible;
-		if (cible.type === 'note' && !noteSelectionnee(cible)) notesSelectionnees = [cible];
+		if (cible.type === 'note') {
+			if (!noteSelectionnee(cible)) {
+				notesSelectionnees = [cible];
+				ancreDeSelection = cible;
+			}
+			notesDeplacees = noteSelectionnee(cible) ? [...notesSelectionnees] : [cible];
+		} else {
+			notesDeplacees = [];
+		}
 		menuContextuel = null;
 		if (evenement.dataTransfer !== null) {
 			evenement.dataTransfer.effectAllowed = 'move';
@@ -743,15 +796,17 @@
 		}
 
 		if (source.type === 'note') {
-			const lot = noteSelectionnee(source) ? notesSelectionnees : [source];
+			const lot = notesDeplacees.length > 0 ? [...notesDeplacees] : [source];
 			try {
 				for (const note of lot) await deplacerUneNote(note, destination, cible);
 				notesSelectionnees = [];
+				ancreDeSelection = null;
 				await invalidateAll();
 			} catch (erreur) {
 				window.alert(erreur instanceof Error ? erreur.message : 'Le déplacement a échoué.');
 			} finally {
 				elementDeplace = null;
+				notesDeplacees = [];
 			}
 			return;
 		}
@@ -939,6 +994,7 @@
 	function terminerLeDeplacement(): void {
 		annulerLOuverture();
 		elementDeplace = null;
+		notesDeplacees = [];
 		cibleDeDepot = null;
 	}
 
@@ -966,7 +1022,8 @@
 			class:noeud--courant={n.page}
 			class:noeud--selectionne={noteSelectionnee(cibleDeNoeud(n))}
 			class:noeud--deplace={elementDeplace !== null &&
-				cleDeCible(elementDeplace) === cleDeCible(cibleDeNoeud(n))}
+				(cleDeCible(elementDeplace) === cleDeCible(cibleDeNoeud(n)) ||
+					noteDeplacee(cibleDeNoeud(n)))}
 			class:noeud--depot={cibleDeDepot === n.cle}
 			data-ouvert={n.ouvert ? 'oui' : undefined}
 			ondragover={(evenement) => survolerLaDestination(evenement, cibleDeNoeud(n), n.cle)}
