@@ -62,72 +62,112 @@ dialog[data-visionneuse].visionneuse--agrandie [data-visionneuse-corps] {
 	min-height: 0;
 }
 
-.tableur__commandes,
-.tableur__pagination,
-.tableur__pagination label {
+.tableur__selection {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: var(--e-2);
-}
-
-.tableur__commandes {
-	flex-wrap: wrap;
-	justify-content: space-between;
 	padding: var(--e-2) var(--e-3);
+	font-size: var(--t-petit);
 }
 
-.tableur__pagination input {
-	width: 10ch;
-	min-height: var(--h-enfant);
-	padding: var(--e-1);
-	border: 1px solid var(--c-trait-fort);
+.tableur__selection span {
+	flex: 0 0 auto;
+	padding-top: var(--e-1);
+	color: var(--c-encre-3);
+}
+
+.tableur__selection textarea {
+	flex: 1;
+	min-width: 0;
+	max-height: 30vh;
+	resize: vertical;
+	padding: var(--e-1) var(--e-2);
+	border: 1px solid var(--c-trait);
 	border-radius: var(--r-2);
 	background: var(--c-papier);
+	font-family: var(--f-donnee);
+	font-size: var(--t-petit);
+	line-height: var(--i-ui);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
 }
 
 .tableur__defilement {
+	--tableur-hauteur-ligne: var(--h-univers);
+	--tableur-largeur-colonne: var(--l-sommaire);
+	--tableur-largeur-numero: var(--e-8);
 	flex: 1;
 	min-height: 0;
 	overflow: auto;
+	overflow-anchor: none;
 	border-top: 1px solid var(--c-trait);
 }
 
-.tableur__grille {
+.tableur .tableur__grille {
+	table-layout: fixed;
 	border-collapse: separate;
 	border-spacing: 0;
-	min-width: 100%;
+	margin: 0;
+	max-width: none;
 	font-family: var(--f-donnee);
 	font-size: var(--t-petit);
 }
 
-.tableur__grille th,
-.tableur__grille td {
-	padding: var(--e-2) var(--e-3);
+.tableur .tableur__grille th,
+.tableur .tableur__grille td {
+	height: var(--tableur-hauteur-ligne);
+	padding: 0;
 	border-right: 1px solid var(--c-trait);
 	border-bottom: 1px solid var(--c-trait);
 	text-align: left;
-	vertical-align: top;
-	white-space: pre-wrap;
-	overflow-wrap: anywhere;
-	min-width: 12ch;
-	max-width: 60ch;
+	vertical-align: middle;
+	white-space: nowrap;
 }
 
-.tableur__grille th {
+.tableur__valeur {
+	display: block;
+	height: calc(var(--tableur-hauteur-ligne) - 1px);
+	line-height: calc(var(--tableur-hauteur-ligne) - 1px);
+	padding: 0 var(--e-3);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: pre;
+	cursor: cell;
+}
+
+.tableur .tableur__grille [aria-selected='true'] {
+	background: var(--c-accent-voile);
+	box-shadow: inset 0 0 0 2px var(--c-accent);
+}
+
+.tableur .tableur__grille th {
 	position: sticky;
+	padding: 0 var(--e-2);
 	background: var(--c-papier-2);
 	color: var(--c-encre-3);
 	font-weight: var(--g-moyen);
+	line-height: var(--i-serre);
 }
 
-.tableur__grille thead th {
+.tableur .tableur__grille thead th {
 	top: 0;
-	z-index: 1;
+	z-index: 3;
 }
 
-.tableur__grille tbody th {
+.tableur .tableur__grille tbody th {
 	left: 0;
-	min-width: 7ch;
+	z-index: 2;
+}
+
+.tableur .tableur__grille .tableur__coin {
+	left: 0;
+	z-index: 4;
+}
+
+.tableur .tableur__grille .tableur__espace {
+	height: 0;
+	padding: 0;
+	border: 0;
 }
 
 .tableur-integre {

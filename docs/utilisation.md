@@ -64,7 +64,8 @@ L'import accepte du Markdown et du texte. Les PDF, images et tableurs XLS, XLSX 
 l'arborescence et s'ouvre dans la zone de lecture, sans devoir le joindre à une note existante.
 L'import d'un dossier conserve leur rangement.
 
-La lecture des tableurs permet de changer de feuille, parcourir les cellules et agrandir la grille.
+La lecture des tableurs permet de changer de feuille, parcourir toutes les lignes et colonnes par
+défilement continu et agrandir la grille. Sélectionner une cellule permet de lire sa valeur complète.
 Elle affiche les valeurs enregistrées, sans recalcul des formules. Le téléchargement conserve le
 fichier original, avec sa mise en forme et ses graphiques.
 
