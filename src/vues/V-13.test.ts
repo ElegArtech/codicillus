@@ -123,6 +123,13 @@ describe('V-13 — la propriété servie décide', () => {
 		expect(html).toContain("modifiée aujourd'hui");
 	});
 
+	it('rend les lignes de note sélectionnables sans remplacer leur adresse', async () => {
+		const html = await rendu({});
+		expect(html).toContain('class="note-ligne"');
+		expect(html).toContain('href="/notes/');
+		expect(html).toContain('data-selectionnee=');
+	});
+
 	/**
 	 * L'ORIGINE DU DROIT — celle que la route résout, et rien d'autre. Le gel fige
 	 * « — hérité du domaine Infrastructure », et cette tournure était le REPLI de
