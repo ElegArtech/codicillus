@@ -42,11 +42,24 @@ function monterLeTableur(figure: HTMLElement): () => void {
 	const agrandir = figure.querySelector<HTMLButtonElement>('[data-agrandir-tableur]');
 	let boite: HTMLDialogElement | null = null;
 	let emplacement: Comment | null = null;
+	let position = { haut: 0, gauche: 0 };
+	function memoriserPosition(): void {
+		const grille = figure.querySelector<HTMLElement>('.tableur__defilement');
+		if (grille) position = { haut: grille.scrollTop, gauche: grille.scrollLeft };
+	}
+	function restaurerPosition(): void {
+		const grille = figure.querySelector<HTMLElement>('.tableur__defilement');
+		if (!grille) return;
+		grille.scrollTop = position.haut;
+		grille.scrollLeft = position.gauche;
+		grille.dispatchEvent(new Event('scroll'));
+	}
 	function reduire(): void {
 		emplacement?.replaceWith(figure);
 		emplacement = null;
 		boite?.remove();
 		boite = null;
+		restaurerPosition();
 		if (agrandir) {
 			agrandir.textContent = 'Agrandir';
 			agrandir.setAttribute('aria-expanded', 'false');
@@ -54,6 +67,7 @@ function monterLeTableur(figure: HTMLElement): () => void {
 		}
 	}
 	function basculer(): void {
+		memoriserPosition();
 		if (boite) {
 			boite.close();
 			return;
@@ -64,6 +78,7 @@ function monterLeTableur(figure: HTMLElement): () => void {
 		boite.className = 'tableur-integre__dialogue';
 		boite.setAttribute('aria-label', figure.querySelector('strong')?.textContent ?? 'Tableur');
 		boite.addEventListener('close', reduire, { once: true });
+		boite.addEventListener('cancel', memoriserPosition, { once: true });
 		boite.append(figure);
 		doc.body.append(boite);
 		if (agrandir) {
@@ -71,6 +86,7 @@ function monterLeTableur(figure: HTMLElement): () => void {
 			agrandir.setAttribute('aria-expanded', 'true');
 		}
 		boite.showModal();
+		restaurerPosition();
 	}
 	agrandir?.setAttribute('aria-expanded', 'false');
 	agrandir?.addEventListener('click', basculer);
