@@ -25,7 +25,12 @@
 	import { base as racineDesAssets, resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Pictogramme from '$lib/console/Pictogramme.svelte';
-	import { CHAMP_DOMAINE_CIBLE, CHAMP_NOM, CHAMP_UNIVERS_CIBLE } from '$lib/console/structure';
+	import {
+		CHAMP_DOMAINE_CIBLE,
+		CHAMP_NOM,
+		CHAMP_UNIVERS_CIBLE,
+		CHAMP_UNIVERS_DE_RATTACHEMENT
+	} from '$lib/console/structure';
 	import { identifiantLisible } from '$lib/rangement/adresses';
 	import { accord } from '$lib/vocabulaire';
 	import { cheminDuFichier, fichiersDuTransfert } from '$lib/cablage/depot-de-fichiers';
@@ -158,7 +163,7 @@
 	const compteAffiche = $derived(compte ?? identite?.compte ?? COMPTE_VIDE);
 	const recentsAffiches = $derived(recents ?? identite?.recents ?? []);
 
-	const ecriture = $derived(droits !== 'lecture');
+	const ecriture = $derived(role === 'admin' || droits !== 'lecture');
 	const admin = $derived(role === 'admin');
 
 	/**
@@ -218,6 +223,14 @@
 	let erreurDeSuppression = $state<string | null>(null);
 	let elementDeplace = $state<CibleContextuelle | null>(null);
 	let cibleDeDepot = $state<string | null>(null);
+	let brancheSurvolee: string | null = null;
+	let ouvertureAuSurvol: ReturnType<typeof setTimeout> | undefined;
+	function annulerLOuverture(): void {
+		clearTimeout(ouvertureAuSurvol);
+		ouvertureAuSurvol = undefined;
+		brancheSurvolee = null;
+	}
+	onMount(() => () => annulerLOuverture());
 	let importEnCours = $state(false);
 	let renommage = $state<{
 		cible: CibleContextuelle;
@@ -520,11 +533,30 @@
 	}
 
 	function peutRecevoir(cible: CibleContextuelle): boolean {
-		if (!ecriture) return false;
-		if (elementDeplace?.type === 'domaine') {
-			return admin && cible.type === 'domaine' && cleDeCible(cible) !== cleDeCible(elementDeplace);
+		if (!ecriture || cible.cible === null) return false;
+		const source = elementDeplace;
+		if (source === null) return cible.type === 'domaine' || cible.type === 'dossier';
+		const memeDomaine =
+			source.cible?.univers === cible.cible.univers &&
+			source.cible?.domaine === cible.cible.domaine;
+		if (source.type === 'domaine') {
+			return (
+				admin &&
+				(cible.type === 'univers'
+					? source.cible?.univers !== cible.cible.univers
+					: (cible.type === 'domaine' || cible.type === 'dossier') && !memeDomaine)
+			);
 		}
-		return cible.type === 'domaine' || cible.type === 'dossier';
+		if (cible.type === 'univers') return admin && source.type === 'dossier';
+		if (cible.type !== 'domaine' && cible.type !== 'dossier') return false;
+		if (
+			source.type === 'dossier' &&
+			memeDomaine &&
+			source.cible !== null &&
+			source.cible.chemin.every((segment, i) => cible.cible?.chemin[i] === segment)
+		)
+			return false;
+		return true;
 	}
 
 	function transfertDeFichiers(evenement: DragEvent): boolean {
@@ -557,11 +589,30 @@
 		cible: CibleContextuelle,
 		cle: string
 	): void {
-		const externe = elementDeplace === null && transfertDeFichiers(evenement);
-		if (externe ? !peutRecevoirUnDepot(cible) : elementDeplace === null || !peutRecevoir(cible))
-			return;
-		evenement.preventDefault();
 		evenement.stopPropagation();
+		const externe = elementDeplace === null && transfertDeFichiers(evenement);
+		if (elementDeplace === null && !externe) return;
+		const ligne = (evenement.currentTarget as Element).closest('.noeud');
+		const rail = ligne?.closest<HTMLElement>('.rail');
+		if (rail !== null && rail !== undefined) {
+			const limites = rail.getBoundingClientRect();
+			if (evenement.clientY < limites.top + 60) rail.scrollTop -= 24;
+			if (evenement.clientY > limites.bottom - 60) rail.scrollTop += 24;
+		}
+		if (brancheSurvolee !== cle) {
+			annulerLOuverture();
+			brancheSurvolee = cle;
+			const chevron = ligne?.querySelector<HTMLButtonElement>('.noeud__chevron');
+			if (chevron?.getAttribute('aria-expanded') === 'false') {
+				ouvertureAuSurvol = setTimeout(() => chevron.click(), 650);
+			}
+		}
+		if (externe ? !peutRecevoirUnDepot(cible) : !peutRecevoir(cible)) {
+			cibleDeDepot = null;
+			if (evenement.dataTransfer !== null) evenement.dataTransfer.dropEffect = 'none';
+			return;
+		}
+		evenement.preventDefault();
 		cibleDeDepot = cle;
 		if (evenement.dataTransfer !== null)
 			evenement.dataTransfer.dropEffect = externe ? 'copy' : 'move';
@@ -569,10 +620,11 @@
 
 	function quitterLaDestination(evenement: DragEvent, cle: string): void {
 		if (
-			cibleDeDepot === cle &&
+			(cibleDeDepot === cle || brancheSurvolee === cle) &&
 			(!(evenement.relatedTarget instanceof Node) ||
 				!(evenement.currentTarget as Element).contains(evenement.relatedTarget))
 		) {
+			annulerLOuverture();
 			cibleDeDepot = null;
 		}
 	}
@@ -585,6 +637,8 @@
 	}
 
 	async function deposerLElement(evenement: DragEvent, cible: CibleContextuelle): Promise<void> {
+		annulerLOuverture();
+		evenement.stopPropagation();
 		if (elementDeplace === null && transfertDeFichiers(evenement)) {
 			evenement.stopPropagation();
 			await importerLeDepot(evenement, cible);
@@ -598,12 +652,15 @@
 		cibleDeDepot = null;
 		if (destination === null) return;
 
-		const memeDomaine = source.cible?.domaine === destination.domaine;
+		const memeDomaine =
+			source.cible?.univers === destination.univers &&
+			source.cible?.domaine === destination.domaine;
 		const origine = source.cible?.dossierAffiche.join(' › ') ?? '';
 		const destinationAffichee =
 			cible.type === 'domaine' ? '' : destination.dossierAffiche.join(' › ');
 		const parentDeLaSource = source.cible?.dossierAffiche.slice(0, -1).join(' › ') ?? '';
 		if (
+			source.type !== 'domaine' &&
 			memeDomaine &&
 			(source.type === 'note'
 				? origine === destinationAffichee
@@ -615,21 +672,25 @@
 
 		const formulaire = new FormData();
 		let adresse: string;
-		let sourceEstLaPageCourante = false;
+		let adresseSource: string | null = null;
+		let adresseDestination: string | null = null;
 		if (source.type === 'domaine') {
 			if (source.cible === null) return;
 			formulaire.set(CHAMP_UNIVERS_CIBLE, source.cible.univers);
 			formulaire.set(CHAMP_DOMAINE_CIBLE, source.cible.domaine);
 			formulaire.set('destination-univers', destination.univers);
 			formulaire.set('destination-domaine', destination.domaine);
-			adresse = `${resolve('/console/domaines')}?/convertirEnDossier`;
-			const adresseSource = resolve(ROUTE_DOMAINE, {
+			formulaire.set('destination-chemin', destination.chemin.join('/'));
+			if (cible.type === 'univers') {
+				formulaire.set(CHAMP_UNIVERS_DE_RATTACHEMENT, destination.univers);
+				adresse = `${resolve('/console/domaines')}?/enregistrer`;
+			} else {
+				adresse = `${resolve('/console/domaines')}?/convertirEnDossier`;
+			}
+			adresseSource = resolve(ROUTE_DOMAINE, {
 				univers: source.cible.univers,
 				domaine: source.cible.domaine
 			});
-			sourceEstLaPageCourante =
-				page.url.pathname === adresseSource ||
-				page.url.pathname.startsWith(`${adresseSource}/dossiers/`);
 		} else if (source.type === 'dossier') {
 			formulaire.set('nouveauNom', source.nom);
 			formulaire.set('destination-univers', destination.univers);
@@ -639,14 +700,18 @@
 				cible.type === 'dossier' ? destination.chemin.join('/') : ''
 			);
 			adresse = adresseDeRenommage(source);
-			sourceEstLaPageCourante =
-				source.cible !== null &&
-				page.url.pathname ===
-					resolve(ROUTE_DOSSIER, {
-						univers: source.cible.univers,
-						domaine: source.cible.domaine,
-						chemin: source.cible.chemin.join('/')
-					});
+			if (cible.type === 'univers' && source.cible !== null) {
+				formulaire.set(CHAMP_UNIVERS_CIBLE, source.cible.univers);
+				formulaire.set(CHAMP_DOMAINE_CIBLE, source.cible.domaine);
+				formulaire.set('source-chemin', source.cible.chemin.join('/'));
+				adresse = `${resolve('/console/domaines')}?/convertirEnDomaine`;
+			}
+			if (source.cible !== null)
+				adresseSource = resolve(ROUTE_DOSSIER, {
+					univers: source.cible.univers,
+					domaine: source.cible.domaine,
+					chemin: source.cible.chemin.join('/')
+				});
 		} else {
 			if (source.identifiant === null) return;
 			formulaire.set('univers', destination.univers);
@@ -657,32 +722,60 @@
 		try {
 			const reponse = await fetch(adresse, {
 				method: 'POST',
+				headers: { accept: 'application/json', 'x-sveltekit-action': 'true' },
 				body: formulaire
 			});
-			if (!reponse.ok) throw new Error('deplacement refuse');
-			if (sourceEstLaPageCourante && source.type !== 'note') {
-				await goto(
-					resolve(ROUTE_DOSSIER, {
-						univers: destination.univers,
-						domaine: destination.domaine,
-						chemin: [
-							...(source.type === 'dossier' && cible.type === 'dossier' ? destination.chemin : []),
-							identifiantLisible(source.nom)
-						].join('/')
-					}),
-					{ invalidateAll: true }
-				);
+			const resultat = deserialize(await reponse.text());
+			if (resultat.type === 'failure' || resultat.type === 'error') {
+				const donnees = resultat.type === 'failure' ? resultat.data : null;
+				const erreurs = donnees?.erreurs;
+				const premiere = Array.isArray(erreurs) ? erreurs[0] : undefined;
+				const message =
+					donnees?.deplacement ??
+					donnees?.motif ??
+					(premiere && typeof premiere === 'object' && 'message' in premiere
+						? premiere.message
+						: undefined);
+				throw new Error(typeof message === 'string' ? message : 'Ce déplacement a été refusé.');
+			}
+			if (cible.type === 'univers') {
+				const donnees = resultat.type === 'success' ? resultat.data : undefined;
+				adresseDestination = resolve(ROUTE_DOMAINE, {
+					univers: destination.univers,
+					domaine:
+						typeof donnees?.identifiant === 'string'
+							? donnees.identifiant
+							: (source.cible?.domaine ?? '')
+				});
+			} else if (source.type !== 'note') {
+				adresseDestination = resolve(ROUTE_DOSSIER, {
+					univers: destination.univers,
+					domaine: destination.domaine,
+					chemin: [...destination.chemin, identifiantLisible(source.nom)].join('/')
+				});
+			}
+			if (
+				adresseSource !== null &&
+				adresseDestination !== null &&
+				(page.url.pathname === adresseSource || page.url.pathname.startsWith(`${adresseSource}/`))
+			) {
+				let suite = page.url.pathname.slice(adresseSource.length);
+				if (source.type === 'dossier' && cible.type === 'univers' && suite !== '')
+					suite = `/dossiers${suite}`;
+				if (source.type === 'domaine' && cible.type !== 'univers') {
+					suite = suite.startsWith('/dossiers/') ? suite.slice('/dossiers'.length) : '';
+					if (suite === `/${identifiantLisible(source.nom)}`) suite = '';
+				}
+				// Les deux adresses sont produites par resolve ci-dessus.
+				// eslint-disable-next-line svelte/no-navigation-without-resolve
+				await goto(`${adresseDestination}${suite}${page.url.search}${page.url.hash}`, {
+					invalidateAll: true
+				});
 			} else {
 				await invalidateAll();
 			}
-		} catch {
-			window.alert(
-				source.type === 'domaine'
-					? "Le domaine n'a pas pu être converti en dossier à cette destination."
-					: source.type === 'dossier'
-						? "Le dossier n'a pas pu être déplacé vers cette destination."
-						: "La note n'a pas pu être déplacée vers ce dossier."
-			);
+		} catch (erreur) {
+			window.alert(erreur instanceof Error ? erreur.message : 'Le déplacement a échoué.');
 		} finally {
 			elementDeplace = null;
 		}
@@ -763,6 +856,7 @@
 	}
 
 	function terminerLeDeplacement(): void {
+		annulerLOuverture();
 		elementDeplace = null;
 		cibleDeDepot = null;
 	}
@@ -1016,6 +1110,7 @@
 									? '#'
 									: resolve(ROUTE_UNIVERS, { univers: section.cible.univers })}
 								aria-label={section.nom}
+								draggable={false}
 								title={section.nom}
 								aria-current={section.page ? 'page' : undefined}
 								oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDUnivers(section))}

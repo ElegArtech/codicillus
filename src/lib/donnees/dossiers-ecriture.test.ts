@@ -195,6 +195,31 @@ describe('la conversion d’un domaine en dossier', () => {
 		).toBeNull();
 	});
 
+	it('accepte une branche sous un dossier d’un autre domaine', () => {
+		const enfant = { ...destination, id: 'enfant', parentId: destination.id, profondeur: 2 };
+		expect(
+			motifDeConversionDUnDomaine(
+				[...ARBRE.filter((d) => !d.id.startsWith('p')), destination, enfant],
+				'racine',
+				enfant.id,
+				'Domaine'
+			)
+		).toBeNull();
+	});
+
+	it('refuse un descendant du domaine source', () => {
+		expect(motifDeConversionDUnDomaine(ARBRE, 'racine', 'a', 'Domaine')).toBe(
+			DESTINATION_INTERIEURE
+		);
+	});
+
+	it('compte la profondeur de la destination et toute la branche déplacée', () => {
+		const profond = { ...destination, id: 'profond', parentId: destination.id, profondeur: 9 };
+		expect(
+			motifDeConversionDUnDomaine([...ARBRE, destination, profond], 'racine', profond.id, 'Domaine')
+		).toBe(depasseLePlafond(8));
+	});
+
 	it('refuse un dossier frère qui occupe déjà la même adresse', () => {
 		const homonyme = {
 			id: 'homonyme',
