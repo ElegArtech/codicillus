@@ -17,6 +17,7 @@
 	 * SANS JAVASCRIPT, CET ÉCRAN NE DÉPOSE PAS — `ARB-063` §4.
 	 */
 	import { deserialize } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import Vue from '../../vues/V-24.svelte';
@@ -200,7 +201,10 @@
 		const issue = await envoyer('importer', fichiers, reglages);
 		if ('refus' in issue) return issue;
 		const rapport = issue.valeur['rapport'] as RapportDeLot | undefined;
-		return rapport === undefined ? { refus: REFUS_SANS_MOTIF } : { valeur: rapport };
+		if (rapport === undefined) return { refus: REFUS_SANS_MOTIF };
+		// Le fetch manuel ne recharge pas les données du rail après les écritures.
+		if (!rapport.simulation && !rapport.refuseEnBloc) await invalidateAll();
+		return { valeur: rapport };
 	}
 
 	/**
