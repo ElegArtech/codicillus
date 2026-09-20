@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { Domaine, IdentifiantNote, NomDeDomaine, Note, Univers } from '../../seeds/corpus';
 	import { barresFraicheur, classeTemoin, libelleFraicheur } from '$lib/fraicheur';
-	import { SvelteSet } from 'svelte/reactivity';
 	import Coquille from '$lib/coquille/Coquille.svelte';
 	import { COMPTE_VIDE } from '$lib/coquille/compte-vide';
 	import { designationsDeCoquille, type CompteAffiche } from '$lib/coquille/identite';
@@ -351,44 +350,6 @@
 		);
 	});
 
-	/* La liste reste une navigation au clic simple, mais ses gestes avec modificateur
-	   sont ceux d'une liste de fichiers : Maj étend une plage, Ctrl/Cmd ajoute ou
-	   retire une note. Sans cette interception, le navigateur donne à Maj + clic sa
-	   sémantique de lien — ouvrir une nouvelle fenêtre — et aucune sélection n'existe. */
-	const notesSelectionnees = new SvelteSet<IdentifiantNote>();
-	let ancreDeSelection = $state<IdentifiantNote | null>(null);
-	const nombreDeNotesSelectionnees = $derived(notesSelectionnees.size);
-	const ordreDesNotes = $derived(groupes.flatMap(([, liste]) => liste.map((n) => n.id)));
-
-	function selectionnerLaNote(evenement: MouseEvent, identifiant: IdentifiantNote): void {
-		if (!evenement.shiftKey && !evenement.ctrlKey && !evenement.metaKey) return;
-		evenement.preventDefault();
-
-		const suivante = new SvelteSet(notesSelectionnees);
-		if (evenement.shiftKey && ancreDeSelection !== null) {
-			const debut = ordreDesNotes.indexOf(ancreDeSelection);
-			const fin = ordreDesNotes.indexOf(identifiant);
-			if (debut !== -1 && fin !== -1) {
-				const premier = Math.min(debut, fin);
-				const dernier = Math.max(debut, fin);
-				for (const id of ordreDesNotes.slice(premier, dernier + 1)) suivante.add(id);
-			}
-		} else if (suivante.has(identifiant)) {
-			suivante.delete(identifiant);
-		} else {
-			suivante.add(identifiant);
-		}
-
-		notesSelectionnees.clear();
-		for (const id of suivante) notesSelectionnees.add(id);
-		ancreDeSelection = identifiant;
-	}
-
-	function effacerLaSelection(): void {
-		notesSelectionnees.clear();
-		ancreDeSelection = null;
-	}
-
 	/* Le témoin de fraîcheur vient de `$lib/fraicheur` et de nulle part ailleurs
 	   (ADR-005) : classe, nombre de barres et libellé en sortent tous les trois. */
 
@@ -698,20 +659,10 @@
 		<section class="bloc" id="bloc-notes" hidden={!notesDuDossier.length}>
 			<div class="section-titre">
 				<h2>Notes de ce dossier</h2>
-				<div class="section-titre__fin">
-					{#if nombreDeNotesSelectionnees > 0}<span class="selection-notes" role="status"
-							>{nombreDeNotesSelectionnees}
-							{accord(
-								nombreDeNotesSelectionnees,
-								'note sélectionnée',
-								'notes sélectionnées'
-							)}<button type="button" onclick={effacerLaSelection}>Effacer la sélection</button
-							></span
-						>{/if}<span class="etiq" id="n-notes"
-						>{#if notesDuDossier.length}{notesDuDossier.length}
-							{accord(notesDuDossier.length, 'note')}{/if}</span
-					>
-				</div>
+				<span class="etiq" id="n-notes"
+					>{#if notesDuDossier.length}{notesDuDossier.length}
+						{accord(notesDuDossier.length, 'note')}{/if}</span
+				>
 			</div>
 			<div id="groupes">
 				{#each groupes as [type, liste] (type)}
@@ -720,11 +671,7 @@
 							<h3 class="groupe__nom">{liste.length > 1 ? plurielDeType(type) : type}</h3>
 							<span class="groupe__n">{liste.length}</span>
 						</div>
-						{#each liste as n (n.id)}<a
-								class="note-ligne"
-								href={adresseDeNote(n.id)}
-								data-selectionnee={notesSelectionnees.has(n.id) ? 'oui' : 'non'}
-								onclick={(evenement) => selectionnerLaNote(evenement, n.id)}
+						{#each liste as n (n.id)}<a class="note-ligne" href={adresseDeNote(n.id)}
 								><span class="note-ligne__corps"
 									><span class="note-ligne__titre"
 										>{n.titre}{#if n.brouillon}<span class="past past--brouillon">Brouillon</span
