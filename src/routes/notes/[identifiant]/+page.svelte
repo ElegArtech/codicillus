@@ -24,6 +24,7 @@
 	import '../../../vues/V-14.css';
 	import { cablerLaSuppression } from '$lib/cablage/formulaires';
 	import { formeDeLecture, type FormeDeLecture } from '$lib/fichiers/affichage';
+	import '$lib/fichiers/visionneuse-tableur.css';
 	import { cablerLaLecture, cablerLaLoupe } from './cablage';
 	import Dialogues from '../../../vues/V-40.svelte';
 	import '../../../vues/V-40.css';
@@ -131,6 +132,7 @@
 		return () => {
 			defaireSuppression();
 			defairePieces();
+			fermerLaVisionneuse(formulaire.ownerDocument);
 			defaireRelation();
 			defaireLecture();
 			defaireLoupe();
@@ -150,27 +152,24 @@
 
 	/* ═══════════════════════════════ La visionneuse ═════════════════════════ */
 
-	/**
-	 * LIRE UNE PIÈCE SANS QUITTER LA NOTE.
-	 *
-	 * Le lien du panneau menait aux octets, et le navigateur en faisait ce que
-	 * `content-disposition` lui disait : un téléchargement. Une image et un PDF
-	 * n'ont pas besoin de sortir pour être lus — tout navigateur les rend —, et les
-	 * faire sortir COUPE LA LECTURE : le fichier s'ouvre ailleurs, la note qui le
-	 * portait n'est plus à l'écran, et le contexte qui justifiait la pièce est
-	 * perdu. Les deux familles s'ouvrent donc EN PLACE, dans une boîte modale
-	 * au-dessus de la note ; tout le reste garde le lien nu, qui télécharge.
-	 *
-	 * `formeDeLecture()` DÉCIDE, ET C'EST LE MÊME PRÉDICAT QUE LE SERVEUR emploie
-	 * pour sa disposition (`P-01`) : une pièce que la boîte afficherait et que la
-	 * route servirait en `attachment` déclencherait un téléchargement depuis le
-	 * cadre, laissant la boîte vide sans la moindre erreur.
-	 *
-	 * LA BOÎTE VIT SUR LE `document`, JAMAIS DANS LE FORMULAIRE : l'article de la
-	 * note est enveloppé d'un `<form action="?/supprimer">` (`RG-M04-10`), et tout
-	 * bouton qui y naîtrait partirait en suppression.
-	 */
+	/** La boîte vit hors du formulaire de suppression ; les tableurs sont lus localement. */
 	const MARQUE_DE_LA_BOITE = 'visionneuse';
+	let lectureDeTableur: AbortController | null = null;
+
+	function viderLaVisionneuse(boite: HTMLDialogElement): void {
+		lectureDeTableur?.abort();
+		lectureDeTableur = null;
+		boite.querySelector('[data-visionneuse-corps]')?.replaceChildren();
+	}
+
+	function fermerLaVisionneuse(doc: Document): void {
+		const boite = doc.querySelector<HTMLDialogElement>('dialog[data-visionneuse]');
+		if (boite === null) return;
+		viderLaVisionneuse(boite);
+		boite.close();
+		boite.remove();
+		doc.querySelector('[data-visionneuse-voile]')?.remove();
+	}
 
 	interface PieceLisible {
 		readonly nom: string;
@@ -202,6 +201,7 @@
 			'max-height:94vh;overflow:hidden';
 
 		const tete = doc.createElement('div');
+		tete.dataset['visionneuseTete'] = 'oui';
 		tete.style.cssText =
 			'display:flex;align-items:center;gap:var(--e-3);padding:var(--e-3);' +
 			'border-bottom:1px solid var(--c-trait);font-family:var(--f-ui)';
@@ -223,7 +223,24 @@
 		fermer.append('Fermer');
 		fermer.addEventListener('click', () => boite.close());
 
-		tete.append(titre, emporter, fermer);
+		const agrandir = doc.createElement('button');
+		agrandir.type = 'button';
+		agrandir.className = 'btn btn--discret';
+		agrandir.textContent = 'Agrandir';
+		agrandir.setAttribute('aria-pressed', 'false');
+		agrandir.addEventListener('click', () => {
+			const grand = boite.classList.toggle('visionneuse--agrandie');
+			agrandir.textContent = grand ? 'Réduire' : 'Agrandir';
+			agrandir.setAttribute('aria-pressed', String(grand));
+		});
+		boite.addEventListener('close', () => {
+			viderLaVisionneuse(boite);
+			boite.classList.remove('visionneuse--agrandie');
+			agrandir.textContent = 'Agrandir';
+			agrandir.setAttribute('aria-pressed', 'false');
+		});
+		boite.addEventListener('cancel', () => viderLaVisionneuse(boite));
+		tete.append(titre, agrandir, emporter, fermer);
 
 		const corps = doc.createElement('div');
 		corps.dataset[MARQUE_DE_LA_BOITE + 'Corps'] = 'oui';
@@ -250,7 +267,7 @@
 		}
 		const corps = boite.querySelector<HTMLElement>(`[data-${MARQUE_DE_LA_BOITE}-corps]`);
 		if (corps === null) return;
-		corps.replaceChildren();
+		viderLaVisionneuse(boite);
 
 		if (piece.forme === 'image') {
 			const vue = doc.createElement('img');
@@ -258,6 +275,25 @@
 			vue.alt = piece.nom;
 			vue.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain';
 			corps.append(vue);
+		} else if (piece.forme === 'tableur') {
+			const chargement = doc.createElement('p');
+			chargement.className = 'tableur__message';
+			chargement.setAttribute('role', 'status');
+			chargement.textContent = 'Chargement du tableur…';
+			corps.append(chargement);
+			const controle = new AbortController();
+			lectureDeTableur = controle;
+			void import('$lib/fichiers/visionneuse-tableur')
+				.then(({ afficherLeTableur }) => {
+					if (!controle.signal.aborted)
+						return afficherLeTableur(corps, piece.adresse, controle.signal);
+				})
+				.catch(() => {
+					if (controle.signal.aborted) return;
+					chargement.setAttribute('role', 'alert');
+					chargement.textContent =
+						'La visionneuse n’a pas pu être chargée. Téléchargez l’original pour l’ouvrir dans votre tableur.';
+				});
 		} else {
 			/* UN CADRE, ET NON UN `<embed>` : le cadre porte un titre accessible et
 			   se recharge proprement d'une ouverture à l'autre. Le rendu est celui
@@ -342,7 +378,7 @@
 			   L'adresse reste posée dans les deux cas : sans script, le lien mène
 			   toujours aux octets, et le clic interrompu ne l'est que par ce
 			   câblage-ci. */
-			const forme = formeDeLecture(piece.typeMedia);
+			const forme = formeDeLecture(piece.typeMedia, piece.nom);
 			if (forme !== null) {
 				const lire = (evenement: MouseEvent): void => {
 					evenement.preventDefault();

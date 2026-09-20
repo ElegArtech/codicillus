@@ -1,0 +1,131 @@
+dialog[data-visionneuse].visionneuse--agrandie {
+	max-width: calc(100vw - var(--e-4)) !important;
+	width: calc(100vw - var(--e-4)) !important;
+	max-height: calc(100dvh - var(--e-4)) !important;
+}
+
+dialog[data-visionneuse] [data-visionneuse-tete] {
+	flex-wrap: wrap;
+}
+
+dialog[data-visionneuse].visionneuse--agrandie [data-visionneuse-corps] {
+	height: calc(100dvh - var(--h-entete) - var(--e-6)) !important;
+}
+
+.tableur {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	min-height: 0;
+	background: var(--c-papier);
+	font-family: var(--f-ui);
+	font-size: var(--t-petit);
+}
+
+.tableur__information,
+.tableur__plage {
+	margin: 0;
+	padding: var(--e-2) var(--e-3);
+	color: var(--c-encre-3);
+}
+
+.tableur__message {
+	padding: var(--e-5);
+	color: var(--c-encre-2);
+}
+
+.tableur__onglets {
+	display: flex;
+	flex-shrink: 0;
+	gap: var(--e-1);
+	padding: var(--e-2) var(--e-3);
+	overflow-x: auto;
+	border-bottom: 1px solid var(--c-trait);
+}
+
+.tableur__onglets button {
+	flex-shrink: 0;
+}
+
+.tableur__onglets [aria-selected='true'] {
+	background: var(--c-accent-voile);
+	color: var(--c-accent);
+	border-color: var(--c-accent-trait);
+}
+
+.tableur__feuille {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.tableur__commandes,
+.tableur__pagination,
+.tableur__pagination label {
+	display: flex;
+	align-items: center;
+	gap: var(--e-2);
+}
+
+.tableur__commandes {
+	flex-wrap: wrap;
+	justify-content: space-between;
+	padding: var(--e-2) var(--e-3);
+}
+
+.tableur__pagination input {
+	width: 10ch;
+	min-height: var(--h-enfant);
+	padding: var(--e-1);
+	border: 1px solid var(--c-trait-fort);
+	border-radius: var(--r-2);
+	background: var(--c-papier);
+}
+
+.tableur__defilement {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+	border-top: 1px solid var(--c-trait);
+}
+
+.tableur__grille {
+	border-collapse: separate;
+	border-spacing: 0;
+	min-width: 100%;
+	font-family: var(--f-donnee);
+	font-size: var(--t-petit);
+}
+
+.tableur__grille th,
+.tableur__grille td {
+	padding: var(--e-2) var(--e-3);
+	border-right: 1px solid var(--c-trait);
+	border-bottom: 1px solid var(--c-trait);
+	text-align: left;
+	vertical-align: top;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	min-width: 12ch;
+	max-width: 60ch;
+}
+
+.tableur__grille th {
+	position: sticky;
+	background: var(--c-papier-2);
+	color: var(--c-encre-3);
+	font-weight: var(--g-moyen);
+}
+
+.tableur__grille thead th {
+	top: 0;
+	z-index: 1;
+}
+
+.tableur__grille tbody th {
+	left: 0;
+	min-width: 7ch;
+}
