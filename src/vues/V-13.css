@@ -403,6 +403,10 @@
 }
 .note-ligne:last-child { border-bottom: 0; }
 .note-ligne:hover { background: var(--c-papier); box-shadow: var(--o-pose); }
+.note-ligne[data-selectionnee="oui"] {
+  background: var(--c-accent-voile); box-shadow: inset 3px 0 0 var(--c-accent);
+}
+.note-ligne[data-selectionnee="oui"] .note-ligne__titre { color: var(--c-accent-fonce); }
 .note-ligne__corps { flex: 1; min-width: 0; }
 .note-ligne__titre {
   display: flex; align-items: baseline; gap: var(--e-2); flex-wrap: wrap;
@@ -414,6 +418,16 @@
   font-size: var(--t-mini); color: var(--c-encre-3); margin-top: 3px;
 }
 .note-ligne__sous .sep { color: var(--c-trait-fort); }
+.section-titre__fin { display: flex; align-items: center; gap: var(--e-3); margin-left: auto; }
+.selection-notes {
+  display: inline-flex; align-items: center; gap: var(--e-2);
+  font-size: var(--t-mini); color: var(--c-encre-2);
+}
+.selection-notes button {
+  border: 0; background: none; padding: 0; color: var(--c-accent-fonce);
+  font: inherit; font-weight: var(--g-fort); cursor: pointer; text-decoration: underline;
+}
+.selection-notes button:hover { color: var(--c-accent); }
 
 .section-titre {
   display: flex; align-items: baseline; justify-content: space-between; gap: var(--e-4);
