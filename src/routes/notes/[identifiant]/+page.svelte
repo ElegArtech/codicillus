@@ -25,6 +25,7 @@
 	import { cablerLaSuppression } from '$lib/cablage/formulaires';
 	import { formeDeLecture, type FormeDeLecture } from '$lib/fichiers/affichage';
 	import '$lib/fichiers/visionneuse-tableur.css';
+	import { cablerLesTableursIntegres } from '$lib/fichiers/tableurs-integres';
 	import { cablerLaLecture, cablerLaLoupe } from './cablage';
 	import Dialogues from '../../../vues/V-40.svelte';
 	import '../../../vues/V-40.css';
@@ -129,6 +130,7 @@
 			ecriture: data.vecteur.droits === 'ecriture'
 		});
 		const defaireLoupe = cablerLaLoupe(formulaire.ownerDocument);
+		const defaireTableurs = cablerLesTableursIntegres(formulaire);
 		return () => {
 			defaireSuppression();
 			defairePieces();
@@ -136,6 +138,7 @@
 			defaireRelation();
 			defaireLecture();
 			defaireLoupe();
+			defaireTableurs();
 		};
 	});
 

@@ -246,3 +246,30 @@ describe('le rendu du registre Opérationnel du gel', () => {
 		expect(html).not.toContain('checked');
 	});
 });
+
+describe('le tableur intégré ouvre sa grille dans le corps', () => {
+	it.each([
+		['Budget.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+		['Budget.xls', 'application/vnd.ms-excel'],
+		['Budget.ods', 'application/vnd.oasis.opendocument.spreadsheet'],
+		['Budget.xlsx', 'application/octet-stream']
+	])('rend %s sans cadre déclenchant un téléchargement', (nom, typeMedia) => {
+		const html = rendreDocument(
+			{
+				type: 'doc',
+				content: [
+					{
+						type: 'pieceJointe',
+						attrs: { nom, typeMedia, src: `/notes/budget/pieces-jointes/${nom}` }
+					}
+				]
+			},
+			INTERNE
+		);
+		expect(html).toContain('data-tableur-integre');
+		expect(html).toContain(`data-tableur-adresse="/notes/budget/pieces-jointes/${nom}"`);
+		expect(html).toContain('data-agrandir-tableur');
+		expect(html).toContain('Télécharger');
+		expect(html).not.toContain('<iframe');
+	});
+});

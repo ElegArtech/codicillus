@@ -345,7 +345,7 @@
 		/* Deux fragments s'accordent avec le compte qui les précède. */
 		recusDepuis: (n: number): string => ` ${accord(n, 'reçu')} depuis `,
 		bilanAvecErreurs: "L'import est allé jusqu'au bout : ",
-		bilanSansErreur: 'Tous les fichiers retenus ont été convertis. ',
+		bilanSansErreur: 'Tous les fichiers retenus ont été importés. ',
 		ecartesALApercu: (n: number): string =>
 			` ${accord(n, 'avait été écarté', 'avaient été écartés')} à l\u2019aperçu, comme annoncé.`
 	};
@@ -813,7 +813,7 @@
 		if (scenarioChoisi === SCENARIO_DE_RACINE)
 			return `${dossier} sera traité comme la racine de l’application. Chacun de ses dossiers directs deviendra un univers ou complétera l’univers existant du même nom. Les fichiers placés directement à la racine seront ignorés.`;
 		if (scenarioChoisi === SCENARIO_D_UNIVERS)
-			return `${dossier} deviendra un univers. Ses dossiers directs deviendront des domaines. Ses fichiers Markdown placés à la racine seront rangés automatiquement dans un domaine portant le même nom que l’univers.`;
+			return `${dossier} deviendra un univers. Ses dossiers directs deviendront des domaines. Ses fichiers placés à la racine seront rangés automatiquement dans un domaine portant le même nom que l’univers.`;
 		if (!destinationValide)
 			return 'Choisissez la destination pour voir exactement ce qui sera créé.';
 		if (scenarioChoisi === SCENARIO_LIVRE && destination !== null)
@@ -1066,6 +1066,11 @@
 							onchange={surChoixDeFichiers}
 						/>{/if}
 				</div>
+
+				<p class="sous">
+					Formats pris en charge : Markdown, texte, DOCX, PPTX, PDF, images et tableurs XLS, XLSX,
+					ODS. Les tableurs sont consultables directement depuis l’arborescence.
+				</p>
 
 				<div class="reglages-depot">
 					{#if typeChoisi === 'note'}

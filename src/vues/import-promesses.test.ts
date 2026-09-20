@@ -382,11 +382,11 @@ const LOT_NU: LotDImport = {
 		{ c: 'Recrutement/Offres/Poste ouvert.docx', f: 'docx', o: 21, s: 'note' },
 		{ c: 'Recrutement/Offres/Diffusion.md', f: 'md', o: 4, s: 'note' },
 		{
-			c: 'Recrutement/Barème.xlsx',
-			f: 'xlsx',
+			c: 'Recrutement/Ancien.doc',
+			f: 'doc',
 			o: 33,
 			s: 'ignore',
-			m: 'Un tableur reste un tableur.'
+			m: 'Ce format ancien n’est pas pris en charge.'
 		},
 		{ c: 'Formation/Catalogue.pdf', f: 'pdf', o: 240, s: 'note' },
 		{ c: 'Formation/Sessions/Planning.txt', f: 'txt', o: 6, s: 'note' },

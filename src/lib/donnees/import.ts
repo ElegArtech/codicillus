@@ -90,7 +90,9 @@ export const VOIE_PAR_FORMAT: Readonly<Record<FormatDImport, VoieDeTraitement>> 
 	webp: 'integre',
 	gif: 'integre',
 	doc: 'ecarte',
-	xlsx: 'ecarte',
+	xls: 'integre',
+	xlsx: 'integre',
+	ods: 'integre',
 	zip: 'ecarte'
 };
 
@@ -101,6 +103,9 @@ export const VOIE_PAR_FORMAT: Readonly<Record<FormatDImport, VoieDeTraitement>> 
  */
 export const TYPE_MEDIA_PAR_FORMAT: Readonly<Partial<Record<FormatDImport, string>>> = {
 	pdf: 'application/pdf',
+	xls: 'application/vnd.ms-excel',
+	xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+	ods: 'application/vnd.oasis.opendocument.spreadsheet',
 	png: 'image/png',
 	jpg: 'image/jpeg',
 	jpeg: 'image/jpeg',
@@ -146,7 +151,9 @@ export const LIBELLE_PAR_FORMAT: Readonly<Record<FormatDImport, string>> = {
 	pdf: 'PDF',
 	md: 'Markdown',
 	txt: 'Texte brut',
-	xlsx: 'Tableur',
+	xls: 'Tableur Excel (XLS)',
+	xlsx: 'Tableur Excel (XLSX)',
+	ods: 'Tableur OpenDocument (ODS)',
 	png: 'Image',
 	jpg: 'Image',
 	jpeg: 'Image',
