@@ -222,6 +222,7 @@
 	let suppressionEnCours = $state(false);
 	let erreurDeSuppression = $state<string | null>(null);
 	let elementDeplace = $state<CibleContextuelle | null>(null);
+	let notesSelectionnees = $state<CibleContextuelle[]>([]);
 	let cibleDeDepot = $state<string | null>(null);
 	let brancheSurvolee: string | null = null;
 	let ouvertureAuSurvol: ReturnType<typeof setTimeout> | undefined;
@@ -329,6 +330,46 @@
 	function cleDeCible(cible: CibleContextuelle): string {
 		if (cible.type === 'note') return `note:${cible.identifiant ?? ''}`;
 		return `${cible.type}:${cible.cible?.univers ?? ''}:${cible.cible?.domaine ?? ''}:${cible.cible?.chemin.join('/') ?? ''}`;
+	}
+
+	function noteSelectionnee(cible: CibleContextuelle): boolean {
+		return (
+			cible.type === 'note' &&
+			cible.identifiant !== null &&
+			notesSelectionnees.some((note) => note.identifiant === cible.identifiant)
+		);
+	}
+
+	function memeDossierDeNote(a: CibleContextuelle, b: CibleContextuelle): boolean {
+		return (
+			a.cible !== null &&
+			b.cible !== null &&
+			a.cible.univers === b.cible.univers &&
+			a.cible.domaine === b.cible.domaine &&
+			a.cible.dossierAffiche.join(' › ') === b.cible.dossierAffiche.join(' › ')
+		);
+	}
+
+	function selectionnerLaNote(evenement: MouseEvent, cible: CibleContextuelle): void {
+		if (cible.type !== 'note' || (!evenement.shiftKey && !evenement.ctrlKey && !evenement.metaKey))
+			return;
+		evenement.preventDefault();
+		evenement.stopPropagation();
+		if (noteSelectionnee(cible)) {
+			notesSelectionnees = notesSelectionnees.filter(
+				(note) => note.identifiant !== cible.identifiant
+			);
+			return;
+		}
+		const premiere = notesSelectionnees[0];
+		notesSelectionnees =
+			premiere === undefined || memeDossierDeNote(premiere, cible)
+				? [...notesSelectionnees, cible]
+				: [cible];
+	}
+
+	function effacerLaSelectionDeNotes(): void {
+		notesSelectionnees = [];
 	}
 
 	function renommageDe(cible: CibleContextuelle): boolean {
@@ -577,6 +618,7 @@
 			return;
 		}
 		elementDeplace = cible;
+		if (cible.type === 'note' && !noteSelectionnee(cible)) notesSelectionnees = [cible];
 		menuContextuel = null;
 		if (evenement.dataTransfer !== null) {
 			evenement.dataTransfer.effectAllowed = 'move';
@@ -636,6 +678,36 @@
 			: cible.cible.dossierAffiche.join(' › ');
 	}
 
+	async function deplacerUneNote(
+		source: CibleContextuelle,
+		destination: NonNullable<CibleContextuelle['cible']>,
+		cible: CibleContextuelle
+	): Promise<void> {
+		if (source.identifiant === null) return;
+		const formulaire = new FormData();
+		formulaire.set('univers', destination.univers);
+		formulaire.set('domaine', destination.domaineAffiche);
+		formulaire.set('dossier', dossierDeDestination(cible));
+		const reponse = await fetch(`${adresseDeNote(source)}/modifier`, {
+			method: 'POST',
+			headers: { accept: 'application/json', 'x-sveltekit-action': 'true' },
+			body: formulaire
+		});
+		const resultat = deserialize(await reponse.text());
+		if (resultat.type === 'failure' || resultat.type === 'error') {
+			const donnees = resultat.type === 'failure' ? resultat.data : null;
+			const erreurs = donnees?.erreurs;
+			const premiere = Array.isArray(erreurs) ? erreurs[0] : undefined;
+			const message =
+				donnees?.deplacement ??
+				donnees?.motif ??
+				(premiere && typeof premiere === 'object' && 'message' in premiere
+					? premiere.message
+					: undefined);
+			throw new Error(typeof message === 'string' ? message : 'Ce déplacement a été refusé.');
+		}
+	}
+
 	async function deposerLElement(evenement: DragEvent, cible: CibleContextuelle): Promise<void> {
 		annulerLOuverture();
 		evenement.stopPropagation();
@@ -670,10 +742,24 @@
 			return;
 		}
 
+		if (source.type === 'note') {
+			const lot = noteSelectionnee(source) ? notesSelectionnees : [source];
+			try {
+				for (const note of lot) await deplacerUneNote(note, destination, cible);
+				notesSelectionnees = [];
+				await invalidateAll();
+			} catch (erreur) {
+				window.alert(erreur instanceof Error ? erreur.message : 'Le déplacement a échoué.');
+			} finally {
+				elementDeplace = null;
+			}
+			return;
+		}
+
 		const formulaire = new FormData();
 		let adresse: string;
 		let adresseSource: string | null = null;
-		let adresseDestination: string | null = null;
+		let adresseDestination: string;
 		if (source.type === 'domaine') {
 			if (source.cible === null) return;
 			formulaire.set(CHAMP_UNIVERS_CIBLE, source.cible.univers);
@@ -713,11 +799,7 @@
 					chemin: source.cible.chemin.join('/')
 				});
 		} else {
-			if (source.identifiant === null) return;
-			formulaire.set('univers', destination.univers);
-			formulaire.set('domaine', destination.domaineAffiche);
-			formulaire.set('dossier', dossierDeDestination(cible));
-			adresse = `${adresseDeNote(source)}/modifier`;
+			return;
 		}
 		try {
 			const reponse = await fetch(adresse, {
@@ -747,7 +829,7 @@
 							? donnees.identifiant
 							: (source.cible?.domaine ?? '')
 				});
-			} else if (source.type !== 'note') {
+			} else {
 				adresseDestination = resolve(ROUTE_DOSSIER, {
 					univers: destination.univers,
 					domaine: destination.domaine,
@@ -756,7 +838,6 @@
 			}
 			if (
 				adresseSource !== null &&
-				adresseDestination !== null &&
 				(page.url.pathname === adresseSource || page.url.pathname.startsWith(`${adresseSource}/`))
 			) {
 				let suite = page.url.pathname.slice(adresseSource.length);
@@ -883,6 +964,7 @@
 			class="noeud"
 			role="group"
 			class:noeud--courant={n.page}
+			class:noeud--selectionne={noteSelectionnee(cibleDeNoeud(n))}
 			class:noeud--deplace={elementDeplace !== null &&
 				cleDeCible(elementDeplace) === cleDeCible(cibleDeNoeud(n))}
 			class:noeud--depot={cibleDeDepot === n.cle}
@@ -927,6 +1009,7 @@
 				aria-current={n.page ? 'page' : undefined}
 				draggable={ecriture &&
 					(n.type === 'note' || n.type === 'dossier' || (n.type === 'domaine' && admin))}
+				onclick={(evenement) => selectionnerLaNote(evenement, cibleDeNoeud(n))}
 				oncontextmenu={(evenement) => ouvrirLeMenu(evenement, cibleDeNoeud(n))}
 				ondragstart={(evenement) => commencerLeDeplacement(evenement, cibleDeNoeud(n))}
 				ondragend={terminerLeDeplacement}
@@ -1043,6 +1126,13 @@
 
 	<div class="rail__zone">
 		<div class="rail__titre etiq">Univers</div>
+		{#if notesSelectionnees.length > 0}<div class="rail__selection" role="status">
+				<span
+					>{notesSelectionnees.length}
+					{accord(notesSelectionnees.length, 'note sélectionnée', 'notes sélectionnées')}</span
+				>
+				<button type="button" onclick={effacerLaSelectionDeNotes}>Effacer</button>
+			</div>{/if}
 		{#if arbre.length === 0}
 			<!-- LE VIDE NE SE DIT PAS PAREIL SELON QUI LE LIT : cette phrase envoyait
 			     l'administrateur qui vient d'installer « demander à un administrateur »,
