@@ -29,7 +29,8 @@ import {
 	lotsDImport,
 	modulesDeDomaine,
 	notes,
-	requetesDeDocumentation
+	requetesDeDocumentation,
+	univers
 } from '../base/schema';
 import {
 	capacites,
@@ -162,7 +163,9 @@ export function motifDeConversionDUnDomaine(
 ): string | null {
 	if (racineSourceId === racineDestinationId) return DEPLACE_DANS_LUI_MEME;
 	const source = lignes.find((d) => d.id === racineSourceId && d.parentId === null);
-	const destination = lignes.find((d) => d.id === racineDestinationId && d.parentId === null);
+	const destination = lignes.find((d) => d.id === racineDestinationId);
+	if (source !== undefined && destination?.domaineId === source.domaineId)
+		return DESTINATION_INTERIEURE;
 	if (source === undefined || destination === undefined) return DESTINATION_MANQUANTE;
 	const hauteur = hauteurDuSousArbre(lignes, source.id);
 	if (destination.profondeur + 1 + hauteur > PROFONDEUR_MAX) return depasseLePlafond(hauteur);
@@ -608,7 +611,11 @@ export type IssueDeConversionDUnDomaine =
  */
 export async function convertirUnDomaineEnDossier(
 	base: Base,
-	demande: { readonly sourceId: string; readonly destinationId: string }
+	demande: {
+		readonly sourceId: string;
+		readonly destinationId: string;
+		readonly dossierDestinationId?: string;
+	}
 ): Promise<IssueDeConversionDUnDomaine> {
 	if (demande.sourceId === demande.destinationId) {
 		return { fait: false, message: 'Un domaine ne peut pas être déplacé dans lui-même.' };
@@ -646,7 +653,11 @@ export async function convertirUnDomaineEnDossier(
 		.where(inArray(dossiers.domaineId, [source.id, destination.id]));
 	const racineSource = lignes.find((d) => d.domaineId === source.id && d.parentId === null);
 	const racineDestination = lignes.find(
-		(d) => d.domaineId === destination.id && d.parentId === null
+		(d) =>
+			d.domaineId === destination.id &&
+			(demande.dossierDestinationId === undefined
+				? d.parentId === null
+				: d.id === demande.dossierDestinationId)
 	);
 	if (racineSource === undefined || racineDestination === undefined) return REFUS_MUET;
 
@@ -709,7 +720,7 @@ export async function convertirUnDomaineEnDossier(
 				domaineId: destination.id,
 				nom: sql`case when ${dossiers.id} = ${racineSource.id} then ${source.nom} else ${dossiers.nom} end`,
 				parentId: sql`case when ${dossiers.id} = ${racineSource.id} then ${racineDestination.id} else ${dossiers.parentId} end`,
-				profondeur: sql`${dossiers.profondeur} + 1`,
+				profondeur: sql`${dossiers.profondeur} + ${racineDestination.profondeur + 1 - racineSource.profondeur}`,
 				position: sql`case when ${dossiers.id} = ${racineSource.id} then ${position} else ${dossiers.position} end`,
 				modifieLe: maintenant
 			})
@@ -736,6 +747,83 @@ export async function convertirUnDomaineEnDossier(
 	});
 
 	return { fait: true, notes: notesDeplacees.map((n) => n.identifiant) };
+}
+
+/** Un dossier déposé sur un univers devient la racine d'un nouveau domaine. */
+export async function convertirUnDossierEnDomaine(
+	base: Base,
+	demande: { readonly dossierId: string; readonly univers: string }
+): Promise<(DeplacementFait & { readonly identifiant: string }) | RefusDEcriture> {
+	const [source] = await base.select().from(dossiers).where(eq(dossiers.id, demande.dossierId));
+	const [accueil] = await base
+		.select()
+		.from(univers)
+		.where(eq(univers.identifiant, demande.univers));
+	if (source === undefined || source.parentId === null || accueil === undefined) return REFUS_MUET;
+	const [domaine] = await base.select().from(domaines).where(eq(domaines.id, source.domaineId));
+	if (domaine === undefined) return REFUS_MUET;
+	const existants = await base.select().from(domaines).where(eq(domaines.universId, accueil.id));
+	if (existants.some((d) => d.nom.toLocaleLowerCase('fr') === source.nom.toLocaleLowerCase('fr'))) {
+		return { fait: false, message: nomDejaPris(source.nom) };
+	}
+	const segment = identifiantLisible(source.nom);
+	let identifiant = segment;
+	for (let rang = 2; existants.some((d) => d.identifiant === identifiant); rang++)
+		identifiant = `${segment}-${rang}`;
+	const lignes = await base.select().from(dossiers).where(eq(dossiers.domaineId, source.domaineId));
+	const racine = lignes.find((d) => d.parentId === null);
+	if (racine === undefined) return REFUS_MUET;
+	const branche = sousArbre(lignes, source.id).map((d) => d.id);
+	const contenu = await base
+		.select({ id: notes.id, identifiant: notes.identifiant, dossierId: notes.dossierId })
+		.from(notes)
+		.where(inArray(notes.dossierId, branche));
+	const modules = await base
+		.select()
+		.from(modulesDeDomaine)
+		.where(eq(modulesDeDomaine.domaineId, source.domaineId));
+	await base.transaction(async (tx) => {
+		const [cree] = await tx
+			.insert(domaines)
+			.values({ universId: accueil.id, nom: source.nom, identifiant, couleur: domaine.couleur })
+			.returning();
+		if (cree === undefined) throw new Error('Le domaine n’a pas pu être créé.');
+		await tx
+			.insert(modulesDeDomaine)
+			.values(modules.map((m) => ({ domaineId: cree.id, module: m.module })));
+		// Les notes attendent sur la racine source pendant le changement de domaine de leur dossier.
+		if (contenu.length > 0)
+			await tx
+				.update(notes)
+				.set({ dossierId: racine.id })
+				.where(
+					inArray(
+						notes.id,
+						contenu.map((n) => n.id)
+					)
+				);
+		await tx
+			.update(dossiers)
+			.set({
+				domaineId: cree.id,
+				parentId: sql`case when ${dossiers.id} = ${source.id} then null else ${dossiers.parentId} end`,
+				profondeur: sql`${dossiers.profondeur} - ${source.profondeur - 1}`,
+				modifieLe: new Date()
+			})
+			.where(inArray(dossiers.id, branche));
+		for (const dossierId of new Set(contenu.map((n) => n.dossierId))) {
+			await tx
+				.update(notes)
+				.set({ domaineId: cree.id, dossierId, modifieLe: new Date() })
+				.where(
+					inArray(
+						notes.id,
+						contenu.filter((n) => n.dossierId === dossierId).map((n) => n.id)
+					)
+				);
+		}
+	});
+	return { fait: true, identifiant, segments: [], notes: contenu.map((n) => n.identifiant) };
 }
 
 /**

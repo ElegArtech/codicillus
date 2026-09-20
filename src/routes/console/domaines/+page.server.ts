@@ -13,6 +13,8 @@
  * `vecteur: null` demande l'état au repos : les positions des axes « Formulaire » et
  * « Suppression » sont des états d'INTERACTION.
  */
+import { eq } from 'drizzle-orm';
+import { dossiers, notes } from '$lib/base/schema';
 import { error, fail } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
 import { creerUnDomaine, modifierUnDomaine, supprimerUnDomaine } from '$lib/donnees/administration';
@@ -39,10 +41,17 @@ import {
 import { moteurPartage } from '$lib/recherche/acces';
 import { entretenirLIndex } from '$lib/recherche/entretien';
 import type { Actions, PageServerLoad } from './$types';
-import { lireDomaineParIdentifiants, MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
+import {
+	resoudreLeChemin,
+	lireDomaineParIdentifiants,
+	MESSAGE_INTROUVABLE
+} from '$lib/donnees/rangement';
 import { CATALOGUE_DE_MODULES } from '$lib/rangement/modules';
 import { env } from '$env/dynamic/private';
-import { convertirUnDomaineEnDossier } from '$lib/donnees/dossiers-ecriture';
+import {
+	convertirUnDomaineEnDossier,
+	convertirUnDossierEnDomaine
+} from '$lib/donnees/dossiers-ecriture';
 
 /**
  * LE CATALOGUE DES SIX MODULES ACTIVABLES SUR UN DOMAINE — LU, JAMAIS RECOPIÉ.
@@ -90,6 +99,34 @@ function consoleOuverte(locals: App.Locals): void {
 }
 
 export const actions: Actions = {
+	convertirEnDomaine: async ({ locals, request }) => {
+		consoleOuverte(locals);
+		const champs = await request.formData();
+		const base = basePartagee();
+		const source = await lireDomaineParIdentifiants(
+			base,
+			String(champs.get('univers') ?? ''),
+			String(champs.get('domaine') ?? '')
+		);
+		if (source === null) error(404, MESSAGE_INTROUVABLE);
+		const dossier = resoudreLeChemin(
+			await base.select().from(dossiers).where(eq(dossiers.domaineId, source.id)),
+			String(champs.get('source-chemin') ?? '')
+				.split('/')
+				.filter(Boolean)
+		);
+		if (dossier === null) error(404, MESSAGE_INTROUVABLE);
+		const resultat = await convertirUnDossierEnDomaine(base, {
+			dossierId: dossier.id,
+			univers: String(champs.get('destination-univers') ?? '')
+		});
+		if (!resultat.fait) {
+			if (resultat.message === '') error(404, MESSAGE_INTROUVABLE);
+			return fail(422, { deplacement: resultat.message });
+		}
+		if (resultat.notes.length > 0) await entretenirLIndex(base, moteurPartage(), resultat.notes);
+		return { identifiant: resultat.identifiant };
+	},
 	/**
 	 * Le dépôt d'un domaine sur un autre le convertit en dossier enfant. Ce geste est
 	 * réservé à la console parce qu'il retire un domaine de la structure, mais il ne
@@ -111,9 +148,21 @@ export const actions: Actions = {
 		);
 		if (source === null || destination === null) error(404, MESSAGE_INTROUVABLE);
 
+		const chemin = String(champs.get('destination-chemin') ?? '')
+			.split('/')
+			.filter(Boolean);
+		const dossier =
+			chemin.length > 0
+				? resoudreLeChemin(
+						await base.select().from(dossiers).where(eq(dossiers.domaineId, destination.id)),
+						chemin
+					)
+				: null;
+		if (chemin.length > 0 && dossier === null) error(404, MESSAGE_INTROUVABLE);
 		const resultat = await convertirUnDomaineEnDossier(base, {
 			sourceId: source.id,
-			destinationId: destination.id
+			destinationId: destination.id,
+			...(dossier === null ? {} : { dossierDestinationId: dossier.id })
 		});
 		if (!resultat.fait) {
 			if (resultat.message === '') error(404, MESSAGE_INTROUVABLE);
@@ -232,6 +281,22 @@ export const actions: Actions = {
 		);
 		if (resultat.issue === 'introuvable') error(404, MESSAGE_INTROUVABLE);
 		if (resultat.issue !== 'possible') return fail(400, resultat);
+		if (rattachement !== undefined) {
+			const base = basePartagee();
+			const deplace = await lireDomaineParIdentifiants(base, rattachement, resultat.identifiant);
+			if (deplace !== null) {
+				const contenu = await base
+					.select({ identifiant: notes.identifiant })
+					.from(notes)
+					.where(eq(notes.domaineId, deplace.id));
+				if (contenu.length > 0)
+					await entretenirLIndex(
+						base,
+						moteurPartage(),
+						contenu.map((n) => n.identifiant)
+					);
+			}
+		}
 		return resultat;
 	}
 };
