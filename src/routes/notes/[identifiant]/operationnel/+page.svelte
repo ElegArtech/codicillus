@@ -17,6 +17,7 @@
 	 * nomme.
 	 */
 	import { onMount } from 'svelte';
+	import { cablerLesVideos } from '$lib/fichiers/videos';
 	import { cablerLesTableursIntegres } from '$lib/fichiers/tableurs-integres';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
@@ -84,6 +85,7 @@
 				? null
 				: monterLEditeur(zone, data.corps, formulaire, {
 						surChangement: () => gestes?.signalerUneModification(),
+						identifiantDeNote: page.params['identifiant'] ?? '',
 						deposerImage: (fichier) =>
 							deposerImageDansLaNote(page.params['identifiant'] ?? '', fichier)
 					});
@@ -100,8 +102,10 @@
 			retour: adresse
 		});
 		const defaireTableurs = cablerLesTableursIntegres(formulaire);
+		const defaireVideos = cablerLesVideos(formulaire);
 		return () => {
 			defaireTableurs();
+			defaireVideos();
 			gestes?.defaire();
 			defaireLesActions();
 			defaireLEditeur();

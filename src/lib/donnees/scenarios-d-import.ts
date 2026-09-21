@@ -114,7 +114,7 @@ export const CHOIX_D_IMPORT: readonly {
 	{
 		id: SCENARIO_LIVRE,
 		nom: 'Importer une note',
-		sous: 'Le fichier, y compris un PDF ou un tableur XLS, XLSX, ODS, sera rangé dans un domaine ou un dossier existant.'
+		sous: 'Le fichier, y compris un PDF, un tableur XLS, XLSX, ODS ou une vidéo MP4, WebM, sera rangé dans un domaine ou un dossier existant.'
 	},
 	{
 		id: SCENARIO_DE_DOMAINE,

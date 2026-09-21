@@ -12,6 +12,9 @@
  * ATTRIBUTS : un bouton auquel aucune commande ne répond est signalé au journal plutôt que
  * d'être silencieux — un bouton inerte est un lien mort.
  */
+import { creerLeLecteurVideo } from '../fichiers/videos';
+import { formeDeLecture } from '../fichiers/affichage';
+import { deposerVideoDansLaNote } from './videos-client';
 import { EditorState, Selection, type Command, type Transaction } from '@tiptap/pm/state';
 import { EditorView } from '@tiptap/pm/view';
 import {
@@ -117,6 +120,7 @@ export interface OptionsDeMontage {
 	 */
 	surChangement?: () => void;
 	/** Dépose les octets avant que leur adresse interne entre dans le document. */
+	identifiantDeNote?: string;
 	deposerImage?: (fichier: File) => Promise<{ readonly src: string; readonly nom: string }>;
 }
 
@@ -638,6 +642,22 @@ export function monterLEditeur(
 		/* Les signatures de ProseMirror passent bien plus que ce que ces vues lisent ;
 		   le rétrécissement est local et nommé. */
 		nodeViews: {
+			pieceJointe: (noeud) => {
+				const { src, nom, typeMedia } = noeud.attrs as {
+					src: string;
+					nom: string;
+					typeMedia: string;
+				};
+				if (formeDeLecture(typeMedia, nom) === 'video') {
+					const dom = creerLeLecteurVideo(window.document, src, nom);
+					dom.contentEditable = 'false';
+					return { dom, stopEvent: () => true };
+				}
+				const dom = window.document.createElement('a');
+				dom.href = src;
+				dom.textContent = nom;
+				return { dom };
+			},
 			alerte: ((noeud: NoeudDeVue) => vueDAlerte(noeud)) as never,
 			diagramme: ((noeud: NoeudDeVue) => vueDeDiagramme(noeud)) as never,
 			table: (() => vueDeTableau()) as never
@@ -661,6 +681,32 @@ export function monterLEditeur(
 
 	/* LA BARRE D'OUTILS — un seul écouteur, délégué, sur la racine. Aucun
 	   attribut n'est posé sur un bouton du gel. */
+	const choisirUneVideo = (): void => {
+		if (!options.identifiantDeNote) {
+			window.alert('Enregistrez la note avant d’ajouter une vidéo.');
+			return;
+		}
+		const champ = window.document.createElement('input');
+		champ.type = 'file';
+		champ.accept = 'video/mp4,video/webm,.mp4,.webm';
+		champ.addEventListener(
+			'change',
+			() => {
+				const fichier = champ.files?.[0];
+				if (!fichier) return;
+				void deposerVideoDansLaNote(options.identifiantDeNote!, fichier)
+					.then((piece) => {
+						if (vue.isDestroyed) return;
+						inserer(noeudDeSchema('pieceJointe'), piece)(vue.state, vue.dispatch, vue);
+					})
+					.catch((cause: unknown) =>
+						window.alert(cause instanceof Error ? cause.message : 'Le dépôt de la vidéo a échoué.')
+					);
+			},
+			{ once: true }
+		);
+		champ.click();
+	};
 	const auClic = (evenement: Event): void => {
 		const cible = (evenement.target as Element | null)?.closest(SELECTEUR_DES_BOUTONS);
 		if (cible === null || cible === undefined) return;
@@ -669,6 +715,10 @@ export function monterLEditeur(
 		for (const attribut of ATTRIBUTS_DE_BOUTON) {
 			const nom = jeu[attribut];
 			if (nom === undefined) continue;
+			if (attribut === 'bloc' && nom === 'video') {
+				choisirUneVideo();
+				return;
+			}
 			if (attribut === 'bloc' && nom === 'image') {
 				choisirUneImage(vue);
 				return;

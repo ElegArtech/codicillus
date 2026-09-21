@@ -273,3 +273,29 @@ describe('le tableur intégré ouvre sa grille dans le corps', () => {
 		expect(html).not.toContain('<iframe');
 	});
 });
+
+describe('les vidéos intégrées', () => {
+	it.each(['video/mp4', 'video/webm'])(
+		'rend %s dans un lecteur sans démarrage automatique',
+		(typeMedia) => {
+			const html = rendreDocument(
+				{
+					type: 'doc',
+					content: [
+						{
+							type: 'pieceJointe',
+							attrs: { src: '/notes/essai/pieces-jointes/clip.mp4', nom: 'Clip <test>', typeMedia }
+						}
+					]
+				},
+				INTERNE
+			);
+			expect(html).toContain('<video controls playsinline preload="metadata"');
+			expect(html).toContain('Clip &lt;test&gt;');
+			expect(html).toContain('data-erreur-video');
+			expect(html).toContain('download=');
+			expect(html).not.toContain('<iframe');
+			expect(html).not.toContain('autoplay');
+		}
+	);
+});

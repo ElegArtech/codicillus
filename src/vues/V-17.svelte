@@ -668,6 +668,13 @@
 							/></svg
 						>
 					</button>
+					<button
+						class="ob"
+						type="button"
+						data-bloc="video"
+						title="Insérer une vidéo"
+						aria-label="Insérer une vidéo">▷</button
+					>
 					<button class="ob" type="button" data-bloc="image" title="Image" aria-label="Image">
 						<svg
 							width="16"

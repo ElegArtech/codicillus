@@ -51,7 +51,8 @@ const NOEUDS_DU_FORMAT = [
 	'tableCell',
 	'image',
 	'horizontalRule',
-	'diagramme'
+	'diagramme',
+	'pieceJointe'
 ];
 
 describe('le schéma de l’éditeur porte exactement les nœuds du format', () => {
