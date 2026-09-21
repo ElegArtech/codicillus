@@ -13,11 +13,12 @@ const TYPES_GENERIQUES = new Set([
 	'binary/octet-stream'
 ]);
 
-export type FormeDeLecture = 'image' | 'pdf' | 'tableur';
+export type FormeDeLecture = 'image' | 'pdf' | 'tableur' | 'video';
 
 export function formeDeLecture(typeMedia: string, nom = ''): FormeDeLecture | null {
 	const type = (typeMedia.split(';')[0] ?? '').trim().toLowerCase();
 	if (type.startsWith('image/')) return 'image';
+	if (type === 'video/mp4' || type === 'video/webm') return 'video';
 	if (type === TYPE_MEDIA_PDF) return 'pdf';
 	if (TYPES_DES_TABLEURS.has(type)) return 'tableur';
 	if (TYPES_GENERIQUES.has(type) && /\.(xlsx?|ods)$/i.test(nom)) return 'tableur';
@@ -27,5 +28,5 @@ export function formeDeLecture(typeMedia: string, nom = ''): FormeDeLecture | nu
 /** Seuls les formats rendus nativement par le navigateur sont servis en ligne. */
 export function seLitEnLigne(typeMedia: string): boolean {
 	const forme = formeDeLecture(typeMedia);
-	return forme === 'image' || forme === 'pdf';
+	return forme === 'image' || forme === 'pdf' || forme === 'video';
 }

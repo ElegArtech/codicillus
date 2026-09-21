@@ -1,0 +1,17 @@
+.video-integree {
+	width: 100%;
+	min-width: 0;
+	margin: var(--e-4) 0;
+}
+
+.video-integree video {
+	display: block;
+	width: 100%;
+	max-height: 70vh;
+	background: var(--c-encre);
+}
+
+.video-integree figcaption,
+.video-integree p {
+	padding: var(--e-2);
+}

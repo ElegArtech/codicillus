@@ -9,6 +9,7 @@
 	 * porte elle-même.
 	 */
 	import { onMount } from 'svelte';
+	import { cablerLesVideos } from '$lib/fichiers/videos';
 	import { cablerLesTableursIntegres } from '$lib/fichiers/tableurs-integres';
 	import Vue from '../../../vues/V-03.svelte';
 	import '../../../vues/V-03.css';
@@ -31,9 +32,11 @@
 		if (racine === null) return;
 		const defaireGuide = cablerLeGuide(racine);
 		const defaireTableurs = cablerLesTableursIntegres(racine);
+		const defaireVideos = cablerLesVideos(racine);
 		return () => {
 			defaireGuide();
 			defaireTableurs();
+			defaireVideos();
 		};
 	});
 </script>

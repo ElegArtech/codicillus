@@ -25,6 +25,7 @@
 	import { cablerLaSuppression } from '$lib/cablage/formulaires';
 	import { formeDeLecture, type FormeDeLecture } from '$lib/fichiers/affichage';
 	import '$lib/fichiers/visionneuse-tableur.css';
+	import { cablerLesVideos, creerLeLecteurVideo } from '$lib/fichiers/videos';
 	import { cablerLesTableursIntegres } from '$lib/fichiers/tableurs-integres';
 	import { cablerLaLecture, cablerLaLoupe } from './cablage';
 	import Dialogues from '../../../vues/V-40.svelte';
@@ -131,6 +132,7 @@
 		});
 		const defaireLoupe = cablerLaLoupe(formulaire.ownerDocument);
 		const defaireTableurs = cablerLesTableursIntegres(formulaire);
+		const defaireVideos = cablerLesVideos(formulaire);
 		return () => {
 			defaireSuppression();
 			defairePieces();
@@ -139,6 +141,7 @@
 			defaireLecture();
 			defaireLoupe();
 			defaireTableurs();
+			defaireVideos();
 		};
 	});
 
@@ -162,6 +165,11 @@
 	function viderLaVisionneuse(boite: HTMLDialogElement): void {
 		lectureDeTableur?.abort();
 		lectureDeTableur = null;
+		for (const video of boite.querySelectorAll('video')) {
+			video.pause();
+			video.removeAttribute('src');
+			video.load();
+		}
 		boite.querySelector('[data-visionneuse-corps]')?.replaceChildren();
 	}
 
@@ -278,6 +286,8 @@
 			vue.alt = piece.nom;
 			vue.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain';
 			corps.append(vue);
+		} else if (piece.forme === 'video') {
+			corps.append(creerLeLecteurVideo(doc, piece.adresse, piece.nom));
 		} else if (piece.forme === 'tableur') {
 			const chargement = doc.createElement('p');
 			chargement.className = 'tableur__message';

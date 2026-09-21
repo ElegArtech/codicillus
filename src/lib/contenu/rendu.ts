@@ -376,6 +376,15 @@ function rendreImage(image: Image): string {
  */
 function rendrePieceJointe(bloc: PieceJointeIntegree): string {
 	const { src, nom, typeMedia } = bloc.attrs;
+	if (formeDeLecture(typeMedia, nom) === 'video') {
+		return (
+			`<figure class="figure piece-integree video-integree">` +
+			`<video controls playsinline preload="metadata" src="${echapper(src)}" aria-label="${echapper(nom)}">` +
+			`Votre navigateur ne permet pas la lecture de cette vidéo.</video>` +
+			`<p data-erreur-video hidden role="alert">Cette vidéo ne peut pas être lue. Son encodage peut être incompatible avec ce navigateur ou le fichier indisponible. Téléchargez l’original pour l’ouvrir.</p>` +
+			`<figcaption>${echapper(nom)} <a href="${echapper(src)}" download="${echapper(nom)}">Télécharger</a></figcaption></figure>`
+		);
+	}
 	if (formeDeLecture(typeMedia, nom) === 'tableur') {
 		return (
 			`<figure class="figure piece-integree tableur-integre" data-tableur-integre>` +

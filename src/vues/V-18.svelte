@@ -458,6 +458,7 @@
 						<button type="button" data-bloc="alerte-danger" role="menuitem"
 							>Bloc d'alerte — danger</button
 						>
+						<button type="button" data-bloc="video" role="menuitem">Insérer une vidéo</button>
 						<button type="button" data-bloc="tableau" role="menuitem">Tableau</button>
 						<button type="button" data-bloc="citation" role="menuitem">Citation</button>
 						<button type="button" id="reprendre-ref" role="menuitem"

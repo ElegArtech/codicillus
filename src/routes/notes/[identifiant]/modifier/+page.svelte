@@ -102,6 +102,7 @@
 							gestes?.signalerUneModification();
 							brouillon?.signaler();
 						},
+						identifiantDeNote: page.params['identifiant'] ?? '',
 						deposerImage: (fichier) =>
 							deposerImageDansLaNote(page.params['identifiant'] ?? '', fichier)
 					});

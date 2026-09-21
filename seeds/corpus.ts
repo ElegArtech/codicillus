@@ -370,6 +370,8 @@ export type FormatDImport =
 	| 'xls'
 	| 'xlsx'
 	| 'ods'
+	| 'mp4'
+	| 'webm'
 	| 'png'
 	| 'jpg'
 	| 'jpeg'

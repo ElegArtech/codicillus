@@ -1613,11 +1613,13 @@ describe('le recensement des manques', () => {
 	});
 });
 
-describe('les tableurs autonomes dans l’arborescence', () => {
+describe('les tableurs et vidéos autonomes dans l’arborescence', () => {
 	it.each([
 		['xls', 'application/vnd.ms-excel'],
 		['xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
-		['ods', 'application/vnd.oasis.opendocument.spreadsheet']
+		['ods', 'application/vnd.oasis.opendocument.spreadsheet'],
+		['mp4', 'video/mp4'],
+		['webm', 'video/webm']
 	])('importe un %s sans service de conversion ni note préalable', (format, typeMedia) => {
 		const nom = `Budget.${format}`;
 		const lot = classerLeLot(

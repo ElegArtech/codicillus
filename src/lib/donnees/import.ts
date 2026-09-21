@@ -93,6 +93,8 @@ export const VOIE_PAR_FORMAT: Readonly<Record<FormatDImport, VoieDeTraitement>> 
 	xls: 'integre',
 	xlsx: 'integre',
 	ods: 'integre',
+	mp4: 'integre',
+	webm: 'integre',
 	zip: 'ecarte'
 };
 
@@ -102,6 +104,8 @@ export const VOIE_PAR_FORMAT: Readonly<Record<FormatDImport, VoieDeTraitement>> 
  * sont décidés par la même table, écrite une fois.
  */
 export const TYPE_MEDIA_PAR_FORMAT: Readonly<Partial<Record<FormatDImport, string>>> = {
+	mp4: 'video/mp4',
+	webm: 'video/webm',
 	pdf: 'application/pdf',
 	xls: 'application/vnd.ms-excel',
 	xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -154,6 +158,8 @@ export const LIBELLE_PAR_FORMAT: Readonly<Record<FormatDImport, string>> = {
 	xls: 'Tableur Excel (XLS)',
 	xlsx: 'Tableur Excel (XLSX)',
 	ods: 'Tableur OpenDocument (ODS)',
+	mp4: 'Vidéo MP4',
+	webm: 'Vidéo WebM',
 	png: 'Image',
 	jpg: 'Image',
 	jpeg: 'Image',

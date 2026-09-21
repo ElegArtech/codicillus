@@ -7,6 +7,7 @@
 	 * restauration est un formulaire natif vers l'action de la note. Rien ici
 	 * n'attend l'hydratation, donc rien ne casse sans elle.
 	 */
+	import { cablerLesVideos } from '$lib/fichiers/videos';
 	import { cablerLesTableursIntegres } from '$lib/fichiers/tableurs-integres';
 	import Vue from '../../../../vues/V-15.svelte';
 	import '../../../../vues/V-15.css';
@@ -16,7 +17,12 @@
 	let racine: HTMLDivElement;
 	$effect(() => {
 		void data.evenements;
-		return cablerLesTableursIntegres(racine);
+		const defaireTableurs = cablerLesTableursIntegres(racine);
+		const defaireVideos = cablerLesVideos(racine);
+		return () => {
+			defaireTableurs();
+			defaireVideos();
+		};
 	});
 </script>
 

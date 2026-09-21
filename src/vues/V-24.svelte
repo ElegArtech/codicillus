@@ -1069,7 +1069,8 @@
 
 				<p class="sous">
 					Formats pris en charge : Markdown, texte, DOCX, PPTX, PDF, images et tableurs XLS, XLSX,
-					ODS. Les tableurs sont consultables directement depuis l’arborescence.
+					ODS, vidéos MP4 et WebM. Les tableurs et les vidéos sont consultables directement depuis
+					l’arborescence.
 				</p>
 
 				<div class="reglages-depot">

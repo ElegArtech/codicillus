@@ -181,6 +181,16 @@ const ATTRIBUTS_DE_MARQUE: Readonly<Record<string, MarkSpec['attrs']>> = {
  * le schéma porte la forme, les sept règles portent l'interdit. `diagramme` est un atome.
  */
 const NOEUDS_EN_PROPRE: Readonly<Record<string, NodeSpec>> = {
+	pieceJointe: {
+		group: 'block',
+		atom: true,
+		attrs: { src: {}, nom: {}, typeMedia: {} },
+		toDOM: (noeud) => [
+			'figure',
+			{ class: 'piece-integree' },
+			['a', { href: String(noeud.attrs['src']) }, String(noeud.attrs['nom'])]
+		]
+	},
 	alerte: {
 		group: 'block',
 		content: 'block+',
