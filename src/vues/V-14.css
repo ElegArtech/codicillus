@@ -110,6 +110,12 @@
 .registres__creer { margin: 0 0 var(--e-2) auto; text-decoration: none; font-weight: var(--g-normal); }
 .registres__creer:hover { border-color: var(--c-accent); color: var(--c-accent); }
 .registres__plus { font-size: var(--t-t3); line-height: 1; }
+.registres__copier {
+  flex: none; margin: 0 0 var(--e-2) auto;
+  color: var(--c-encre-3); font-weight: var(--g-normal);
+}
+.registres__creer + .registres__copier { margin-left: var(--e-2); }
+.registres__copier:hover { color: var(--c-accent); }
 
 /* --- La ligne de vivacité -------------------------------------------------
    RECOPIÉE DE `V-42.css`, SOUS LES MÊMES NOMS : la planche des états et la
@@ -217,6 +223,9 @@
 }
 .pied-note__planche { color: var(--c-encre-3); text-decoration: underline dotted; }
 .pied-note__planche:hover { color: var(--c-accent); }
+.pied-note__droite { display: flex; align-items: center; gap: var(--e-4); }
+.pied-note__copier { flex: none; color: var(--c-encre-3); font-weight: var(--g-normal); }
+.pied-note__copier:hover { color: var(--c-accent); }
 
 /* --- La partie droite de l'en-tête ---------------------------------------- */
 .modif {
@@ -934,6 +943,11 @@ blockquote.prose-cit footer { font-style: normal; font-size: var(--t-petit); col
   .meta-item { border-right: 0; margin-right: var(--e-5); padding-right: 0; }
   .modif { display: none; }
   .prose h2 { font-size: var(--t-t2); }
+}
+@media (max-width: 560px) {
+  .registres__copier { padding-inline: var(--e-2); }
+  .registres__copier .copier-note__libelle { display: none; }
+  .pied-note__droite { width: 100%; justify-content: space-between; }
 }
 
 /* --- Impression ------------------------------------------------------------

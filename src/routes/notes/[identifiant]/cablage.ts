@@ -275,6 +275,22 @@ export function cablerLaLecture(
 	   porte déjà ses règles d'impression (`V-14.css`, la requête de média). */
 	gestes('Imprimer', () => fenetre?.print());
 
+	/* « Copier » — LES DEUX EMPLACEMENTS COPIENT LE MÊME CORPS AFFICHÉ. Le clone
+	   retire les commandes produites dans les blocs de code : elles appartiennent
+	   à l'interface, pas à la note. Le presse-papiers reçoit le HTML pour conserver
+	   les listes, tableaux et liens, plus un texte brut pour les destinations qui
+	   ne savent pas le lire. */
+	for (const bouton of document.querySelectorAll<HTMLButtonElement>('[data-copier-note]')) {
+		agir(bouton, () => {
+			const corps = document.querySelector<HTMLElement>('.prose');
+			if (corps === null) return;
+			const contenu = contenuCopiable(corps);
+			void ecrireDansLePressePapiers(document, contenu).then((copie) => {
+				accuserLaCopie(bouton, copie, fenetre);
+			});
+		});
+	}
+
 	/* La suppression : le second bouton délègue au premier, celui que
 	   `cablerLaSuppression()` a câblé avec la confirmation chiffrée. */
 	const suppressions = boutonsNommes(document, 'Supprimer');
@@ -355,6 +371,97 @@ export function cablerLaLecture(
 
 /** `V-14:3971` — combien de temps le bouton de copie dit « Copié ». */
 const DUREE_DE_L_ACCUSE = 1400;
+
+interface ContenuCopiable {
+	readonly html: string;
+	readonly texte: string;
+}
+
+/** Le corps seul, privé des commandes d'interface et avec des liens autonomes. */
+function contenuCopiable(corps: HTMLElement): ContenuCopiable {
+	const copie = corps.cloneNode(true) as HTMLElement;
+	for (const commande of copie.querySelectorAll('button')) commande.remove();
+
+	const liens = Array.from(corps.querySelectorAll<HTMLAnchorElement>('a'));
+	for (const [rang, lien] of Array.from(copie.querySelectorAll<HTMLAnchorElement>('a')).entries()) {
+		const original = liens[rang];
+		if (original !== undefined) lien.href = original.href;
+	}
+	const images = Array.from(corps.querySelectorAll<HTMLImageElement>('img'));
+	for (const [rang, image] of Array.from(
+		copie.querySelectorAll<HTMLImageElement>('img')
+	).entries()) {
+		const originale = images[rang];
+		if (originale !== undefined) image.src = originale.src;
+	}
+
+	/* `innerText` respecte les paragraphes, les listes et les retours des blocs de
+	   code, mais seulement sur un nœud rendu. Le clone est donc posé hors écran le
+	   temps d'une lecture, sans modifier le document visible. */
+	copie.setAttribute('aria-hidden', 'true');
+	copie.style.cssText =
+		'position:fixed;left:-10000px;top:0;width:800px;pointer-events:none;opacity:0';
+	corps.ownerDocument.body.append(copie);
+	const texte = copie.innerText.trim();
+	const html = copie.innerHTML;
+	copie.remove();
+	return { html, texte };
+}
+
+/** Écrit en riche quand le navigateur le permet, puis se replie sur le texte. */
+async function ecrireDansLePressePapiers(
+	document: Document,
+	contenu: ContenuCopiable
+): Promise<boolean> {
+	const fenetre = document.defaultView;
+	const presse = fenetre?.navigator.clipboard;
+	const ElementDePressePapiers = fenetre?.ClipboardItem;
+	if (presse !== undefined) {
+		if (typeof presse.write === 'function' && ElementDePressePapiers !== undefined) {
+			try {
+				await presse.write([
+					new ElementDePressePapiers({
+						'text/html': new Blob([contenu.html], { type: 'text/html' }),
+						'text/plain': new Blob([contenu.texte], { type: 'text/plain' })
+					})
+				]);
+				return true;
+			} catch {
+				/* Certaines politiques autorisent le texte mais refusent le HTML. */
+			}
+		}
+		try {
+			await presse.writeText(contenu.texte);
+			return true;
+		} catch {
+			/* Le repli ancien reste utile hors contexte sécurisé. */
+		}
+	}
+
+	const zone = document.createElement('textarea');
+	zone.value = contenu.texte;
+	zone.style.cssText = 'position:fixed;left:-10000px;top:0';
+	document.body.append(zone);
+	zone.select();
+	const copie = document.execCommand('copy');
+	zone.remove();
+	return copie;
+}
+
+/** Le libellé accuse le geste sans toast ni déplacement de la page. */
+function accuserLaCopie(bouton: HTMLButtonElement, reussie: boolean, fenetre: Window | null): void {
+	const libelle = bouton.querySelector<HTMLElement>('.copier-note__libelle');
+	if (libelle === null) return;
+	const avant = libelle.textContent ?? 'Copier';
+	const ariaAvant = bouton.getAttribute('aria-label');
+	libelle.textContent = reussie ? 'Copié' : 'Copie impossible';
+	bouton.setAttribute('aria-label', reussie ? 'Contenu copié' : 'Copie impossible');
+	fenetre?.setTimeout(() => {
+		libelle.textContent = avant;
+		if (ariaAvant === null) bouton.removeAttribute('aria-label');
+		else bouton.setAttribute('aria-label', ariaAvant);
+	}, DUREE_DE_L_ACCUSE);
+}
 
 /** Combien de temps la bulle d'un geste reste à l'écran — 2,6 s au prototype. */
 const DUREE_DE_LA_BULLE = 2600;

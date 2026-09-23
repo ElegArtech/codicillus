@@ -287,6 +287,18 @@
 						>{LIBELLE.creerLOperationnel}</a
 					>
 				{/if}
+				{#if corps !== null}
+					<button
+						class="btn btn--discret registres__copier"
+						type="button"
+						data-copier-note
+						aria-label={`Copier le contenu du registre ${nomDuRegistre}`}
+						title={`Copier le contenu du registre ${nomDuRegistre}`}
+					>
+						{@render ic('M5.5 4V2.5h8v8H12M2.5 5.5h8v8h-8z', 15)}
+						<span class="copier-note__libelle">Copier</span>
+					</button>
+				{/if}
 			</nav>
 
 			<!-- La ligne de vivacité — `data-attention` commande le fond et le poids. -->
@@ -459,8 +471,21 @@
 			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- adresse composée par la route -->
 			<footer class="pied-note">
 				<span>{viv.rappel}</span>
-				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- adresse composée par la route -->
-				<a class="pied-note__planche" href={adresses.planche}>Planche des états de vivacité</a>
+				<div class="pied-note__droite">
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- adresse composée par la route -->
+					<a class="pied-note__planche" href={adresses.planche}>Planche des états de vivacité</a>
+					{#if corps !== null}
+						<button
+							class="btn btn--discret pied-note__copier"
+							type="button"
+							data-copier-note
+							aria-label={`Copier le contenu du registre ${nomDuRegistre}`}
+						>
+							{@render ic('M5.5 4V2.5h8v8H12M2.5 5.5h8v8h-8z', 15)}
+							<span class="copier-note__libelle">Copier le contenu</span>
+						</button>
+					{/if}
+				</div>
 			</footer>
 		</article>
 
