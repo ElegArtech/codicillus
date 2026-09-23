@@ -393,6 +393,18 @@ describe('V-14 — la colonne de contexte ne ment pas', () => {
 });
 
 describe('V-14 — le pied de note et la bulle du geste', () => {
+	it('offre la copie du corps en haut et en bas, mais pas pour un registre vide', async () => {
+		const html = await rendu();
+		expect(html.match(/data-copier-note/g)).toHaveLength(2);
+		expect(html).toContain('Copier le contenu du registre Référence');
+
+		const vide = await rendu({
+			registre: 'operationnel',
+			affichee: { ...AFFICHEE, operationnel: null }
+		});
+		expect(vide).not.toContain('data-copier-note');
+	});
+
 	it('rend le rappel automatique et le lien vers la planche', async () => {
 		const html = await rendu();
 		expect(html).toContain(REFERENCE_A_JOUR.rappel);
