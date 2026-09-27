@@ -523,6 +523,7 @@
 
 {#if hote && disposition}
 	<Coquille
+		adresseCourante={actif?.adresse ?? '/'}
 		fil={fils[actif?.id ?? ''] ?? ['Accueil']}
 		courant={(fils[actif?.id ?? ''] ?? []).slice(
 			2,
