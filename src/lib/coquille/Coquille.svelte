@@ -42,6 +42,8 @@
 		fil: readonly string[];
 		/** Le chemin de rangement mis en évidence dans le rail, du domaine au dernier dossier. */
 		courant?: readonly string[];
+		/** L'adresse du volet actif lorsque la coquille est partagée entre plusieurs lectures. */
+		adresseCourante?: string;
 		/**
 		 * ACCEPTÉES, PLUS LUES POUR LE RAIL : la navigation vient du chargeur racine
 		 * (voir `universEffectif`). Vingt-cinq vues les passent, et le compilateur les
@@ -156,6 +158,7 @@
 		menuDeNote = false,
 		fil,
 		courant = [],
+		adresseCourante,
 		notes,
 		compte,
 		version,
@@ -279,7 +282,12 @@
 	 */
 	const pageDuRail: PageCourante = $derived({
 		chemin: courant,
-		note: identite === undefined ? null : noteDeLAdresse(page.url.pathname),
+		note:
+			adresseCourante !== undefined
+				? noteDeLAdresse(adresseCourante.split(/[?#]/)[0] ?? '')
+				: identite === undefined
+					? null
+					: noteDeLAdresse(page.url.pathname),
 		univers: fil[0] === 'Accueil' ? (fil[1] ?? null) : null,
 		surLUnivers: fil[0] === 'Accueil' && fil.length === 2
 	});
