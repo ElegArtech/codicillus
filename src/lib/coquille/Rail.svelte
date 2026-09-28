@@ -1419,7 +1419,11 @@
 		<div class="rail__menu-contextuel-titre">{menuContextuel.nom}</div>
 		{#if menuContextuel.type === 'univers'}
 			<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}>Renommer</button>
-			<a role="menuitem" href={adresseDeCreationDeDomaine(menuContextuel)}>Créer un domaine</a>
+			<a
+				role="menuitem"
+				href={adresseDeCreationDeDomaine(menuContextuel)}
+				onclick={() => fermerLeMenu()}>Créer un domaine</a
+			>
 			<button
 				type="button"
 				role="menuitem"
@@ -1430,8 +1434,16 @@
 			{#if admin}<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}
 					>Renommer</button
 				>{/if}
-			<a role="menuitem" href={adresseDeCreationDeNote(menuContextuel)}>Créer une note</a>
-			<a role="menuitem" href={adresseDeCreationDeDossier(menuContextuel)}>Créer un dossier</a>
+			<a
+				role="menuitem"
+				href={adresseDeCreationDeNote(menuContextuel)}
+				onclick={() => fermerLeMenu()}>Créer une note</a
+			>
+			<a
+				role="menuitem"
+				href={adresseDeCreationDeDossier(menuContextuel)}
+				onclick={() => fermerLeMenu()}>Créer un dossier</a
+			>
 			{#if admin}<button
 					type="button"
 					role="menuitem"
@@ -1440,8 +1452,16 @@
 				>{/if}
 		{:else if menuContextuel.type === 'dossier'}
 			<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}>Renommer</button>
-			<a role="menuitem" href={adresseDeCreationDeNote(menuContextuel)}>Créer une note ici</a>
-			<a role="menuitem" href={adresseDeCreationDeDossier(menuContextuel)}>Créer un sous-dossier</a>
+			<a
+				role="menuitem"
+				href={adresseDeCreationDeNote(menuContextuel)}
+				onclick={() => fermerLeMenu()}>Créer une note ici</a
+			>
+			<a
+				role="menuitem"
+				href={adresseDeCreationDeDossier(menuContextuel)}
+				onclick={() => fermerLeMenu()}>Créer un sous-dossier</a
+			>
 			<button
 				type="button"
 				role="menuitem"
@@ -1449,7 +1469,9 @@
 				onclick={demanderLaSuppressionDepuisLeMenu}>Supprimer</button
 			>
 		{:else if menuContextuel.identifiant}
-			<a role="menuitem" href={adresseDeNote(menuContextuel)}>Ouvrir</a>
+			<a role="menuitem" href={adresseDeNote(menuContextuel)} onclick={() => fermerLeMenu()}
+				>Ouvrir</a
+			>
 			{#if ecriture}
 				<button type="button" role="menuitem" onclick={commencerLeRenommageDuMenu}>Renommer</button>
 				<button
