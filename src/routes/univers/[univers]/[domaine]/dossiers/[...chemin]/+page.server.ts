@@ -193,8 +193,8 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 
 	/* LA FORME CANONIQUE DE LA RACINE PORTE SON NOM. L'adresse nue y mène plutôt
 	   que d'être servie en double : chemin affiché, redirections d'après-création
-	   et tuiles de sous-dossier composent tous la forme nommée. La redirection est
-	   permanente — l'adresse nue ne changera plus de sens.
+	   et tuiles de sous-dossier composent tous la forme nommée. La redirection reste temporaire car la racine peut être renommée.
+	   Les paramètres conservent notamment la demande de création de dossier.
 
 	   LES DEUX PREMIERS SEGMENTS SONT LES IDENTIFIANTS PERSISTÉS, jamais les noms
 	   slugifiés : ce sont ceux sur lesquels l'adresse vient d'être résolue, et ils
@@ -202,7 +202,10 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	   des quatre redirections de ce fichier menait en 404 dès qu'un univers ou un
 	   domaine avait été renommé. */
 	if (dossier.parentId === null && params.chemin.split('/').every((s) => s === '')) {
-		redirect(308, adresseDeDossier(domaine.universIdentifiant, domaine.identifiant, [dossier.nom]));
+		redirect(
+			307,
+			adresseDeDossier(domaine.universIdentifiant, domaine.identifiant, [dossier.nom]) + url.search
+		);
 	}
 
 	/**
