@@ -523,10 +523,7 @@
 
 	function adresseDeCreationDeDossier(cible: CibleContextuelle): string {
 		if (cible.cible === null) return '#';
-		const chemin =
-			cible.type === 'domaine'
-				? identifiantLisible(cible.cible.domaineAffiche)
-				: cible.cible.chemin.join('/');
+		const chemin = cible.type === 'domaine' ? '' : cible.cible.chemin.join('/');
 		const adresse = resolve(ROUTE_DOSSIER, {
 			univers: cible.cible.univers,
 			domaine: cible.cible.domaine,
