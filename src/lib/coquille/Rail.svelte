@@ -43,6 +43,7 @@
 		type SectionRendue
 	} from './arborescence';
 	import { COMPTE_VIDE } from './compte-vide';
+	import { memoriserLeRail } from './etat-du-rail';
 	import { glypheDUnivers, iconeDeNoeud } from './glyphes';
 	import type { SectionAbregeeRendue } from './arborescence-abregee';
 	import {
@@ -484,15 +485,38 @@
 		try {
 			const reponse = await fetch(adresseDeRenommage(actif.cible), {
 				method: 'POST',
+				headers: { accept: 'application/json', 'x-sveltekit-action': 'true' },
 				body: champs
 			});
-			if (!reponse.ok) {
+			const resultat = deserialize(await reponse.text());
+			if (!reponse.ok || resultat.type === 'failure' || resultat.type === 'error') {
 				actif.erreur = 'Ce nom ne peut pas être utilisé.';
 				actif.envoi = false;
 				return;
 			}
+			const restaurerLeRail = memoriserLeRail();
+			const changementAdresse =
+				actif.cible.type === 'dossier' && resultat.type === 'redirect'
+					? {
+							avant: adresseDeRenommage(actif.cible).split('?')[0]!,
+							apres: new URL(resultat.location, page.url).pathname
+						}
+					: undefined;
 			renommage = null;
-			await invalidateAll();
+			if (
+				changementAdresse &&
+				(page.url.pathname === changementAdresse.avant ||
+					page.url.pathname.startsWith(changementAdresse.avant + '/'))
+			) {
+				await goto(
+					// Adresse de redirection renvoyée par le serveur après renommage.
+					// eslint-disable-next-line svelte/no-navigation-without-resolve
+					changementAdresse.apres + page.url.pathname.slice(changementAdresse.avant.length),
+					{ invalidateAll: true, noScroll: true }
+				);
+			} else await invalidateAll();
+			await tick();
+			restaurerLeRail(changementAdresse);
 		} catch {
 			actif.erreur = 'Le renommage a échoué.';
 			actif.envoi = false;
@@ -591,14 +615,33 @@
 		if (suppressionDemandee === null || suppressionEnCours) return;
 		const cible = suppressionDemandee;
 		if (cible.type !== 'note' && confirmationDeSuppression !== cible.nom) return;
+		const adresseCible =
+			cible.type === 'univers'
+				? resolve(ROUTE_UNIVERS, { univers: cible.cible?.univers ?? '' })
+				: cible.type === 'domaine'
+					? resolve(ROUTE_DOMAINE, {
+							univers: cible.cible?.univers ?? '',
+							domaine: cible.cible?.domaine ?? ''
+						})
+					: adresseDeSuppression(cible).split('?')[0]!;
+		const lienCible = Array.from(
+			document.querySelectorAll<HTMLAnchorElement>('.rail .noeud__nom')
+		).find((lien) => lien.getAttribute('href') === adresseCible);
+		const cibleAffichee =
+			(cible.type === 'note' && cible.identifiant === noteCourante) ||
+			page.url.pathname === adresseCible ||
+			page.url.pathname.startsWith(adresseCible + '/') ||
+			Boolean(lienCible?.closest('li')?.querySelector('[aria-current="page"]'));
 		suppressionEnCours = true;
 		erreurDeSuppression = null;
 		try {
 			const reponse = await fetch(adresseDeSuppression(cible), {
 				method: 'POST',
+				headers: { accept: 'application/json', 'x-sveltekit-action': 'true' },
 				body: champsDeSuppression(cible)
 			});
-			if (!reponse.ok) {
+			const resultat = deserialize(await reponse.text());
+			if (!reponse.ok || resultat.type === 'failure' || resultat.type === 'error') {
 				erreurDeSuppression =
 					cible.type === 'univers'
 						? `« ${cible.nom} » est l'univers système et ne peut pas être supprimé.`
@@ -606,9 +649,14 @@
 				suppressionEnCours = false;
 				return;
 			}
+			const restaurerLeRail = memoriserLeRail();
 			boiteDeSuppression?.close();
 			suppressionDemandee = null;
-			await goto(resolve('/'), { invalidateAll: true });
+			if (cibleAffichee) await goto(resolve('/'), { invalidateAll: true, noScroll: true });
+			else await invalidateAll();
+			await tick();
+			restaurerLeRail();
+			suppressionEnCours = false;
 		} catch {
 			erreurDeSuppression = 'La suppression a échoué.';
 			suppressionEnCours = false;
