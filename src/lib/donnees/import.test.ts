@@ -699,6 +699,20 @@ describe('le classement d’un lot — RG-M12-04, et le lot ne s’arrête jamai
 
 	const plan = classerLeLot('épreuve', LOT, SANS_SERVICE);
 
+	it('importe le même contenu et les mêmes métadonnées avec des fins de ligne Windows', () => {
+		const texte =
+			'---\ntitre: Consignes\netiquettes: recette\n---\n# Consignes\n\nDe nuit.\n\n```sh\necho disponible\n```\n';
+		const fichier = { chemin: 'consignes.md', octets: 200, texte, binaire: null };
+		const unix = classerLeLot('épreuve', [fichier], SANS_SERVICE);
+		const windows = classerLeLot(
+			'épreuve',
+			[{ ...fichier, texte: texte.replace(/\n/g, '\r\n') }],
+			SANS_SERVICE
+		);
+		expect(unix.notes).toBe(1);
+		expect(windows).toEqual(unix);
+	});
+
 	it('traite les fichiers qui suivent une erreur — c’est la règle même', () => {
 		const dernier = plan.lignes[plan.lignes.length - 1];
 		expect(dernier?.chemin).toBe('Reseau/Adressage.txt');
