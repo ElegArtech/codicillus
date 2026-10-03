@@ -14,7 +14,7 @@ Aucun runtime Node ou Python n'est requis sur le serveur : ils sont embarqués d
 ## Installation guidée
 
 ```sh
-curl -fL https://github.com/ElegArtech/codicillus/releases/download/v1.0.0-rc.2/installer-codicillus.sh -o installer-codicillus.sh && bash installer-codicillus.sh
+curl -fL https://github.com/ElegArtech/codicillus/releases/download/v1.0.0/installer-codicillus.sh -o installer-codicillus.sh && bash installer-codicillus.sh
 ```
 
 Le script télécharge le kit de cette version, vérifie son empreinte et l'extrait dans un nouveau
@@ -28,13 +28,13 @@ votre compte. Il ne remplace pas une installation existante. Un autre dossier pe
 
 ## Installation avec le kit Compose
 
-Le [kit Compose](https://github.com/ElegArtech/codicillus/releases/download/v1.0.0-rc.2/codicillus-1.0.0-rc.2-compose.tar.gz)
+Le [kit Compose](https://github.com/ElegArtech/codicillus/releases/download/v1.0.0/codicillus-1.0.0-compose.tar.gz)
 contient tous les fichiers d'installation, sans les images. Il est également possible de télécharger
 son fichier `.sha256` depuis la release, puis de le vérifier avec `sha256sum --check`.
 
 ```sh
-tar -xzf codicillus-1.0.0-rc.2-compose.tar.gz
-cd codicillus-1.0.0-rc.2-compose
+tar -xzf codicillus-1.0.0-compose.tar.gz
+cd codicillus-1.0.0-compose
 bash outils/configurer.sh
 ```
 

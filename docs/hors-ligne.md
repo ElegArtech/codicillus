@@ -12,20 +12,20 @@ paquet système ou de l'image système autorisés dans votre organisation.
 
 ### Télécharger le paquet prêt à installer
 
-Depuis la [préversion v1.0.0-rc.2](https://github.com/ElegArtech/codicillus/releases/tag/v1.0.0-rc.2),
+Depuis la [version stable v1.0.0](https://github.com/ElegArtech/codicillus/releases/tag/v1.0.0),
 télécharger ces deux fichiers dans le même dossier :
 
-- `codicillus-1.0.0-rc.2-linux-amd64.tar.gz` : le paquet complet pour Linux x86-64 ;
-- `codicillus-1.0.0-rc.2-linux-amd64.tar.gz.sha256` : son empreinte SHA-256.
+- `codicillus-1.0.0-linux-amd64.tar.gz` : le paquet complet pour Linux x86-64 ;
+- `codicillus-1.0.0-linux-amd64.tar.gz.sha256` : son empreinte SHA-256.
 
 Vérifier puis extraire l'archive :
 
 ```sh
-sha256sum --check codicillus-1.0.0-rc.2-linux-amd64.tar.gz.sha256
-tar -xzf codicillus-1.0.0-rc.2-linux-amd64.tar.gz
+sha256sum --check codicillus-1.0.0-linux-amd64.tar.gz.sha256
+tar -xzf codicillus-1.0.0-linux-amd64.tar.gz
 ```
 
-Le dossier `codicillus-1.0.0-rc.2/` est prêt à transférer. Continuer à l'étape 2 :
+Le dossier `codicillus-1.0.0/` est prêt à transférer. Continuer à l'étape 2 :
 aucune construction d'image n'est nécessaire.
 
 ### Ou construire le paquet depuis les sources
@@ -38,7 +38,7 @@ bash outils/preparer-hors-ligne.sh
 
 Le script récupère les images publiées de Codicillus, de gestion, de conversion, PostgreSQL,
 Meilisearch et Caddy, puis exporte les six images dans
-`dist/codicillus-1.0.0-rc.2/images.tar`. Il ne copie ni `.env`, ni les données de votre instance.
+`dist/codicillus-1.0.0/images.tar`. Il ne copie ni `.env`, ni les données de votre instance.
 
 Le dossier contient aussi Compose, les fichiers de configuration nécessaires, les guides,
 les scripts d'exploitation, les notices de licence et les sources de la version de Pandoc livrée.
@@ -83,7 +83,7 @@ au lieu de copier et remplir `.env` manuellement.
 Pour générer les deux secrets manuellement sans installer OpenSSL ou Node sur le serveur :
 
 ```sh
-docker run --rm --pull never --network none --entrypoint node   ghcr.io/elegartech/codicillus:1.0.0-rc.2   -e "const c=require('node:crypto'); console.log(c.randomBytes(32).toString('hex')); console.log(c.randomBytes(32).toString('hex'))"
+docker run --rm --pull never --network none --entrypoint node   ghcr.io/elegartech/codicillus:1.0.0   -e "const c=require('node:crypto'); console.log(c.randomBytes(32).toString('hex')); console.log(c.randomBytes(32).toString('hex'))"
 ```
 
 Reporter les valeurs dans `MDP_POSTGRES` et `CLE_MAITRE_RECHERCHE`, puis remplir les paramètres du
