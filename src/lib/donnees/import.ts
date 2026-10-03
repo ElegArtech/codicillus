@@ -1139,7 +1139,8 @@ export function classerLeLot(
 			return;
 		}
 
-		const entete = detacherLEnTete(texte);
+		// Les fichiers Windows portent aussi ces fins de ligne dans leur en-tête.
+		const entete = detacherLEnTete(texte.replace(/\r\n/g, '\n'));
 		let corps: Document;
 		try {
 			/* LA FRONTIÈRE D'IMPORT — voir `markdownImporte()`. Un fichier écrit
