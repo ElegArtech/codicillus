@@ -368,8 +368,6 @@ export interface EtatDeLIndex {
 	readonly champsCherchables: readonly string[];
 	readonly champsFiltrables: readonly string[];
 	readonly champsTriables: readonly string[];
-	/** Les embedders déclarés. Vide : le mode « Sens » est indisponible. */
-	readonly embedders: readonly string[];
 }
 
 export async function etatDeLIndex(client: Meilisearch): Promise<EtatDeLIndex> {
@@ -383,8 +381,7 @@ export async function etatDeLIndex(client: Meilisearch): Promise<EtatDeLIndex> {
 			entrees: 0,
 			champsCherchables: [],
 			champsFiltrables: [],
-			champsTriables: [],
-			embedders: []
+			champsTriables: []
 		};
 	}
 	const index = client.index(NOM_DE_L_INDEX);
@@ -397,8 +394,7 @@ export async function etatDeLIndex(client: Meilisearch): Promise<EtatDeLIndex> {
 		champsFiltrables: (reglages.filterableAttributes ?? []).map((a) =>
 			typeof a === 'string' ? a : JSON.stringify(a)
 		),
-		champsTriables: reglages.sortableAttributes ?? [],
-		embedders: Object.keys(reglages.embedders ?? {})
+		champsTriables: reglages.sortableAttributes ?? []
 	};
 }
 

@@ -6,7 +6,7 @@
  * `pnpm test:unit` dépendant de Docker, et une batterie qui ne s'exécute pas ne
  * prouve rien.
  *
- * QUATRE PROPRIÉTÉS Y SONT ÉPROUVÉES, ET CHACUNE A UN CAS QUI LA SOLLICITE —
+ * TROIS PROPRIÉTÉS Y SONT ÉPROUVÉES, ET CHACUNE A UN CAS QUI LA SOLLICITE —
  * `P-5` et `P-26` : un contrôle dont l'unique cas est l'état du dépôt devient
  * inerte le jour où le dépôt change.
  *
@@ -18,9 +18,7 @@
  *      pas : une note publique en BROUILLON ;
  *   2. **aucun chemin dérogatoire en anonyme.** Même avec un périmètre total en
  *      main, l'anonyme reçoit le filtre réduit ;
- *   3. **une facette ne peut pas élargir un périmètre**, ni en rouvrir un fermé ;
- *   4. **le mode « Sens » est indisponible parce qu'aucun embedder n'est
- *      déclaré** — le constat est dérivé des réglages, pas écrit.
+ *   3. **une facette ne peut pas élargir un périmètre**, ni en rouvrir un fermé.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -41,7 +39,7 @@ import {
 	filtreDuPerimetre,
 	valeurDeFiltre
 } from './perimetre';
-import { REGLAGES_DE_L_INDEX, SENS_DISPONIBLE } from './notes-indexees';
+import { REGLAGES_DE_L_INDEX } from './notes-indexees';
 
 /* ═══════════════════════════════════════ Le décor ══════════════════════ */
 
@@ -299,17 +297,7 @@ describe('les facettes — elles restreignent, elles n’élargissent jamais', (
 	});
 });
 
-/* ═══════════════════════════════════════ 4. Le mode « Sens » ═══════════ */
-
-describe('le mode « Sens » — déclaré indisponible, jamais simulé', () => {
-	it('n’est pas disponible', () => {
-		expect(SENS_DISPONIBLE).toBe(false);
-	});
-
-	it('ne l’est pas par constat : aucun embedder n’est déclaré dans les réglages', () => {
-		expect(REGLAGES_DE_L_INDEX.embedders).toBeUndefined();
-	});
-
+describe('les réglages de l’index', () => {
 	it('déclare filtrables les quatre champs du périmètre', () => {
 		for (const champ of ['dossier', 'ancetres', 'visibilite', 'statut']) {
 			expect(REGLAGES_DE_L_INDEX.filterableAttributes).toContain(champ);

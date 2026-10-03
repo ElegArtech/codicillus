@@ -2,7 +2,7 @@
 	/**
 	 * V-09 — Palette de recherche rapide. AUCUNE ROUTE : la palette est une
 	 * superposition, pas une page (`docs/routes.md`). Ce que la maquette sert est
-	 * sa PLANCHE D'ÉTATS, les six côte à côte.
+	 * sa PLANCHE D'ÉTATS, les cinq côte à côte.
 	 *
 	 * CE FICHIER EST LA PLANCHE, PAS LA PALETTE VIVANTE. Celle que le produit
 	 * monte — ouverture au raccourci et au clic du champ de la barre supérieure,
@@ -16,29 +16,28 @@
 	 * seule dont l'enveloppe soit `div.planche-vue`. Son unique lien d'évitement
 	 * est `#etats`.
 	 *
-	 * Ce composant IGNORE donc `etat` : il rend la même page pour les six clés.
-	 * VÉRIFIÉ côté référence — les six relevés de DOM de la maquette gelée ont
+	 * Ce composant IGNORE donc `etat` : il rend la même page pour les cinq clés.
+	 * VÉRIFIÉ côté référence — les cinq relevés de DOM de la maquette gelée ont
 	 * la même empreinte MD5, au bit près.
 	 *
 	 * V-09 est aussi la SEULE maquette du dépôt à porter un état « Petit écran
 	 * — 360 px » (`V-09:740`, `le module de conditions du banc, sa borne de temporisation`). Il n'est pas
-	 * obtenu en rétrécissant la fenêtre : la sixième section porte
+	 * obtenu en rétrécissant la fenêtre : la cinquième section porte
 	 * `class="cas cas--etroit"`, sa feuille contraint `.palette-hote` à 360 px,
 	 * et `.palette-hote { container-type: inline-size }` fait réagir la palette
 	 * à SON CONTENEUR, pas à la fenêtre — `@container (max-width: 430px)`,
 	 * `V-09.css:267`. Les quatre fenêtres d'ARB-009 s'appliquent par-dessus.
 	 *
 	 * ═══════════════════════════════════════════════════════════════════════
-	 * LES SIX CAS, TELS QUE LA FABRIQUE DU GEL LES INSTANCIE (`V-09:1334`)
+	 * LES CINQ CAS, TELS QUE LA FABRIQUE DU GEL LES INSTANCIE (`V-09:1334`)
 	 *
 	 *   repos      requête vide,          curseur                → 4 récentes
 	 *   unecar     « r »,                 curseur                → invitation
 	 *   resultats  « restauration base », curseur, sélection 0    → 7 lignes
 	 *   vide       « bascule VoIP »,      curseur                → impasse
-	 *   degrade    « sauvegarde »,        curseur, dégradé, sél. 1 → 7 lignes
 	 *   etroit     « restauration »,      curseur, sél. 0, 300 px  → 7 lignes
 	 *
-	 * `opts.statique` vaut vrai pour les six (`V-09:1347`) : la saisie prend
+	 * `opts.statique` vaut vrai pour les cinq (`V-09:1347`) : la saisie prend
 	 * `tabindex="-1"` et `readonly`, la liste reçoit sa hauteur maximale en
 	 * style en ligne, et les deux boutons du pied prennent `tabindex="-1"`.
 	 * « Un aperçu ne capte ni le focus ni le clavier : il illustre. »
@@ -191,8 +190,6 @@
 		readonly nom: string;
 		readonly quoi: string;
 		readonly requete: string;
-		/** La brique de recherche par sens est tombée. */
-		readonly degrade: boolean;
 		/** Le rang sélectionné, quand la liste en porte un. */
 		readonly selection: number;
 		/** Hauteur maximale de la liste, en style en ligne — `opts.hauteur`. */
@@ -202,8 +199,8 @@
 	}
 
 	/**
-	 * Les six cas, dans l'ordre du balisage. Les réglages sont ceux de la table
-	 * `CAS` du gel (`V-09:1334`) ; les textes, ceux des six `section.cas`
+	 * Les cinq cas, dans l'ordre du balisage. Les réglages sont ceux de la table
+	 * `CAS` du gel (`V-09:1334`) ; les textes, ceux des cinq `section.cas`
 	 * (`V-09:692` et suivantes).
 	 */
 	const CAS: readonly Cas[] = [
@@ -213,7 +210,6 @@
 			nom: 'Au repos',
 			quoi: "Champ vide, à l'ouverture. Les notes récemment consultées tiennent lieu de point de départ : la palette ne s'ouvre jamais sur du blanc. Le premier élément est déjà sélectionné — une frappe sur Entrée suffit à revenir à sa dernière lecture.",
 			requete: '',
-			degrade: false,
 			selection: 0,
 			hauteur: '268px',
 			etroit: false
@@ -224,7 +220,6 @@
 			nom: 'Un seul caractère',
 			quoi: "En dessous de deux caractères, aucun résultat n'est calculé : le bruit serait plus coûteux que l'attente. Le message le dit, plutôt que de laisser croire à une recherche infructueuse.",
 			requete: 'r',
-			degrade: false,
 			selection: 0,
 			hauteur: '268px',
 			etroit: false
@@ -235,7 +230,6 @@
 			nom: 'Résultats',
 			quoi: "Dès le deuxième caractère, affinés au fil de la frappe. Ligne compacte : type, titre avec les termes mis en évidence, signal de fraîcheur, domaine. Un résultat trouvé dans le registre opérationnel le signale — l'ouverture se fera sur ce registre.",
 			requete: 'restauration base',
-			degrade: false,
 			selection: 0,
 			hauteur: '268px',
 			etroit: false
@@ -246,29 +240,16 @@
 			nom: 'Aucun résultat',
 			quoi: "La requête est reprise entre guillemets et la création prend la place du message d'échec. Comme en V-08, l'impasse devient une contribution. Le bouton disparaît pour un lecteur sans droit d'écriture.",
 			requete: 'bascule VoIP',
-			degrade: false,
 			selection: 0,
 			hauteur: '268px',
 			etroit: false
 		},
 		{
-			cle: 'degrade',
-			num: 'ÉTAT 05',
-			nom: 'Recherche par sens indisponible',
-			quoi: 'La brique optionnelle est tombée. La palette bascule en mots-clés et le dit, sans interrompre la frappe ni vider la liste. La recherche ne tombe jamais en panne.',
-			requete: 'sauvegarde',
-			degrade: true,
-			selection: 1,
-			hauteur: '268px',
-			etroit: false
-		},
-		{
 			cle: 'etroit',
-			num: 'ÉTAT 06',
+			num: 'ÉTAT 05',
 			nom: 'Petit écran — 360 px',
 			quoi: "La palette occupe la quasi-totalité de l'écran et gagne un bouton de fermeture explicite : le raccourci d'échappement n'existe pas au doigt. Les rappels de raccourcis cèdent la place, la durée du signal de fraîcheur se réduit à la jauge.",
 			requete: 'restauration',
-			degrade: false,
 			selection: 0,
 			hauteur: '300px',
 			etroit: true
@@ -414,7 +395,7 @@
 		<h1>Chercher sans quitter sa page</h1>
 		<p>
 			Le geste le plus fréquent du produit. La palette se superpose à n'importe quelle vue, se
-			pilote entièrement au clavier, et n'affiche jamais une zone vide. Les six états ci-dessous
+			pilote entièrement au clavier, et n'affiche jamais une zone vide. Les cinq états ci-dessous
 			sont produits par le même composant que celui embarqué dans V-08 et V-14 — ce ne sont pas des
 			reproductions.
 		</p>
@@ -434,11 +415,7 @@
 					<p class="cas__quoi">{cas.quoi}</p>
 				</div>
 				<div class="cas__hote palette-hote" data-cas={cas.cle}>
-					<div
-						class="palette__boite"
-						data-degrade={cas.degrade ? 'oui' : undefined}
-						data-curseur="oui"
-					>
+					<div class="palette__boite" data-curseur="oui">
 						<div class="palette__champ">
 							<svg
 								width="18"
@@ -479,19 +456,6 @@
 								>
 							</button>
 							<button class="btn btn--discret palette__fermer" tabindex="-1">Fermer</button>
-						</div>
-
-						<div class="palette__degrade">
-							<svg
-								width="13"
-								height="13"
-								viewBox="0 0 16 16"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.6"
-								><path d="M8 5.5v3.5M8 11.2v.3" /><circle cx="8" cy="8" r="6" /></svg
-							>
-							Recherche par sens indisponible — résultats en mots-clés
 						</div>
 
 						<!-- prettier-ignore -->
@@ -537,5 +501,5 @@
 	</section>
 </div>
 
-<!-- Rendu vide : la référence le montre vide sur les six cas (ARB-011). -->
+<!-- Rendu vide : la référence le montre vide sur les cinq cas (ARB-011). -->
 <div class="notifs" id="notifs" role="status" aria-live="polite"></div>

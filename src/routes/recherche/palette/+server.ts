@@ -31,7 +31,6 @@ import { and, desc, eq, inArray, max } from 'drizzle-orm';
 import { basePartagee } from '$lib/base/acces';
 import { consultations, notes } from '$lib/base/schema';
 import { lireConfiguration, lireNotes, type ContexteDeLecture } from '$lib/donnees/lecture';
-import { SENS_DISPONIBLE } from '$lib/donnees/public';
 import { moteurPartage } from '$lib/recherche/acces';
 import { chercherLesNotes, perimetreDeLIdentite } from '$lib/recherche/moteur';
 import { AUCUN_RESULTAT, indexAbsent, motifDuPerimetreVide } from '$lib/recherche/vide';
@@ -149,7 +148,6 @@ async function auRepos(
 		   vaut pas zéro. Le pied n'écrit alors aucune durée. */
 		dureeMs: null,
 		recentes: true,
-		degrade: !SENS_DISPONIBLE,
 		motif: notesLues.length > 0 ? null : await motifDuPerimetre(base, identite)
 	};
 }
@@ -194,7 +192,6 @@ async function pourLaRequete(
 		total: trouvees.total,
 		dureeMs: trouvees.dureeMs,
 		recentes: false,
-		degrade: !SENS_DISPONIBLE,
 		motif
 	};
 }

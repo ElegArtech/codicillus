@@ -77,7 +77,6 @@
 		pistes={data.pistes}
 		motif={data.motif}
 		tri={data.tri}
-		modeDemande={data.mode}
 	/>
 {:else}
 	<!--

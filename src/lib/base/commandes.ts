@@ -266,10 +266,7 @@ SELECT ligne FROM (
 	  JOIN pg_namespace n ON n.oid = p.pronamespace
 	 WHERE n.nspname = 'public'
 	   AND p.prokind = 'f'
-	   -- Les objets APPORTES PAR UNE EXTENSION ne sont pas du schema du produit :
-	   -- pgvector pose une centaine de fonctions et d agregats dans public. Les
-	   -- relever ferait dependre l empreinte de la version de l extension, et
-	   -- pg_get_functiondef refuse d ailleurs de decrire un agregat.
+	   -- Les fonctions des extensions ne font pas partie du schema applicatif.
 	   AND NOT EXISTS (
 	     SELECT 1 FROM pg_depend d
 	      WHERE d.objid = p.oid AND d.classid = 'pg_proc'::regclass AND d.deptype = 'e'

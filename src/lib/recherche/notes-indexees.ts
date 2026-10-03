@@ -6,7 +6,7 @@
  * faute inatteignable — `dossier`, `ancetres`, `visibilite` et `statut` sont OBLIGATOIRES. Le
  * mot « document » est celui du MOTEUR : les types, fichiers et commandes disent NOTE.
  *
- * TROIS REFUS, AUCUN OUBLI :
+ * DEUX EXCLUSIONS :
  *
  *  1. LA FRAÎCHEUR. Une colonne `fraicheur` dans l'index serait une seconde définition, et
  *     pire : GELÉE À L'INSTANT DE L'INDEXATION. Ce sont donc les INSTANTS qui sont indexés, et
@@ -14,7 +14,6 @@
  *  2. LE CORPS DES DEUX REGISTRES. Les champs cherchables sont EXACTEMENT ceux que la maquette
  *     cherche ; indexer le corps ferait trouver des notes que la fabrique du gel rejette.
  *     Conséquence : `RG-M02-02` n'a pas de quoi se décider.
- *  3. LES VECTEURS. Aucun n'existe, et `SENS_DISPONIBLE` en est DÉRIVÉ.
  */
 import type { Settings } from 'meilisearch';
 
@@ -113,10 +112,6 @@ export const CHAMPS_TRIABLES: readonly string[] = [
 /**
  * LES RÉGLAGES DE L'INDEX.
  *
- * `embedders` N'Y EST PAS, ET C'EST LE POINT : le mode « Sens » du moteur exige un embedder
- * déclaré. Son absence est la condition mécanique de son indisponibilité, et `SENS_DISPONIBLE`
- * la lit plus bas au lieu de l'affirmer.
- *
  * `pagination.maxTotalHits` gouverne le nombre total que le moteur consent à compter — donc le
  * compteur global de `RG-M02-08` —, et `PLAFOND_DE_RESULTATS` en dépend.
  */
@@ -125,16 +120,3 @@ export const REGLAGES_DE_L_INDEX: Settings = {
 	filterableAttributes: [...CHAMPS_FILTRABLES],
 	sortableAttributes: [...CHAMPS_TRIABLES]
 };
-
-/**
- * LE MODE « SENS » EST-IL DISPONIBLE ? — un CONSTAT, dérivé des réglages.
- *
- * `P-10` : dégradation, jamais panne. `P-02` : aucune valeur illustrative — un mode « Sens »
- * qui rendrait en réalité des résultats de mots-clés serait une simulation indétectable. La
- * valeur n'est pas écrite : elle est LIÉE à la seule condition qui la rende vraie.
- *
- * Le gel porte déjà cet état et sa phrase : V-08 pose son mode en mots-clés, se déclare
- * dégradée et affiche « Recherche par sens momentanément indisponible ». `RG-M02-01` exige que
- * la bascule soit ANNONCÉE, pas silencieuse.
- */
-export const SENS_DISPONIBLE: boolean = REGLAGES_DE_L_INDEX.embedders !== undefined;

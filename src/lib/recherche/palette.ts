@@ -51,8 +51,6 @@ export interface ReponseDePalette {
 	 * recherche : la requête était vide. La palette ne s'ouvre jamais sur du blanc.
 	 */
 	readonly recentes: boolean;
-	/** La recherche par sens est indisponible — la palette le dit sans se vider. */
-	readonly degrade: boolean;
 	/**
 	 * LE PÉRIMÈTRE N'A RIEN À OFFRIR, ET VOICI POURQUOI — les quatre motifs de
 	 * `/recherche`, écrits une seule fois dans `./motifs`. `null` : il a de quoi

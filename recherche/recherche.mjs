@@ -28,7 +28,7 @@ Usage : node recherche/recherche.mjs <commande>
 
   reindexer     reconstruit l'index depuis la base — l'index n'entre pas dans
                 la sauvegarde (RG-NF-09), il se reconstruit
-  etat          ce que l'index porte : entrées, champs réglés, embedders
+  etat          ce que l'index porte : entrées et champs réglés
   epreuve       les sept personas contre l'index : aucune entrée interdite
                 n'en sort, et le filtre n'est pas inerte
 `;
@@ -96,20 +96,10 @@ try {
 			ligne('champs cherchables', etat.champsCherchables.join(', ') || '—');
 			ligne('champs filtrables', etat.champsFiltrables.join(', ') || '—');
 			ligne('champs triables', etat.champsTriables.join(', ') || '—');
-			ligne('embedders déclarés', etat.embedders.join(', ') || 'AUCUN');
-			console.log('');
-			console.log(
-				etat.embedders.length === 0
-					? 'MODE « SENS » INDISPONIBLE — aucun embedder n’est déclaré, donc aucun vecteur\n' +
-							'  n’existe. Le mode se DÉCLARE indisponible (P-10) ; il n’est pas simulé (P-02).'
-					: 'des embedders sont déclarés : le mode « Sens » ne peut plus se dire indisponible.'
-			);
-			console.log('');
 			console.log('CE QUE CET INDEX NE PORTE PAS, ET POURQUOI :');
 			for (const quoi of [
 				'la FRAÎCHEUR — une seconde définition, gelée à l’indexation (P-01, ADR-005)',
-				'le CORPS des deux registres — les champs cherchables sont ceux de la maquette',
-				'les VECTEURS — aucun n’est calculé ; le service d’embeddings est optionnel'
+				'le CORPS des deux registres — les champs cherchables sont ceux de la maquette'
 			]) {
 				console.log(`    ${quoi}`);
 			}

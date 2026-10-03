@@ -54,9 +54,6 @@ La recherche par mots-clés accepte des filtres selon le périmètre et les droi
 La palette de recherche permet un accès rapide depuis la navigation. Les relations et les liens
 internes offrent un autre chemin pour parcourir le corpus.
 
-La recherche sémantique n'est pas active dans cette version. Les résultats disponibles reposent
-sur les mots-clés ; installer un service de modèles ne l'active pas.
-
 ## Importer et exporter
 
 L'import accepte du Markdown et du texte. Les PDF, images et tableurs XLS, XLSX et ODS peuvent

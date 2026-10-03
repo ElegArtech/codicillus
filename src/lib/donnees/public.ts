@@ -32,7 +32,6 @@ import {
 import { lireIndexDesDroits } from './note';
 import { type ContexteDeLecture, lireNotes } from './lecture';
 import { chercherLesNotes } from '../recherche/moteur';
-import { SENS_DISPONIBLE } from '../recherche/notes-indexees';
 import type { Note } from '../../../seeds/corpus';
 
 /**
@@ -116,20 +115,6 @@ export const LACUNES_DU_CHEMIN_PUBLIC: readonly LacuneDuCheminPublic[] = [
 			'la réponse est rigoureusement la même quelle que soit la route qui a refusé.'
 	}
 ];
-
-/**
- * Les trois modes de `RG-M02-01`, et celui qui existe.
- *
- * Les mots-clés viennent du moteur. Le mode « Sens » a besoin de VECTEURS, et il n'en
- * existe aucun : le service d'embeddings est optionnel, le modèle n'est pas fixé, aucun lot
- * ne les calcule. Un mode « Sens » qui rendrait des résultats de mots-clés serait une
- * simulation indétectable (`P-02`) ; la brique indisponible dégrade avec un message clair
- * (`P-10`). LE CONSTAT N'EST PAS ÉCRIT ICI, IL EST DÉRIVÉ : `SENS_DISPONIBLE` vient des
- * RÉGLAGES DE L'INDEX, où l'absence d'embedder est la condition mécanique de
- * l'indisponibilité. `?mode=sens` et `?mode=hybride` ne sont pas dans la liste close des
- * paramètres honorés : ils ne sont ni servis, ni refusés.
- */
-export { SENS_DISPONIBLE };
 
 /**
  * Les paramètres que l'anonyme voit honorer — `docs/routes.md:248` : « en anonyme (V-02),
@@ -245,9 +230,7 @@ export async function lireLaRecherche(
 		vecteur: {
 			/* `P-09` — la capacité vient de `capacites()`, jamais d'un rôle lu à la main. */
 			droits: (await capaciteDEcriture(base, identite)) ? 'ecriture' : 'lecture',
-			etat: lisibles.length === 0 ? 'vide' : 'nominal',
-			/* Le mode « Sens » se DÉCLARE indisponible — voir `SENS_DISPONIBLE`. */
-			'c-degrade': !SENS_DISPONIBLE
+			etat: lisibles.length === 0 ? 'vide' : 'nominal'
 		},
 		notes: lisibles
 	};

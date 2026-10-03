@@ -51,19 +51,18 @@ de Node, Python ou PostgreSQL sur l'hôte n'est nécessaire.
 - **[Exploitation](docs/exploitation.md)** : mises à jour, sauvegardes, restauration et diagnostic.
 
 La conversion bureautique est optionnelle. Sans elle, les imports Markdown et texte restent
-accessibles. La recherche sémantique n'est pas disponible dans cette version.
+accessibles.
 
 ## État de la version
 
 La version `1.0.0` est la première version stable de Codicillus. L’installation sur une base
 vide, les principaux parcours dans le navigateur, la migration depuis la préversion et la
-sauvegarde-restauration ont été vérifiés sur Linux x86-64. La recherche sémantique reste
-indisponible. La documentation décrit les fonctionnalités présentes ; elle ne constitue pas
+sauvegarde-restauration ont été vérifiés sur Linux x86-64. La documentation décrit les fonctionnalités présentes ; elle ne constitue pas
 un engagement de support ou de disponibilité.
 
 ## Technique
 
-SvelteKit et Svelte, TypeScript, PostgreSQL avec pgvector, Meilisearch et Caddy.
+SvelteKit et Svelte, TypeScript, PostgreSQL, Meilisearch et Caddy.
 Les polices et les ressources de l'interface sont servies localement.
 
 La [référence technique](docs/architecture.md) décrit les principaux modules et le modèle de données.

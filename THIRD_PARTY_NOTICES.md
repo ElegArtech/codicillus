@@ -22,7 +22,7 @@ restent présents dans les paquets installés dans les images Docker.
 
 ## Services et outils
 
-PostgreSQL, pgvector, Meilisearch, Caddy, Node.js, Python et les paquets de conversion
+PostgreSQL, Meilisearch, Caddy, Node.js, Python et les paquets de conversion
 conservent leurs licences propres. Les images incluent les notices de leurs distributions
 et des paquets installés. Leurs versions sont définies dans `compose.yaml` et les Dockerfile.
 

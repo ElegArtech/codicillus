@@ -70,14 +70,6 @@
 .palette__boite[data-curseur="oui"] .palette__curseur { display: block; }
 @keyframes clignote { 50% { opacity: 0; } }
 
-/* --- Bandeau de mode dégradé ---------------------------------------------- */
-.palette__degrade {
-  display: none; align-items: center; gap: var(--e-2);
-  padding: var(--e-2) var(--e-4);
-  background: var(--c-alerte-voile); border-bottom: 1px solid #dcc59a;
-  font-size: var(--t-mini); color: var(--c-alerte); flex: none;
-}
-.palette__boite[data-degrade="oui"] .palette__degrade { display: flex; }
 
 /* --- Liste ----------------------------------------------------------------- */
 .palette__liste { overflow-y: auto; padding: var(--e-2); flex: 1; min-height: 0; }
