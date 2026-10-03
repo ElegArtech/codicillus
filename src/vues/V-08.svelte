@@ -25,7 +25,6 @@
 	 * navigateur. Les deux valeurs viennent du gel (`V-08:1191`, `V-08:1004`).
 	 */
 	const ORDRE_PAR_DEFAUT = 'pertinence';
-	const MODE_PAR_DEFAUT = 'hybride';
 
 	/**
 	 * LES QUATRE SOURCES QUI NE VIENNENT DE NULLE PART. `/recherche` n'en passe
@@ -78,11 +77,6 @@
 		 */
 		tri?: string;
 		/**
-		 * Le mode demandé par l'adresse — `?mode=`. Absent : « hybride » (`V-08:1004`).
-		 * Le mode EFFECTIF n'est pas celui-ci : voir `mode`.
-		 */
-		modeDemande?: string;
-		/**
 		 * Pourquoi le périmètre est vide — `null` dès qu'une note s'y trouve. EXIGÉE :
 		 * la vue ne peut pas le déduire, et « zéro note lisible » a quatre causes qui
 		 * n'appellent pas le même geste. Sans elle, l'écran composait « Aucun résultat
@@ -122,8 +116,7 @@
 		univers = [],
 		domaines = [],
 		compte: moi = SANS_IDENTITE,
-		tri = ORDRE_PAR_DEFAUT,
-		modeDemande = MODE_PAR_DEFAUT
+		tri = ORDRE_PAR_DEFAUT
 	}: Proprietes = $props();
 
 	const reglage = $derived(vecteur ?? {});
@@ -148,17 +141,6 @@
 				? 'vide'
 				: 'nominal'
 	);
-
-	/** Le sens indisponible — `V-08:2102-2103` pose `data-mode` ET `disabled`. */
-	const degrade = $derived(reglage['c-degrade'] === true);
-	/**
-	 * LE MODE EFFECTIF — celui que l'écran SERT, jamais seulement celui qu'on a
-	 * demandé. Dégradé, il vaut « mots-clés » quoi qu'on demande, et le bandeau du
-	 * gel l'écrit au-dessous (`RG-M02-01`, bascule annoncée ; `P-10`, dégradation
-	 * sans panne). La DEMANDE ne va PAS jusqu'au moteur : `chercherLesNotes()` n'a
-	 * pas de paramètre de mode tant qu'il n'y a pas d'embedder à qui le passer.
-	 */
-	const mode = $derived(degrade ? 'motscles' : modeDemande);
 
 	/* LA REQUÊTE. Le balisage du gel écrit `value="restauration base"`
 	   (`V-08:1157`) ; son gestionnaire voudrait la remplacer mais pose ces valeurs
@@ -353,8 +335,7 @@
 	function adresse(
 		prochaines: Record<string, readonly string[]>,
 		requeteVoulue: string,
-		ordre: string = tri,
-		modeVoulu: string = modeDemande
+		ordre: string = tri
 	): string {
 		const couples: string[] = [];
 		if (requeteVoulue) couples.push(`q=${encodeURIComponent(requeteVoulue)}`);
@@ -362,7 +343,6 @@
 		   deux écrans identiques rendraient deux adresses différentes, ce que la
 		   fabrique unique est là pour empêcher. */
 		if (ordre !== ORDRE_PAR_DEFAUT) couples.push(`tri=${encodeURIComponent(ordre)}`);
-		if (modeVoulu !== MODE_PAR_DEFAUT) couples.push(`mode=${encodeURIComponent(modeVoulu)}`);
 		for (const f of FACETTES) {
 			for (const v of prochaines[f.id] ?? []) couples.push(`${f.id}=${encodeURIComponent(v)}`);
 		}
@@ -405,16 +385,6 @@
 	    conservés, comme au gel. */
 	function changerLOrdre(ordre: string): void {
 		aller(adresse(choisis, q, ordre));
-	}
-
-	/**
-	 * Changer le mode — `V-08:2077-2083`. LE BOUTON DU MODE SERVI NE NAVIGUE PAS : la
-	 * comparaison porte sur le mode EFFECTIF et non sur celui qu'on a demandé, sans
-	 * quoi le clic d'« Hybride » en dégradé ne faisait rien du tout.
-	 */
-	function changerLeMode(voulu: string): void {
-		if (voulu === mode) return;
-		aller(adresse(choisis, q, tri, voulu));
 	}
 
 	/**
@@ -483,8 +453,6 @@
 	{droits}
 	donnees={{
 		'data-etat': etat,
-		'data-mode': mode,
-		'data-degrade': degrade ? 'oui' : 'non',
 		'data-trop': rendreLesResultats && affluence && nbFiltres === 0 ? 'oui' : 'non',
 		'data-facettes': facettesOuvertes ? 'ouvert' : 'ferme'
 	}}
@@ -564,59 +532,6 @@
 						>
 					</button>
 				</div>
-
-				<!-- Les trois modes. `aria-pressed` suit le mode EFFECTIF. « Sens » ET
-					« Hybride » sont désactivés quand la brique de sens est tombée : les deux
-					ont besoin des vecteurs. Le gel ne désactive que « Sens ». -->
-				<div class="modes" role="group" aria-label="Mode de recherche">
-					<button
-						data-mode="motscles"
-						aria-pressed={mode === 'motscles'}
-						onclick={() => changerLeMode('motscles')}
-					>
-						Mots-clés
-						<span class="aide-mode" role="tooltip"
-							>Correspondance textuelle, tolérante aux fautes de frappe. Cherche les mots tels
-							qu'ils sont écrits.</span
-						>
-					</button>
-					<button
-						data-mode="sens"
-						aria-pressed={mode === 'sens'}
-						disabled={degrade}
-						onclick={() => changerLeMode('sens')}
-					>
-						Sens
-						<span class="aide-mode" role="tooltip"
-							>Trouve les notes qui parlent du même sujet, même lorsqu'elles n'emploient aucun mot
-							de la requête.</span
-						>
-					</button>
-					<button
-						data-mode="hybride"
-						aria-pressed={mode === 'hybride'}
-						disabled={degrade}
-						onclick={() => changerLeMode('hybride')}
-					>
-						Hybride
-						<span class="aide-mode" role="tooltip"
-							>Fusionne les deux approches et classe les résultats sur les deux critères. Mode par
-							défaut.</span
-						>
-					</button>
-				</div>
-			</div>
-
-			<div class="degrade">
-				<svg
-					width="14"
-					height="14"
-					viewBox="0 0 16 16"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.6"><path d="M8 5.5v3.5M8 11.2v.3" /><circle cx="8" cy="8" r="6" /></svg
-				>
-				Recherche par sens momentanément indisponible — les résultats sont établis en mots-clés.
 			</div>
 
 			<div class="reglages">

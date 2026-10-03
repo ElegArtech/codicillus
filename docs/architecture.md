@@ -8,7 +8,7 @@ des comptes, des droits, de l'historique et des réglages. Meilisearch fournit u
 
 Le service Python de conversion reçoit les fichiers bureautiques et retourne un contenu importable.
 Il est optionnel. Aucun service externe n'est requis pour servir les polices ou les ressources de
-l'interface. La recherche sémantique n'est pas implémentée dans la version actuelle.
+l'interface. La recherche utilise les mots-clés et les filtres de Meilisearch.
 
 | Dossier | Rôle |
 |---|---|

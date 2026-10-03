@@ -70,15 +70,6 @@
 .palette__boite[data-curseur="oui"] .palette__curseur { display: block; }
 @keyframes clignote { 50% { opacity: 0; } }
 
-/* --- Bandeau de mode dégradé ---------------------------------------------- */
-.palette__degrade {
-  display: none; align-items: center; gap: var(--e-2);
-  padding: var(--e-2) var(--e-4);
-  background: var(--c-alerte-voile); border-bottom: 1px solid #dcc59a;
-  font-size: var(--t-mini); color: var(--c-alerte); flex: none;
-}
-.palette__boite[data-degrade="oui"] .palette__degrade { display: flex; }
-
 /* --- Liste ----------------------------------------------------------------- */
 .palette__liste { overflow-y: auto; padding: var(--e-2); flex: 1; min-height: 0; }
 .palette__groupe { padding: var(--e-2) var(--e-2) var(--e-1); }
@@ -200,30 +191,6 @@
 }
 .requete__effacer:hover { background: var(--c-fond-creux); color: var(--c-encre); }
 
-/* --- Bascule de mode -------------------------------------------------------- */
-.modes {
-  display: flex; align-items: center; gap: var(--e-1);
-  margin-top: var(--e-3); padding: var(--e-1);
-  background: var(--c-fond-creux); border: 1px solid var(--c-trait);
-  border-radius: var(--r-3); width: fit-content;
-}
-.modes button {
-  position: relative;
-  border: 0; background: none; cursor: pointer;
-  padding: 6px var(--e-3); border-radius: var(--r-2);
-  font-size: var(--t-petit); font-weight: var(--g-fort); color: var(--c-encre-2);
-}
-.modes button[aria-pressed="true"] { background: var(--c-papier); color: var(--c-encre); box-shadow: var(--o-pose); }
-.modes button:hover .aide-mode, .modes button:focus-visible .aide-mode { opacity: 1; visibility: visible; }
-.aide-mode {
-  position: absolute; z-index: 30; left: 50%; top: calc(100% + 8px); transform: translateX(-50%);
-  width: 240px; padding: var(--e-2) var(--e-3);
-  background: var(--c-encre); color: #dfe6e8;
-  border-radius: var(--r-2); box-shadow: var(--o-flotte);
-  font-size: var(--t-mini); font-weight: var(--g-normal); line-height: 1.45; text-align: left;
-  opacity: 0; visibility: hidden; transition: opacity var(--m-vif); pointer-events: none;
-}
-
 /* ==========================================================================
    FACETTES ET FILTRES ACTIFS
    Composant commun à la recherche interne (V-08) et publique (V-02), ainsi
@@ -304,15 +271,6 @@
   border-radius: 9px; background: var(--c-accent); color: #fff;
   font-family: var(--f-donnee); font-size: var(--t-micro); font-weight: var(--g-lourd);
 }
-
-/* --- Bandeau de mode dégradé ------------------------------------------------- */
-.degrade {
-  display: none; align-items: center; gap: var(--e-2);
-  padding: var(--e-2) var(--e-3); margin-bottom: var(--e-3);
-  background: var(--c-alerte-voile); border: 1px solid #dcc59a; border-radius: var(--r-2);
-  font-size: var(--t-mini); color: var(--c-alerte);
-}
-.app[data-degrade="oui"] .degrade { display: flex; }
 
 /* ==========================================================================
    CARTE DE RÉSULTAT
@@ -450,9 +408,6 @@
   .app[data-facettes="ouvert"] .facettes { display: block; }
   .bouton-facettes { display: inline-flex; }
   .requete__champ input { font-size: var(--t-t3); }
-  .modes { width: 100%; }
-  .modes button { flex: 1; }
-  .aide-mode { display: none; }
   .planche { display: none; }
   .carte { padding: var(--e-3); }
 }

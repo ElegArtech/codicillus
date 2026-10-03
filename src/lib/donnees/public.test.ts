@@ -36,7 +36,6 @@ import { notesPubliques, type Note } from '../../../seeds/corpus';
 import {
 	LACUNES_DU_CHEMIN_PUBLIC,
 	PARAMETRES_HONORES_EN_ANONYME,
-	SENS_DISPONIBLE,
 	casDeV26,
 	parametresHonores,
 	peutEcrireQuelquePart,
@@ -239,15 +238,6 @@ describe('la capacité d’écriture — par capacites(), jamais par le rôle', 
 /* ═══════════════════ 5 · Ce qui est déclaré et non comblé ═════════════ */
 
 describe('les constats déclarés', () => {
-	/**
-	 * `T-027` n'a pas alimenté l'index : le mode « Sens » n'existe pas, et il se
-	 * DÉCLARE indisponible plutôt que d'être simulé (`P-02`, `P-10`). Le jour où
-	 * il existera, ce test rougira — c'est ce qu'on lui demande.
-	 */
-	it('déclare le mode « Sens » indisponible', () => {
-		expect(SENS_DISPONIBLE).toBe(false);
-	});
-
 	/**
 	 * Les lacunes sont COMPTÉES, jamais seulement racontées : un lot futur qui en
 	 * refermerait une fait rougir ce test plutôt que de laisser un commentaire

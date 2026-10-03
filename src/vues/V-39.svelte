@@ -505,9 +505,6 @@
 				{#snippet erreurDegradee()}
 					<div style="display:flex;flex-direction:column;gap:var(--e-3)">
 						<div class="degrade">
-							{@render glypheInfo()}Recherche par sens indisponible — résultats par mots-clés
-						</div>
-						<div class="degrade">
 							{@render glypheInfo()}Aperçus des pièces jointes momentanément désactivés
 						</div>
 						<p style="font-size:var(--t-mini);color:var(--c-encre-3);line-height:1.5;margin:0">
@@ -516,7 +513,7 @@
 						</p>
 					</div>
 				{/snippet}
-				{@render vignette('V-08 · V-14', 'Fonctionnalité dégradée', erreurDegradee)}
+				{@render vignette('V-14', 'Fonctionnalité dégradée', erreurDegradee)}
 			</div>
 
 			<div class="langue">

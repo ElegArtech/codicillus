@@ -15,10 +15,7 @@
  * note lue en base.
  *
  * `/recherche` NE REFUSE JAMAIS : un paramètre non honoré est IGNORÉ — « un refus
- * révélerait l'existence du filtre ». LE MODE « SENS » SE DÉCLARE INDISPONIBLE : `?mode=`
- * reste HONORÉ, mais tant que `SENS_DISPONIBLE` est faux le mode EFFECTIF reste
- * « mots-clés » et l'écran se déclare dégradé. `?tri=` EST HONORÉ, et l'ordre est
- * appliqué PAR LE MOTEUR.
+ * révélerait l'existence du filtre ». Le tri est appliqué par le moteur.
  */
 import { basePartagee } from '$lib/base/acces';
 import {
@@ -27,12 +24,7 @@ import {
 	lireEtiquettesParNote,
 	lireNotes
 } from '$lib/donnees/lecture';
-import {
-	SENS_DISPONIBLE,
-	capaciteDEcriture,
-	parametresHonores,
-	requeteDemandee
-} from '$lib/donnees/public';
+import { capaciteDEcriture, parametresHonores, requeteDemandee } from '$lib/donnees/public';
 import { compteDe } from '$lib/donnees/consultation';
 import { journaliserUneRecherche } from '$lib/donnees/recherches';
 import { lireLaVivaciteDesNotes } from '$lib/donnees/outils';
@@ -95,24 +87,10 @@ const FACETTES_HONOREES_EN_ANONYME: readonly string[] = FACETTES_DE_LA_RECHERCHE
 function honores(parametres: URLSearchParams, session: boolean): URLSearchParams {
 	if (!session) return parametresHonores(parametres, false);
 	const retenus = new URLSearchParams();
-	for (const cle of ['q', 'tri', 'mode', ...FACETTES_DE_LA_RECHERCHE]) {
+	for (const cle of ['q', 'tri', ...FACETTES_DE_LA_RECHERCHE]) {
 		for (const valeur of parametres.getAll(cle)) retenus.append(cle, valeur);
 	}
 	return retenus;
-}
-
-/**
- * LES TROIS MODES DE `docs/routes.md:242` — les valeurs de `data-mode` du gel,
- * et rien d'autre. `hybride` EST LE DÉFAUT : `V-08:1004` le pose sur `div.app`,
- * et le bouton « Hybride » est le seul à naître `aria-pressed="true"`.
- */
-const MODES = ['motscles', 'sens', 'hybride'] as const;
-type ModeDeRecherche = (typeof MODES)[number];
-const MODE_PAR_DEFAUT: ModeDeRecherche = 'hybride';
-
-/** Le mode demandé, ou le défaut. Une valeur hors liste est IGNORÉE, pas refusée. */
-function modeDemande(demande: URLSearchParams): ModeDeRecherche {
-	return MODES.find((m) => m === demande.get('mode')) ?? MODE_PAR_DEFAUT;
 }
 
 /**
@@ -230,13 +208,6 @@ interface DonneesDeRecherche {
 	readonly recherchees: true;
 	/** L'ordre demandé par l'adresse — celui dans lequel les notes arrivent. */
 	readonly tri: OrdreDeTri;
-	/**
-	 * LE MODE DEMANDÉ, jamais le mode effectif. La bascule en mots-clés est un ÉTAT
-	 * DE L'ÉCRAN, que la vue dérive de `c-degrade` ; envoyer ici le mode déjà rabattu
-	 * ferait perdre ce que l'utilisateur a demandé, donc l'aveu que sa demande n'a
-	 * pas été servie.
-	 */
-	readonly mode: ModeDeRecherche;
 }
 
 /**
@@ -261,7 +232,6 @@ async function lireLaRecherche(
 	   `docs/routes.md:248`, « un refus révélerait l'existence du filtre ». En
 	   anonyme, le crible a déjà retiré le paramètre : V-02 n'a pas de sélecteur. */
 	const tri = ordreDeTriDemande(demande.get('tri')) ?? ORDRE_PAR_DEFAUT;
-	const mode = modeDemande(demande);
 
 	/* DEUX PANNES DU MOTEUR SE RATTRAPENT ICI, ET LA PAGE SE REND DANS LES DEUX CAS.
 	   L'INDEX ABSENT est une installation neuve (`indexAbsent()`) ; LE MOTEUR
@@ -331,8 +301,7 @@ async function lireLaRecherche(
 		dureeMs: trouvees.dureeMs,
 		pistes,
 		recherchees: true as const,
-		tri,
-		mode
+		tri
 	};
 
 	if (!session) {
@@ -351,9 +320,7 @@ async function lireLaRecherche(
 			   requête sans résultat se rend dans la zone de résultats, par la
 			   condition du gel (`V-08:1969`) que la vue porte ; un périmètre vide,
 			   lui, n'a rien à chercher et rien à afficher, quelle que soit `q`. */
-			etat: toutLeLisible.total === 0 ? 'vide' : 'nominal',
-			/* Le mode « Sens » se DÉCLARE indisponible — voir `SENS_DISPONIBLE`. */
-			'c-degrade': !SENS_DISPONIBLE
+			etat: toutLeLisible.total === 0 ? 'vide' : 'nominal'
 		},
 		...commun
 	};

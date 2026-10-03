@@ -111,7 +111,6 @@
 	);
 	const requeteServie = $derived(servie?.requete ?? '');
 	const motif = $derived<MotifDuVide | null>(tropCourte ? null : (servie?.reponse.motif ?? null));
-	const degrade = $derived(servie?.reponse.degrade ?? false);
 
 	/**
 	 * LE COMPTEUR N'EST ÉCRIT QUE LORSQU'UNE RECHERCHE A EU LIEU. Au repos la liste
@@ -311,7 +310,7 @@
 	onclick={surLeClic}
 	onkeydown={surLeClavierDeLaBoite}
 >
-	<div class="palette__boite" data-degrade={degrade ? 'oui' : undefined}>
+	<div class="palette__boite">
 		<div class="palette__champ">
 			<svg
 				width="18"
@@ -354,18 +353,6 @@
 			</button>
 			<button class="btn btn--discret palette__fermer" type="button" onclick={fermer}>Fermer</button
 			>
-		</div>
-
-		<div class="palette__degrade">
-			<svg
-				width="13"
-				height="13"
-				viewBox="0 0 16 16"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.6"><path d="M8 5.5v3.5M8 11.2v.3" /><circle cx="8" cy="8" r="6" /></svg
-			>
-			Recherche par sens indisponible — résultats en mots-clés
 		</div>
 
 		<div
