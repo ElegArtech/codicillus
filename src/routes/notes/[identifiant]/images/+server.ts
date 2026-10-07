@@ -14,7 +14,9 @@ import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params, locals, request }) => {
 	try {
-		const image = await lireImage((await request.formData()).get('fichier'));
+		const champs = await request.formData().catch(() => null);
+		if (champs === null) return json({ motif: 'Envoi illisible.' }, { status: 400 });
+		const image = await lireImage(champs.get('fichier'));
 		const fait = await deposerUnePieceJointe(basePartagee(), racineDesFichiers(env), {
 			note: params.identifiant,
 			nom: image.nom,
