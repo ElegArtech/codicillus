@@ -13,9 +13,9 @@
  * « Cas » sont des états d'INTERACTION.
  */
 import { error, fail } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, ne } from 'drizzle-orm';
 import { basePartagee } from '$lib/base/acces';
-import { comptes } from '$lib/base/schema';
+import { comptes, sessions } from '$lib/base/schema';
 import { hacherMotDePasse } from '$lib/auth/mots-de-passe';
 import { motDePasseTemporaire } from '$lib/auth/mot-de-passe-temporaire';
 import {
@@ -250,6 +250,19 @@ export const actions: Actions = {
 			})
 			.where(eq(comptes.id, ligne.id));
 
+		/* Un mot de passe réinitialisé ferme les sessions ouvertes avec l'ancien : c'est
+		   le geste qu'on fait sur un compte compromis. Celle de l'administrateur qui agit
+		   reste ouverte. */
+		await base
+			.update(sessions)
+			.set({ fermeeLe: new Date() })
+			.where(
+				and(
+					eq(sessions.compteId, ligne.id),
+					isNull(sessions.fermeeLe),
+					...(locals.sessionId === undefined ? [] : [ne(sessions.id, locals.sessionId)])
+				)
+			);
 		return { issue: 'possible' as const, compte: ligne.nom, motDePasse: clair };
 	}
 };
