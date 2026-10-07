@@ -159,6 +159,9 @@ services:
     restart: unless-stopped
     environment:
       DELAI_MAX_CONVERSION: ${DELAI_MAX_CONVERSION:-120}
+    # Un document piégé ne doit pas pouvoir épuiser la mémoire de l'hôte.
+    mem_limit: ${MEMOIRE_MAX_CONVERSION:-1g}
+    pids_limit: 256
     networks: [codicillus]
 
 networks:
