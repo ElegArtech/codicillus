@@ -480,6 +480,7 @@
 							id="p-affiche"
 							style="max-width:380px"
 							value={profil?.nom ?? ''}
+							disabled={verrouille}
 						/>
 						<span class="champ__aide"
 							>C'est ce nom qui apparaît sur vos notes et dans l'activité.</span
@@ -493,6 +494,7 @@
 							id="p-courriel"
 							style="max-width:380px"
 							value={profil?.courriel ?? ''}
+							disabled={verrouille}
 						/>
 						<!-- LE GEL ÉCRIVAIT ICI « Sert aux notifications et à la réinitialisation
 								du mot de passe ». Les deux usages sont faux : le produit n'a AUCUN
@@ -503,7 +505,13 @@
 						>
 					</div>
 					<div>
-						<button class="btn btn--principal" id="enregistrer-identite">Enregistrer</button>
+						<button class="btn btn--principal" id="enregistrer-identite" disabled={verrouille}
+							>Enregistrer</button
+						>
+						{#if verrouille}<span class="champ__aide"
+								>Ce compte est géré par l'administration : son nom et son adresse ne se modifient
+								pas d'ici.</span
+							>{/if}
 					</div>
 				</div>
 			</div>
@@ -553,7 +561,7 @@
 							/></svg
 						>
 						<div>
-							<h3>Compte de démonstration</h3>
+							<h3>Compte géré par l'administration</h3>
 							<p>
 								Le mot de passe de ce compte est géré par l'administrateur : il ne peut pas être
 								changé depuis ici. Adressez-vous à l'administration technique si vous devez le faire
