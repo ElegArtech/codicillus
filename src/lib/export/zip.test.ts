@@ -62,6 +62,15 @@ describe('la lecture sait dire non — sans quoi elle ne prouverait rien', () =>
 		expect(() => lireZip(abimee)).toThrow(ZipInvalide);
 	});
 
+	it('une entrée qui se déploie au-delà de sa taille annoncée est refusée sans être déployée', () => {
+		const ecrite = ecrireZip([{ chemin: 'a.md', octets: new Uint8Array(1_000_000) }]);
+		const abimee = Buffer.from(ecrite);
+		const central = abimee.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
+		expect(central).toBeGreaterThan(0);
+		abimee.writeUInt32LE(10, central + 24);
+		expect(() => lireZip(new Uint8Array(abimee))).toThrow(ZipInvalide);
+	});
+
 	it('la somme de contrôle est celle du format, sur le vecteur d’épreuve connu', () => {
 		/* La valeur de référence du CRC-32 pour la chaîne des neuf caractères
 		   d'épreuve, publiée avec l'algorithme. Sans ce cas, une somme

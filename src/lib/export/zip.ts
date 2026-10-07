@@ -172,6 +172,18 @@ export function ecrireZip(entrees: readonly EntreeDeZip[]): Uint8Array<ArrayBuff
 }
 
 /**
+ * La décompression s'arrête à la taille que l'archive annonce : sans plafond, une entrée
+ * de quelques kilo-octets qui se déploie en gigaoctets épuisait la mémoire du serveur.
+ */
+function decompresser(charge: Uint8Array, tailleBrute: number, chemin: string): Uint8Array {
+	try {
+		return new Uint8Array(inflateRawSync(charge, { maxOutputLength: Math.max(1, tailleBrute) }));
+	} catch {
+		throw new ZipInvalide('entrée illisible ou plus grande qu’annoncé : « ' + chemin + ' »');
+	}
+}
+
+/**
  * Relit l'archive par son répertoire central — jamais en devinant sur les
  * en-têtes locaux. L'ordre rendu est celui du répertoire, c'est-à-dire l'ordre
  * d'écriture.
@@ -205,7 +217,9 @@ export function lireZip(octets: Uint8Array): readonly EntreeDeZip[] {
 		const debut = decalage + TAILLE_ENTETE_LOCAL + nomLocal + extrasLocaux;
 		const charge = vue.subarray(debut, debut + tailleComprimee);
 		const brut =
-			methode === METHODE_BRUTE ? new Uint8Array(charge) : new Uint8Array(inflateRawSync(charge));
+			methode === METHODE_BRUTE
+				? new Uint8Array(charge)
+				: decompresser(charge, tailleBrute, chemin);
 
 		if (brut.length !== tailleBrute) {
 			throw new ZipInvalide('taille annoncée non tenue sur « ' + chemin + ' »');
