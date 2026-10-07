@@ -6,7 +6,7 @@
  * `possible`. `P-09` : « une action interdite n'est pas affichée » ne dispense JAMAIS de la
  * refuser côté serveur.
  */
-import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Meilisearch } from 'meilisearch';
 import type { Base } from '../base/acces';
 import {
@@ -15,6 +15,7 @@ import {
 	comptes,
 	domaines,
 	dossiers,
+	droitsDeDossier,
 	modulesDeDomaine,
 	notes,
 	parametres,
@@ -26,7 +27,7 @@ import {
 	univers
 } from '../base/schema';
 import { hacherMotDePasse } from '../auth/mots-de-passe';
-import type { RoleDeCompte } from '../droits/resolution';
+import type { DroitDeDossier, RoleDeCompte } from '../droits/resolution';
 import { entretenirLIndex } from '../recherche/entretien';
 import { ROLE_DEPUIS_ENUM } from './lecture';
 import type { CleDeModule, Configuration } from '../../../seeds/corpus';
@@ -964,6 +965,61 @@ export async function delesterUnTypeDeFiche(
 }
 
 /**
+ * LE RATTACHEMENT D'UN COMPTE À UN DOMAINE DONNE LE DROIT QUE SON RÔLE ANNONCE. Sans
+ * cela, la console affichait « Contributeur — Serveurs » pour un compte qui ne voyait
+ * rien : les droits ne se posaient que dossier par dossier, et rien ne le disait. Le
+ * droit est posé sur la racine du domaine et s'hérite ; l'administrateur n'en reçoit
+ * aucun, il les contourne tous.
+ */
+const DROIT_DU_ROLE: Readonly<Record<RoleDeCompte, DroitDeDossier | null>> = {
+	administrateur: null,
+	referent: 'gestionnaire',
+	contributeur: 'redacteur',
+	lecteur: 'lecteur'
+};
+
+async function racinesDuDomaine(base: Base, domaineId: string): Promise<string[]> {
+	const lignes = await base
+		.select({ id: dossiers.id })
+		.from(dossiers)
+		.where(and(eq(dossiers.domaineId, domaineId), isNull(dossiers.parentId)));
+	return lignes.map((l) => l.id);
+}
+
+async function poserLeDroitDuRattachement(
+	base: Base,
+	compteId: string,
+	domaineId: string,
+	role: RoleDeCompte
+): Promise<void> {
+	const droit = DROIT_DU_ROLE[role];
+	if (droit === null) return;
+	for (const dossierId of await racinesDuDomaine(base, domaineId)) {
+		await base
+			.insert(droitsDeDossier)
+			.values({ dossierId, compteId, droit })
+			.onConflictDoUpdate({
+				target: [droitsDeDossier.dossierId, droitsDeDossier.compteId],
+				set: { droit }
+			});
+	}
+}
+
+async function retirerLeDroitDuRattachement(
+	base: Base,
+	compteId: string,
+	domaineId: string
+): Promise<void> {
+	const racines = await racinesDuDomaine(base, domaineId);
+	if (racines.length === 0) return;
+	await base
+		.delete(droitsDeDossier)
+		.where(
+			and(eq(droitsDeDossier.compteId, compteId), inArray(droitsDeDossier.dossierId, racines))
+		);
+}
+
+/**
  * Changer le rôle d'un compte — `RG-M14-07`. Le refus est prononcé AVANT
  * l'écriture, sur une mesure prise dans la même requête : aucune contrainte de base
  * ne porte cette règle, `comptes.role` étant un énuméré ordinaire.
@@ -1008,6 +1064,14 @@ export async function changerLeRoleDUnCompte(
 		domaineId = ligne.id;
 	}
 
+	const [avant] = await base
+		.select({ domaineId: comptes.domaineId })
+		.from(comptes)
+		.where(eq(comptes.id, etat.id))
+		.limit(1);
+	const ancienDomaine = avant?.domaineId ?? null;
+	const nouveauDomaine = rattachement === undefined ? ancienDomaine : domaineId;
+
 	await base
 		.update(comptes)
 		.set({
@@ -1016,6 +1080,15 @@ export async function changerLeRoleDUnCompte(
 			...(rattachement === undefined ? {} : { domaineId })
 		})
 		.where(eq(comptes.id, etat.id));
+
+	if (ancienDomaine !== null && ancienDomaine !== nouveauDomaine) {
+		await retirerLeDroitDuRattachement(base, etat.id, ancienDomaine);
+	}
+	/* Rien n'a changé : un droit réglé à la main sur la racine n'est pas écrasé. */
+	const inchange = ancienDomaine === nouveauDomaine && etat.role === verdict.role;
+	if (nouveauDomaine !== null && !inchange) {
+		await poserLeDroitDuRattachement(base, etat.id, nouveauDomaine, verdict.role);
+	}
 	return verdict;
 }
 
@@ -1452,26 +1525,32 @@ export async function creerUnCompte(
 		domaineId = ligne.id;
 	}
 
-	await base.insert(comptes).values({
-		identifiant,
-		nom: verdict.nom,
-		courriel,
-		role: demande.role,
-		actif: true,
-		motDePasseVerrouille: demande.motDePasseVerrouille,
-		/* « Il devra être changé à la première connexion » (`V-32:913`) : la garde de
+	const [cree] = await base
+		.insert(comptes)
+		.values({
+			identifiant,
+			nom: verdict.nom,
+			courriel,
+			role: demande.role,
+			actif: true,
+			motDePasseVerrouille: demande.motDePasseVerrouille,
+			/* « Il devra être changé à la première connexion » (`V-32:913`) : la garde de
 		   `src/hooks.server.ts` renvoie le compte vers son profil. SAUF SI LE MOT DE PASSE
 		   EST VERROUILLÉ — `RG-CPT-01` lui interdit de le changer, et le lui imposer
 		   l'enfermerait dehors. */
-		motDePasseAChanger: !demande.motDePasseVerrouille,
-		condensatMotDePasse: await hacherMotDePasse(demande.motDePasse),
-		/* Voir l'en-tête de section : aucun nœud du gel ne porte cette date. */
-		arriveLe: maintenant.toISOString().slice(0, 10),
-		creeLe: maintenant,
-		modifieLe: maintenant,
-		domaineId
-	});
+			motDePasseAChanger: !demande.motDePasseVerrouille,
+			condensatMotDePasse: await hacherMotDePasse(demande.motDePasse),
+			/* Voir l'en-tête de section : aucun nœud du gel ne porte cette date. */
+			arriveLe: maintenant.toISOString().slice(0, 10),
+			creeLe: maintenant,
+			modifieLe: maintenant,
+			domaineId
+		})
+		.returning({ id: comptes.id });
 
+	if (cree !== undefined && domaineId !== null) {
+		await poserLeDroitDuRattachement(base, cree.id, domaineId, demande.role);
+	}
 	return verdict;
 }
 
