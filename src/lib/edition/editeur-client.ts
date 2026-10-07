@@ -47,6 +47,7 @@ import { schemaDeLEditeur } from './schema';
 import { documentDepuisNoeud, noeudDepuisDocument } from './document';
 import { GABARITS, MARQUES_DE_LA_BARRE } from './constructions';
 import type { Document } from '../contenu/document';
+import { sourceDePieceJointeSure } from '../contenu/adresses-sures';
 
 const schema = schemaDeLEditeur;
 
@@ -643,18 +644,16 @@ export function monterLEditeur(
 		   le rétrécissement est local et nommé. */
 		nodeViews: {
 			pieceJointe: (noeud) => {
-				const { src, nom, typeMedia } = noeud.attrs as {
-					src: string;
-					nom: string;
-					typeMedia: string;
-				};
-				if (formeDeLecture(typeMedia, nom) === 'video') {
+				const attrs = noeud.attrs as { src: string; nom: string; typeMedia: string };
+				const { nom, typeMedia } = attrs;
+				const src = sourceDePieceJointeSure(attrs.src);
+				if (src !== null && formeDeLecture(typeMedia, nom) === 'video') {
 					const dom = creerLeLecteurVideo(window.document, src, nom);
 					dom.contentEditable = 'false';
 					return { dom, stopEvent: () => true };
 				}
 				const dom = window.document.createElement('a');
-				dom.href = src;
+				if (src !== null) dom.href = src;
 				dom.textContent = nom;
 				return { dom };
 			},

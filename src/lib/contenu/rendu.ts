@@ -17,6 +17,7 @@
  *     la source et l'alternative textuelle de `P-06` — écart déclaré.
  */
 import { formeDeLecture } from '../fichiers/affichage';
+import { lienSur, sourceDImageSure, sourceDePieceJointeSure } from './adresses-sures';
 import { identifiantLisible } from '../rangement/adresses';
 import {
 	analyserDocument,
@@ -151,9 +152,12 @@ function rendreTexte(texte: Texte, options: Rendu): string {
 
 function envelopper(marque: Marque, dedans: string, options: Rendu): string {
 	if (marque.type === 'link') {
-		/* `V-14:1687` — lien externe : nouvel onglet, et `rel` qui va avec. */
+		/* `V-14:1687` — lien externe : nouvel onglet, et `rel` qui va avec. Une adresse
+		   refusée se rend comme un lien cassé, sans `href`. */
+		const href = lienSur(marque.attrs.href);
+		if (href === null) return `<a class="lien-casse">${dedans}</a>`;
 		return (
-			`<a class="lien-ext" href="${echapper(marque.attrs.href)}" ` +
+			`<a class="lien-ext" href="${echapper(href)}" ` +
 			`target="_blank" rel="noopener">${dedans}</a>`
 		);
 	}
@@ -350,11 +354,13 @@ function rendreTableau(tableau: Tableau, options: Rendu): string {
  * déduit est étroit : la balise d'image elle-même.
  */
 function rendreImage(image: Image): string {
-	const { src, alt, etiquette, legende } = image.attrs;
+	const { alt, etiquette, legende } = image.attrs;
+	const src = sourceDImageSure(image.attrs.src);
 	const parts =
 		(etiquette === null ? '' : `<b>${echapper(etiquette)}</b>`) +
 		(legende === null ? '' : `<span>${echapper(legende)}</span>`);
 	const pied = parts === '' ? '' : `<figcaption>${parts}</figcaption>`;
+	if (src === null) return `<figure class="figure">${pied}</figure>`;
 	return (
 		`<figure class="figure"><button type="button" class="figure__cadre" ` +
 		`aria-label="Agrandir ${echapper(alt)}">` +
@@ -375,7 +381,11 @@ function rendreImage(image: Image): string {
  * ne rend rien — un format que ce navigateur-là ne connaît pas.
  */
 function rendrePieceJointe(bloc: PieceJointeIntegree): string {
-	const { src, nom, typeMedia } = bloc.attrs;
+	const { nom, typeMedia } = bloc.attrs;
+	const src = sourceDePieceJointeSure(bloc.attrs.src);
+	if (src === null) {
+		return `<figure class="figure piece-integree"><figcaption>${echapper(nom)}</figcaption></figure>`;
+	}
 	if (formeDeLecture(typeMedia, nom) === 'video') {
 		return (
 			`<figure class="figure piece-integree video-integree">` +

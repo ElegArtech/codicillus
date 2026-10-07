@@ -31,6 +31,7 @@ import TaskList from '@tiptap/extension-task-list';
 import Image from '@tiptap/extension-image';
 import { Schema, type MarkSpec, type NodeSpec } from 'prosemirror-model';
 import { RANG_DE_MARQUE, type Marque } from '../contenu/document';
+import { sourceDePieceJointeSure } from '../contenu/adresses-sures';
 
 /**
  * Les noms de marques du format, du rang le plus bas au plus haut. La liste est
@@ -188,7 +189,11 @@ const NOEUDS_EN_PROPRE: Readonly<Record<string, NodeSpec>> = {
 		toDOM: (noeud) => [
 			'figure',
 			{ class: 'piece-integree' },
-			['a', { href: String(noeud.attrs['src']) }, String(noeud.attrs['nom'])]
+			[
+				'a',
+				{ href: sourceDePieceJointeSure(String(noeud.attrs['src'])) ?? undefined },
+				String(noeud.attrs['nom'])
+			]
 		]
 	},
 	alerte: {
