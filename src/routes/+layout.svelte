@@ -28,6 +28,7 @@
 	import { observerLesDiagrammes } from '$lib/contenu/diagrammes';
 	import { CLE_IDENTITE, type IdentiteDeCoquille } from '$lib/coquille/identite';
 	import { formesDuMot } from '$lib/vocabulaire';
+	import { titreDeLaPage } from '$lib/coquille/titre';
 	import type { LayoutData } from './$types';
 
 	let { children, data }: { children: import('svelte').Snippet; data: LayoutData } = $props();
@@ -226,7 +227,19 @@
 	$effect(() => {
 		document.documentElement.dataset.route = page.route.id ?? '';
 	});
+
+	/* Le titre de l'onglet — `$lib/coquille/titre`. Une erreur ne nomme rien de ce
+	   qu'elle cache. */
+	const titre = $derived(
+		page.error
+			? (page.status === 404 ? 'Introuvable' : 'Erreur') + ' · Codicillus'
+			: titreDeLaPage(page.route.id, page.data)
+	);
 </script>
+
+<svelte:head>
+	{#if titre !== null}<title>{titre}</title>{/if}
+</svelte:head>
 
 <Volets
 	session={data.session ?? false}
