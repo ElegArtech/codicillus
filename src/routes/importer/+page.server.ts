@@ -413,14 +413,18 @@ async function destinationDuLot(
 		const domaineCible = String(demande.champs.get('cible-domaine') ?? '');
 		if (universCible !== '' && domaineCible !== '') {
 			const domaine = await lireDomaineParIdentifiants(base, universCible, domaineCible);
-			if (domaine === null) return { refus: fail(400, { issue: 'domaine-inconnu' }) };
+			if (domaine === null || !domaineLisible(acces, domaine.id)) {
+				return { refus: fail(400, { issue: 'domaine-inconnu' }) };
+			}
 			const lignes = dossiersDuDomaine(acces, domaine.id);
 			const chemin = String(demande.champs.get('cible-chemin') ?? '')
 				.split('/')
 				.filter((segment) => segment !== '');
 			const racine = lignes.find((d) => d.parentId === null) ?? null;
 			const dossier = chemin.length === 0 ? racine : resoudreLeChemin(lignes, chemin);
-			if (dossier === null) return { refus: fail(400, { issue: 'dossier-inconnu' }) };
+			if (dossier === null || !capacites(droitEffectif(acces, dossier.id)).lire) {
+				return { refus: fail(400, { issue: 'dossier-inconnu' }) };
+			}
 			if (!capacites(droitEffectif(acces, dossier.id)).ecrireDesNotes) {
 				return { refus: fail(403, { issue: 'sans-droit-sur-la-cible' }) };
 			}
@@ -437,7 +441,9 @@ async function destinationDuLot(
 		}
 		const nomDuDomaine = String(demande.champs.get('domaine-cible') ?? '');
 		const racine = await racineDuDomaine(base, nomDuDomaine);
-		if (racine === null) return { refus: fail(400, { issue: 'domaine-inconnu' }) };
+		if (racine === null || !domaineLisible(acces, racine.domaineId)) {
+			return { refus: fail(400, { issue: 'domaine-inconnu' }) };
+		}
 		if (!capacites(droitEffectif(acces, racine.id)).ecrireDesNotes) {
 			return { refus: fail(403, { issue: 'sans-droit-sur-la-cible' }) };
 		}
@@ -496,6 +502,17 @@ async function destinationDuLot(
  * que le panneau de création propose. Elle se change en console ; la choisir au hasard
  * ferait deux domaines créés le même jour de deux teintes sans raison.
  */
+/**
+ * UN DOMAINE DONT L'APPELANT NE LIT RIEN EST UN DOMAINE INCONNU. Répondre « sans droit »
+ * à celui-là et « inconnu » à un nom inventé laissait vérifier, nom par nom, l'existence
+ * de domaines qu'on ne voit pas.
+ */
+function domaineLisible(acces: AccesAuRangement, domaineId: string): boolean {
+	return dossiersDuDomaine(acces, domaineId).some(
+		(d) => capacites(droitEffectif(acces, d.id)).lire
+	);
+}
+
 const COULEUR_DE_DOMAINE_IMPORTE = '#453ba0';
 const COULEUR_DUNIVERS_IMPORTE = '#24485c';
 const GLYPHE_DUNIVERS_IMPORTE = 'dossiers';
