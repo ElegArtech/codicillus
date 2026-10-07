@@ -49,6 +49,9 @@ export class ConnexionNonConfigureeErreur extends Error {
  * pas : un appelant qui voudrait la repasser n'a plus de champ où l'écrire.
  */
 export interface EnvironnementDeConnexion {
+	/* Ouverte : sans `.env` au moment de `svelte-kit sync`, l'environnement typé ne
+	   déclare aucune de ces variables, et une interface toute facultative le refusait. */
+	readonly [variable: string]: string | undefined;
 	/* Le CLIENT — `compose.yaml`, service `app` (ARB-038). */
 	readonly HOTE_BASE?: string | undefined;
 	readonly PORT_BASE?: string | undefined;

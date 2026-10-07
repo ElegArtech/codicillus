@@ -61,6 +61,9 @@ export function plafondEnOctets(mo: number): number {
 }
 
 export interface EnvironnementDeLEntrepot {
+	/* Ouverte : sans `.env` au moment de `svelte-kit sync`, l'environnement typé ne
+	   déclare aucune de ces variables, et une interface toute facultative le refusait. */
+	readonly [variable: string]: string | undefined;
 	readonly RACINE_FICHIERS?: string | undefined;
 }
 

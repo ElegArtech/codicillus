@@ -42,6 +42,9 @@ export class RechercheNonConfigureeErreur extends Error {
  * en composer une n'a pas de champ où l'écrire.
  */
 export interface EnvironnementDeRecherche {
+	/* Ouverte : sans `.env` au moment de `svelte-kit sync`, l'environnement typé ne
+	   déclare aucune de ces variables, et une interface toute facultative le refusait. */
+	readonly [variable: string]: string | undefined;
 	/* Le CLIENT — `compose.yaml`, service applicatif. */
 	readonly URL_RECHERCHE?: string | undefined;
 	readonly CLE_RECHERCHE?: string | undefined;
