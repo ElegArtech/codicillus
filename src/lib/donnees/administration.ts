@@ -1663,7 +1663,8 @@ export async function creerUnUnivers(
 	saisie: SaisieDUnUnivers
 ): Promise<VerdictDeStructure> {
 	const nom = saisie.nom.trim();
-	if (nom === '') return refuser('nom', MESSAGE_NOM_DUNIVERS_VIDE);
+	if (nom === '' || identifiantLisible(nom) === '')
+		return refuser('nom', MESSAGE_NOM_DUNIVERS_VIDE);
 
 	const existants = await base
 		.select({ id: univers.id, nom: univers.nom, identifiant: univers.identifiant })
@@ -1730,7 +1731,8 @@ export async function modifierUnUnivers(
 
 	if (changements.nom !== undefined && !cible.systeme) {
 		const nom = changements.nom.trim();
-		if (nom === '') return refuser('nom', MESSAGE_NOM_DUNIVERS_VIDE);
+		if (nom === '' || identifiantLisible(nom) === '')
+			return refuser('nom', MESSAGE_NOM_DUNIVERS_VIDE);
 		if (existants.some((u) => u.id !== cible.id && memeNom(u.nom, nom))) {
 			return refuser('nom', messageDejaPris(nom));
 		}
@@ -1812,7 +1814,8 @@ export async function creerUnDomaine(
 	saisie: SaisieDUnDomaine
 ): Promise<IssueDUnGeste<VerdictDeStructure>> {
 	const nom = saisie.nom.trim();
-	if (nom === '') return refuser('nom', MESSAGE_NOM_DE_DOMAINE_VIDE);
+	if (nom === '' || identifiantLisible(nom) === '')
+		return refuser('nom', MESSAGE_NOM_DE_DOMAINE_VIDE);
 
 	const [accueil] = await base
 		.select({ id: univers.id })
@@ -1895,7 +1898,8 @@ export async function modifierUnDomaine(
 
 	if (changements.nom !== undefined) {
 		const nom = changements.nom.trim();
-		if (nom === '') return refuser('nom', MESSAGE_NOM_DE_DOMAINE_VIDE);
+		if (nom === '' || identifiantLisible(nom) === '')
+			return refuser('nom', MESSAGE_NOM_DE_DOMAINE_VIDE);
 		if (existants.some((d) => d.id !== cible.id && memeNom(d.nom, nom))) {
 			return refuser('nom', messageDejaPris(nom));
 		}

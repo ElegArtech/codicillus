@@ -49,6 +49,7 @@ import type {
 	RelationAExporter
 } from '../export/archive';
 import { lireLesPiecesAvecLeursOctets } from './pieces';
+import { identifiantLisible } from '../rangement/adresses';
 import { ecrireLesOctets, effacerLesOctets } from '../fichiers/entrepot';
 import { entretenirLIndex } from '../recherche/entretien';
 
@@ -386,9 +387,16 @@ export async function reimporterLeDomaine(
 	if (
 		[domaine.universIdentifiant, domaine.universNom, domaine.identifiant, domaine.nom].some(
 			(v) => v.trim() === ''
-		)
+		) ||
+		identifiantLisible(domaine.nom) === ''
 	) {
 		throw new CollisionDArchive('l’identité de l’univers ou du domaine est vide');
+	}
+	/* L'identifiant d'une note est celui de son document dans le moteur de recherche,
+	   qui n'admet que l'ASCII : un autre ferait échouer toute réindexation. */
+	const illisible = domaine.notes.find((note) => !/^[A-Za-z0-9_-]{1,200}$/.test(note.identifiant));
+	if (illisible !== undefined) {
+		throw new CollisionDArchive('identifiant de note invalide : « ' + illisible.identifiant + ' »');
 	}
 
 	const universTrouves = await base
@@ -583,7 +591,11 @@ export async function reimporterLeDomaine(
 					.values({
 						domaineId: domaineCree.id,
 						parentId,
-						nom: dossier.chemin.at(-1)!,
+						/* Un nom sans lettre ni chiffre n'a pas d'adresse — voir la migration 020. */
+						nom:
+							identifiantLisible(dossier.chemin.at(-1)!) === ''
+								? `Dossier sans nom ${rang + 1}`
+								: dossier.chemin.at(-1)!,
 						position: rang,
 						profondeur: dossier.chemin.length
 					})
