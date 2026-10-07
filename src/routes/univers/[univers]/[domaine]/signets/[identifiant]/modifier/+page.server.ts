@@ -16,7 +16,8 @@
  * modification bute sur le dossier d'accueil dès qu'un changement de domaine est demandé,
  * le schéma exigeant que le dossier soit du même domaine.
  */
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
+import { redirect } from '$lib/redirection';
 import { basePartagee } from '$lib/base/acces';
 import { DocumentInvalide } from '$lib/contenu/document';
 import { MarkdownInvalide } from '$lib/contenu/markdown';

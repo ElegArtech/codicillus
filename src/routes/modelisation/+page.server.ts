@@ -24,7 +24,8 @@
  * note que rien ne touche n'y répond pas, et cent notes flottantes noieraient les
  * douze qui portent le modèle.
  */
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
+import { redirect } from '$lib/redirection';
 import { basePartagee } from '$lib/base/acces';
 import {
 	PERIMETRE_DE_V19,

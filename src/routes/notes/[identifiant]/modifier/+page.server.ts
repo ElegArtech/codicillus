@@ -21,7 +21,8 @@ import { erreurDeRoute } from '$lib/requetes/serveur';
  * n'est pas modifié. LA RÉPONSE EST UNE REDIRECTION 303 sur l'identifiant de l'adresse
  * DEMANDÉE — jamais un identifiant recalculé sur le nouveau titre (`RG-M03-03`).
  */
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
+import { redirect } from '$lib/redirection';
 import { adresseApresEnregistrement } from '$lib/donnees/traitement-differe';
 import { desc, eq } from 'drizzle-orm';
 import { basePartagee, type Base } from '$lib/base/acces';

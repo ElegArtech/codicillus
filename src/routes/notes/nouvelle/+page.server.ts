@@ -26,7 +26,8 @@ import { erreurDeRoute } from '$lib/requetes/serveur';
  * soumission est composée par la ROUTE (`ARB-063`).
  */
 import { env } from '$env/dynamic/private';
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
+import { redirect } from '$lib/redirection';
 import { adresseApresEnregistrement } from '$lib/donnees/traitement-differe';
 import { basePartagee } from '$lib/base/acces';
 import { DocumentInvalide } from '$lib/contenu/document';

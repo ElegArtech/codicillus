@@ -22,7 +22,8 @@
  * n'est écrite ici — `capacites()` porte la table, et le refus est le `404` de partout
  * ailleurs. « NOUVELLE NOTE » n'est pas une action mais une navigation.
  */
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
+import { redirect } from '$lib/redirection';
 import { basePartagee } from '$lib/base/acces';
 import { accesALaConsole } from '$lib/donnees/consoles';
 import { dossiers } from '$lib/base/schema';

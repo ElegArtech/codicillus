@@ -8,7 +8,7 @@
  * indisponibilité que l'instance ne connaît pas. C'est le pendant exact de la garde —
  * l'état en base décide dans les deux sens.
  */
-import { redirect } from '@sveltejs/kit';
+import { redirect } from '$lib/redirection';
 import { basePartagee } from '$lib/base/acces';
 import { lireConfiguration } from '$lib/donnees/lecture';
 import { accesALaConsole } from '$lib/donnees/consoles';

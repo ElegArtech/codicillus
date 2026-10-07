@@ -16,7 +16,8 @@
  * `404` que celui du chargeur — `P-09` veut l'action interdite NON RENDUE, mais l'absence
  * de bouton n'est pas un contrôle d'accès.
  */
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
+import { redirect } from '$lib/redirection';
 import { env } from '$env/dynamic/private';
 import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { basePartagee, type Base } from '$lib/base/acces';

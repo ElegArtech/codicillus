@@ -13,7 +13,8 @@
  * restantes) ; elle ne peint pas le bandeau, ce qui demanderait de modifier la
  * vue. Le décompte lui-même est un comportement temporisé.
  */
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
+import { redirect } from '$lib/redirection';
 import { authentifier } from '$lib/auth/authentification';
 import {
 	compteParIdentifiant,

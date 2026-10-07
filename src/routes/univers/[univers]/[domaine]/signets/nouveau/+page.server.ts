@@ -13,7 +13,8 @@
  * la note créée. LE DOMAINE SOUMIS N'EST PAS CRU SUR PAROLE : le droit résolu est celui du
  * domaine de L'ADRESSE, et une divergence est refusée.
  */
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
+import { redirect } from '$lib/redirection';
 import { basePartagee } from '$lib/base/acces';
 import { DocumentInvalide } from '$lib/contenu/document';
 import { MarkdownInvalide } from '$lib/contenu/markdown';

@@ -15,7 +15,8 @@
  * bornes la désignent et le gel rend « Il n'y a rien à comparer » ; aucune, le
  * vecteur reste `null` et la vue retombe sur son état de départ.
  */
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
+import { redirect } from '$lib/redirection';
 import { basePartagee } from '$lib/base/acces';
 import {
 	bornesDemandees,

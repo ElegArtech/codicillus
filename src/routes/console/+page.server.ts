@@ -15,7 +15,8 @@
  * ne s'en remet pas à `garde.ts` pour l'anonyme — une garde qui ne tiendrait que par une
  * autre garde n'est pas une garde.
  */
-import { error, redirect } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
+import { redirect } from '$lib/redirection';
 import { accesALaConsole } from '$lib/donnees/consoles';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import type { PageServerLoad } from './$types';

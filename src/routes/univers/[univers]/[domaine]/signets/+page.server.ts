@@ -14,7 +14,8 @@
  * l'absence de `undefined`. LE DOMAINE SERVI EST LE DOMAINE RÉSOLU, et la liste passée
  * n'a qu'un élément.
  */
-import { error, redirect } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
+import { redirect } from '$lib/redirection';
 import { basePartagee } from '$lib/base/acces';
 import {
 	contexteDeRequete,
