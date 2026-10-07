@@ -1667,3 +1667,9 @@ describe('les tableurs et vidéos autonomes dans l’arborescence', () => {
 		});
 	});
 });
+
+describe('un chemin forgé ne crée aucun dossier « .. »', () => {
+	it('les segments sans lettre ni chiffre sont écartés', () => {
+		expect(segmentsPlafonnes('a/../../b/./c.md', 1).segments).toEqual(['a', 'b']);
+	});
+});

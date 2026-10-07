@@ -960,11 +960,13 @@ export function segmentsPlafonnes(
 	chemin: string,
 	profondeurDeDepart: number
 ): { readonly segments: readonly string[]; readonly aplatie: boolean } {
+	/* Un segment sans lettre ni chiffre — « . », « .. » glissés dans un nom de fichier
+	   forgé — ne nomme aucun dossier : il est écarté, comme un segment vide. */
 	const tous = chemin
 		.split('/')
 		.slice(0, -1)
 		.map((s) => s.trim())
-		.filter((s) => s !== '');
+		.filter((s) => s !== '' && identifiantLisible(s) !== '');
 	const admis = Math.max(0, PROFONDEUR_MAX - profondeurDeDepart);
 	return admis >= tous.length
 		? { segments: tous, aplatie: false }

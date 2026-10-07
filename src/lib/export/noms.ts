@@ -27,10 +27,15 @@ export const ALLONGEMENT = '%';
  * inversible.
  */
 export function echapperSegment(segment: string): string {
+	/* « . » et « .. » sont des noms de chemin, pas des noms de dossier : décompressés
+	   tels quels, ils remontaient hors de l'archive. La barre oblique inverse est un
+	   séparateur sous Windows. */
+	if (segment === '.' || segment === '..') return segment.replaceAll('.', '%2E');
 	let out = '';
 	for (const c of segment) {
 		if (c === ALLONGEMENT) out += '%25';
 		else if (c === '/') out += '%2F';
+		else if (c === '\\') out += '%5C';
 		else out += c;
 	}
 	return out;

@@ -78,6 +78,7 @@ import { ancienneteDeModification } from '$lib/donnees/lecture';
 import { NOM_DU_COMPTE_VISE, nomDuNiveau } from './champs-de-droits';
 import type { NomDeDomaine } from '../../../../../../../seeds/corpus';
 import type { Actions, PageServerLoad, RequestEvent } from './$types';
+import { PHRASE_NOM_TROP_LONG, tropLong } from '$lib/donnees/limites';
 
 /* ═══════════════════════════════════ Le contexte, résolu une fois ═══════ */
 
@@ -407,7 +408,12 @@ export const actions: Actions = {
 
 		const brut = (await request.formData()).get('nom');
 		const nom = typeof brut === 'string' ? brut.trim() : '';
-		if (nom === '') return fail(400, { creation: NOM_MANQUANT });
+		/* Un nom sans lettre ni chiffre — « .. », « - » — n'a pas d'adresse : le dossier
+		   créé ne s'ouvrait plus, et « .. » remontait d'un cran dans l'archive d'export. */
+		if (nom === '' || identifiantLisible(nom) === '') {
+			return fail(400, { creation: NOM_MANQUANT });
+		}
+		if (tropLong(nom)) return fail(400, { creation: PHRASE_NOM_TROP_LONG });
 
 		/* Le niveau annoncé est celui du GEL — la racine du domaine ne s'y compte
 		   pas —, tandis que la contrainte de base compte depuis la racine. Le plafond

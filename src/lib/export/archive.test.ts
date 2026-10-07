@@ -690,3 +690,12 @@ describe('les tableurs autonomes dans une archive', () => {
 		expect(reimporterLArchive(exporterLeDomaine(domaineDe([cas])).octets).notes[0]).toEqual(cas);
 	});
 });
+
+describe('un nom de dossier ne sort jamais de l’archive', () => {
+	it.each(['.', '..', 'a\\..\\b'])('« %s » est échappé, puis relu tel quel', (segment) => {
+		const echappe = echapperSegment(segment);
+		expect(echappe).not.toMatch(/^\.\.?$/);
+		expect(echappe).not.toContain('\\');
+		expect(desechapperSegment(echappe)).toBe(segment);
+	});
+});
