@@ -69,3 +69,35 @@ describe('lecture des vidéos', () => {
 		expect((await complete!.arrayBuffer()).byteLength).toBe(10);
 	});
 });
+
+describe('une pièce jointe n’exécute aucun script', () => {
+	it.each(['image/svg+xml', 'IMAGE/SVG+XML; charset=utf-8'])('%s se télécharge', (type) => {
+		expect(formeDeLecture(type)).toBe('image');
+		expect(seLitEnLigne(type)).toBe(false);
+	});
+	it('les images matricielles restent en ligne', () => {
+		expect(seLitEnLigne('image/png')).toBe(true);
+	});
+	it.each([
+		['image/svg+xml', 'sandbox'],
+		['text/html', 'sandbox'],
+		['application/pdf', null]
+	])('%s est servie avec la politique %s', async (typeMedia, politique) => {
+		const racine = await mkdtemp(join(tmpdir(), 'codicillus-piece-'));
+		temporaires.push(racine);
+		const piece = {
+			noteId: '00000000-0000-0000-0000-000000000001',
+			id: '00000000-0000-0000-0000-000000000003',
+			nom: 'piece',
+			typeMedia
+		};
+		await ecrireLesOctets(racine, piece.noteId, piece.id, new Uint8Array([60, 115]));
+		const reponse = await diffuserLaPiece(
+			racine,
+			piece,
+			new Request('http://localhost/piece'),
+			seLitEnLigne(typeMedia)
+		);
+		expect(reponse?.headers.get('content-security-policy')).toBe(politique);
+	});
+});

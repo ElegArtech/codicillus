@@ -1,5 +1,6 @@
 import { createReadStream } from 'node:fs';
 import { Readable } from 'node:stream';
+import { seLitSansScript } from './affichage';
 import { cheminDUnePiece, tailleSurDisque } from './entrepot';
 
 /** Une plage simple ; les syntaxes non prises en charge sont ignorées. */
@@ -32,6 +33,9 @@ export async function diffuserLaPiece(
 			(enLigne ? 'inline' : 'attachment') + "; filename*=UTF-8''" + encodeURIComponent(piece.nom),
 		'accept-ranges': 'bytes',
 		'x-content-type-options': 'nosniff',
+		/* Ouverte seule dans un onglet, une pièce ne doit jamais exécuter de script dans
+		   l'origine de l'application, quel que soit le type déclaré au dépôt. */
+		...(seLitSansScript(piece.typeMedia) ? { 'content-security-policy': 'sandbox' } : {}),
 		'cache-control': 'no-store'
 	});
 	const plage =

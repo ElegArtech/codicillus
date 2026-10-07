@@ -15,8 +15,12 @@ const TYPES_GENERIQUES = new Set([
 
 export type FormeDeLecture = 'image' | 'pdf' | 'tableur' | 'video';
 
+function typeDe(typeMedia: string): string {
+	return (typeMedia.split(';')[0] ?? '').trim().toLowerCase();
+}
+
 export function formeDeLecture(typeMedia: string, nom = ''): FormeDeLecture | null {
-	const type = (typeMedia.split(';')[0] ?? '').trim().toLowerCase();
+	const type = typeDe(typeMedia);
 	if (type.startsWith('image/')) return 'image';
 	if (type === 'video/mp4' || type === 'video/webm') return 'video';
 	if (type === TYPE_MEDIA_PDF) return 'pdf';
@@ -25,8 +29,19 @@ export function formeDeLecture(typeMedia: string, nom = ''): FormeDeLecture | nu
 	return null;
 }
 
-/** Seuls les formats rendus nativement par le navigateur sont servis en ligne. */
+/**
+ * Seuls les formats rendus nativement par le navigateur sont servis en ligne. LE SVG
+ * N'EN EST PAS : c'est un document qui exécute ses scripts quand on l'ouvre, et le type
+ * est celui que le navigateur du déposant a déclaré. Il reste affiché dans la note, par
+ * une balise d'image, où aucun script ne tourne.
+ */
 export function seLitEnLigne(typeMedia: string): boolean {
+	if (typeDe(typeMedia) === 'image/svg+xml') return false;
 	const forme = formeDeLecture(typeMedia);
 	return forme === 'image' || forme === 'pdf' || forme === 'video';
+}
+
+/** Le PDF est le seul format qui doit garder ses scripts : la visionneuse en dépend. */
+export function seLitSansScript(typeMedia: string): boolean {
+	return typeDe(typeMedia) !== TYPE_MEDIA_PDF;
 }
