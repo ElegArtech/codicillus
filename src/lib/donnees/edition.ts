@@ -56,6 +56,7 @@ import {
 import {
 	capacites,
 	INTROUVABLE,
+	PERIMETRE_TOTAL,
 	noteLisible,
 	resoudre,
 	resoudreDroitDeDossier,
@@ -1378,8 +1379,17 @@ export async function resoudreUnePieceJointe(
 	base: Base,
 	demande: DemandeDePieceJointe
 ): Promise<Resolution<PieceJointeResolue>> {
-	const index = await lireIndexDesDroits(base, demande.identite);
-	const perimetre = perimetreDeLaLectureDUneNote(demande.identite, index);
+	/* L'ANONYME LIT LES PIÈCES D'UNE NOTE PUBLIQUE ET PUBLIÉE — `pieceJointeResolue()`
+	   l'en décide sur la note elle-même. Le périmètre vide de la lecture d'une note
+	   par `/notes/…` l'en empêchait : un guide public montrait des images et un PDF
+	   intégré qui rendaient 404 à son lecteur. */
+	const perimetre =
+		demande.identite.type === 'anonyme'
+			? PERIMETRE_TOTAL
+			: perimetreDeLaLectureDUneNote(
+					demande.identite,
+					await lireIndexDesDroits(base, demande.identite)
+				);
 
 	const [ligne] = await base
 		.select({
