@@ -141,7 +141,29 @@ function routeSure(event: Parameters<Handle>[0]['event']): string {
 	return (event.route.id ?? '').replace(/["'<>&]/g, '');
 }
 
-export const handle: Handle = async ({ event, resolve }) => {
+/**
+ * LES EN-TÊTES DE SÉCURITÉ DE TOUTE RÉPONSE. La politique de contenu des pages est posée
+ * par SvelteKit (`svelte.config.js`), qui seul connaît les empreintes de ses scripts.
+ * Ici : pas d'affichage dans le cadre d'un autre site, pas de devinette de type, pas
+ * d'adresse complète transmise aux sites liés, et HTTPS imposé une fois servi en HTTPS.
+ */
+export const handle: Handle = async (entree) => {
+	const reponse = await traiter(entree);
+	const entetes = reponse.headers;
+	try {
+		entetes.set('x-frame-options', 'SAMEORIGIN');
+		entetes.set('x-content-type-options', 'nosniff');
+		entetes.set('referrer-policy', 'strict-origin-when-cross-origin');
+		if (entree.event.url.protocol === 'https:') {
+			entetes.set('strict-transport-security', 'max-age=31536000');
+		}
+	} catch {
+		/* Une réponse aux en-têtes figés part telle quelle. */
+	}
+	return reponse;
+};
+
+const traiter: Handle = async ({ event, resolve }) => {
 	event.locals.identite = ANONYME;
 
 	const jeton = event.cookies.get(NOM_DU_COOKIE);
