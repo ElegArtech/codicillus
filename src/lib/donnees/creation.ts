@@ -46,6 +46,7 @@ import { identifiantDeNote, identifiantSuivant } from '../rangement/identifiants
 import { identifiantLisible, segmentsDeDossier } from '../rangement/adresses';
 import { entretenirLIndex } from '../recherche/entretien';
 import { resoudreLeChemin, type LigneDeDossier } from './rangement';
+import { MOTIF_TITRE_TROP_LONG, tropLong } from './limites';
 
 /** Les deux visibilités de `CDC` §3.2, telles que la colonne les porte. */
 export const VISIBILITES = ['interne', 'publique'] as const;
@@ -195,6 +196,7 @@ export function proprietesSoumises(
 export function lireLaSaisie(formulaire: FormData): LectureDeSaisie {
 	const titre = texte(formulaire, 'titre');
 	if (titre.length === 0) return { ok: false, motif: 'titre manquant' };
+	if (tropLong(titre)) return { ok: false, motif: MOTIF_TITRE_TROP_LONG };
 	const type = texte(formulaire, 'type');
 	if (type.length === 0) return { ok: false, motif: 'type manquant' };
 	const domaine = texte(formulaire, 'domaine');

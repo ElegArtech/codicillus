@@ -26,6 +26,7 @@ import type { Identite, Resolution } from '../droits/resolution';
 import { INTROUVABLE } from '../droits/resolution';
 import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
 import { creerUneNote, etiquetteDuLibelle } from './creation';
+import { MOTIF_TITRE_TROP_LONG, tropLong } from './limites';
 
 /** Le type de note que porte tout signet — `seeds/corpus.ts`, `TypeDeNote`. */
 const TYPE_SIGNET = 'Signet';
@@ -79,6 +80,7 @@ export function lireLaSaisieDeSignet(champs: FormData): LectureDeSignet {
 
 	const titre = texte(champs, 'titre');
 	if (titre === '') return { ok: false, motif: 'titre manquant' };
+	if (tropLong(titre)) return { ok: false, motif: MOTIF_TITRE_TROP_LONG };
 
 	const domaine = texte(champs, 'domaine');
 	if (domaine === '') return { ok: false, motif: 'domaine manquant' };

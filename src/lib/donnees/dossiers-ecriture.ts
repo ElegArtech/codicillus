@@ -47,6 +47,7 @@ import { identifiantLisible } from '../rangement/adresses';
 import { entretenirLIndex } from '../recherche/entretien';
 import { PROFONDEUR_MAX, segmentsAffiches, type LigneDeDossier } from './rangement';
 import { effacerLesOctetsDUneNote } from '../fichiers/entrepot';
+import { PHRASE_NOM_TROP_LONG, tropLong } from './limites';
 
 /**
  * Le sous-arbre d'un dossier — lui-même d'abord, puis ses descendants. Fonction PURE.
@@ -476,6 +477,7 @@ export async function renommerOuDeplacerUnDossier(
 
 	const nom = demande.nom.trim();
 	if (nom === '') return { fait: false, message: NOM_VIDE };
+	if (tropLong(nom)) return { fait: false, message: PHRASE_NOM_TROP_LONG };
 
 	const motif = motifDeRefusDeDestination(demande.lignes, dossier.id, destination.id);
 	if (motif !== null) return { fait: false, message: motif };

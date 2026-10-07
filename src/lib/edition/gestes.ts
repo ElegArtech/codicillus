@@ -15,6 +15,7 @@ import type { Document } from '../contenu/document';
 import { adresseDeNote } from '../rangement/adresses';
 import { PHRASE_D_OBLIGATION, PREFIXE_D_ERREUR_DE_PROPRIETE } from '../cablage/formulaires';
 import type { Note } from '../../../seeds/corpus';
+import { LONGUEUR_MAX_DE_NOM, MOTIF_TITRE_TROP_LONG } from '../donnees/limites';
 
 export type Debranchement = () => void;
 
@@ -279,6 +280,7 @@ export const MOTIF_DE_PROPRIETE_OBLIGATOIRE = 'propriété obligatoire manquante
  */
 const CHAMP_DU_MOTIF: Readonly<Record<string, string>> = {
 	'titre manquant': 'erreur-titre',
+	[MOTIF_TITRE_TROP_LONG]: 'erreur-titre',
 	'dossier manquant': 'erreur-dossier'
 };
 
@@ -288,6 +290,7 @@ const PHRASE_DU_MOTIF: Readonly<Record<string, string>> = {
 	   garni par `rendreLesProprietesDeFiche()`, cette table sert au témoin. */
 	[MOTIF_DE_PROPRIETE_OBLIGATOIRE]: PHRASE_D_OBLIGATION,
 	'titre manquant': 'Une note sans titre est introuvable. Donnez-lui-en un, même approximatif.',
+	[MOTIF_TITRE_TROP_LONG]: `Le titre ou une étiquette dépasse ${LONGUEUR_MAX_DE_NOM} caractères. Raccourcissez-le.`,
 	'dossier manquant': 'Choisissez le dossier qui recevra la note.',
 	'type manquant': 'Le type de la note n’a pas été transmis.',
 	'domaine manquant': 'Le domaine de la note n’a pas été transmis.',

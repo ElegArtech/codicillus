@@ -16,6 +16,7 @@ import type { Identite } from '../droits/resolution';
 import { identifiantsLisibles, type DonneeSansContrepartie } from './accueil';
 import { lireNotes, ROLE_DEPUIS_ENUM, type ContexteDeLecture } from './lecture';
 import type { Note } from '../../../seeds/corpus';
+import { tropLong } from './limites';
 
 /* 1. Ce que la base ne porte pas — compté, jamais comblé. Le type est celui
    d'`accueil.ts`, réemployé pour que les deux listes se comptent ensemble. */
@@ -253,7 +254,7 @@ export async function enregistrerLIdentite(
 
 	const nom = demande.saisies.nom.trim();
 	const courriel = demande.saisies.courriel.trim();
-	if (nom === '') return 'nom-vide';
+	if (nom === '' || tropLong(nom)) return 'nom-vide';
 	if (!ADRESSE_ELECTRONIQUE.test(courriel)) return 'courriel-invalide';
 
 	await base

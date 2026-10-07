@@ -91,6 +91,7 @@ import {
 } from './creation';
 import type { ChampDeFiche, Note, Template, TypeDeFiche, TypeDeNote } from '../../../seeds/corpus';
 import type { NoteAffichee } from '../lecture/note-de-demonstration';
+import { MOTIF_TITRE_TROP_LONG, tropLong } from './limites';
 
 /**
  * Les trois référentiels que l'éditeur propose. Ils sont administrables (M14),
@@ -549,6 +550,7 @@ export function lireLaModification(champs: ChampsSoumis): LectureDuFormulaire {
 	if (lus.titre.etat === 'texte') {
 		const propre = texteUtile(lus.titre);
 		if (propre === null) return refuser('titre manquant');
+		if (tropLong(propre)) return refuser(MOTIF_TITRE_TROP_LONG);
 		titre = propre;
 	}
 
@@ -587,6 +589,7 @@ export function lireLaModification(champs: ChampsSoumis): LectureDuFormulaire {
 	   remplace la liste courante » ne connaît pas d'exception pour le vide. */
 	const etiquettes =
 		lus.etiquettes.etat === 'texte' ? etiquettesSoumises(lus.etiquettes.valeur) : undefined;
+	if (etiquettes?.some(tropLong)) return refuser(MOTIF_TITRE_TROP_LONG);
 
 	/* LE TYPE DE FICHE EST LE SECOND CHAMP DONT LE VIDE EST UN CHOIX : c'est le
 	   seul moyen de RETIRER un type, le sélecteur du gel portant « Aucun — note
