@@ -23,12 +23,12 @@ import {
 } from '$lib/auth/depot';
 import { arriveeDepuisMotif, cibleApresConnexion, suiteInterne } from '$lib/auth/garde';
 import {
-	ATTRIBUTS_DU_COOKIE,
 	NOM_DU_COOKIE,
+	attributsDuCookie,
 	condensatDeJeton,
 	tirerUnJeton
 } from '$lib/auth/sessions';
-import { BAREME, attendre, etatDesTentatives, finDuBlocage } from '$lib/auth/tentatives';
+import { BAREME, aSonTour, attendre, etatDesTentatives, finDuBlocage } from '$lib/auth/tentatives';
 import { basePartagee } from '$lib/base/acces';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -42,77 +42,89 @@ export const load: PageServerLoad = ({ url }) => ({
 });
 
 export const actions: Actions = {
-	default: async ({ request, cookies, url, getClientAddress }) => {
-		const champs = await request.formData();
-		const identifiant = String(champs.get('identifiant') ?? '');
-		const motdepasse = String(champs.get('motdepasse') ?? '');
-		/* La case du gel n'a pas d'attribut `name` (`V-05:582`) : sa présence
-		   suffit, quelle que soit la valeur qu'un client lui donnera. */
-		const souvenir = champs.get('souvenir') !== null;
-
-		/* RG-M16-01 — « depuis une même origine ». `getClientAddress()` rend
-		   l'adresse de l'appelant telle que l'adaptateur la voit. DERRIÈRE LE
-		   FRONTAL, CE N'EST PAS CELLE DU CLIENT : voir l'écart au rapport du lot. */
-		const origine = getClientAddress();
-		const base = basePartagee();
-		const maintenant = new Date();
-
-		const etat = etatDesTentatives(await tentativesDeLOrigine(base, origine), maintenant);
-
-		/* Déjà bloquée : rien n'est évalué, et rien n'est compté. Le gel fait de
-		   même — le formulaire est désactivé, donc aucune soumission ne part
-		   (`V-05:714`, `champs.disabled = true`). */
-		if (etat.bloquee) {
-			return fail(429, { issue: 'trop', secondes: etat.secondesRestantes });
-		}
-
-		/* Le ralentissement s'applique AVANT toute évaluation : il ne dépend donc
-		   pas de ce qui va échouer, et il n'ajoute aucun écart de temps entre un
-		   identifiant inconnu et un mot de passe faux (ARB-005). */
-		await attendre(etat.attenteSecondes);
-
-		if (etat.ouvreLeBlocage) {
-			const jusqua = finDuBlocage(maintenant);
-			await enregistrerLaTentative(base, {
-				origine,
-				reussie: false,
-				attenteSecondes: etat.attenteSecondes,
-				blocageJusquA: jusqua
-			});
-			return fail(429, { issue: 'trop', secondes: BAREME.blocageEnSecondes });
-		}
-
-		const compte = await compteParIdentifiant(base, identifiant);
-		const decision = await authentifier(compte, motdepasse);
-
-		await enregistrerLaTentative(base, {
-			origine,
-			reussie: decision.reussie,
-			attenteSecondes: etat.attenteSecondes,
-			blocageJusquA: null
-		});
-
-		if (!decision.reussie) {
-			/* Un seul et même retour, quelle que soit la cause : identifiant
-			   inconnu, compte désactivé, mot de passe faux, aucun mot de passe
-			   posé. Même code, même corps, mêmes en-têtes (`V-05:691-696`). */
-			return fail(401, { issue: 'echec' });
-		}
-
-		const jeton = tirerUnJeton();
-		/* `maintenant` est celui de la requête : la dernière connexion et la tentative
-		   enregistrée portent le même instant. */
-		await ouvrirUneSession(
-			base,
-			decision.identite.compteId,
-			condensatDeJeton(jeton),
-			souvenir,
-			maintenant
-		);
-		cookies.set(NOM_DU_COOKIE, jeton, ATTRIBUTS_DU_COOKIE);
-
-		/* §5.2 — « après connexion : {suite} si présent, sinon / ». 303 et non
-		   302 : la requête était un POST, et la cible se lit en GET. */
-		redirect(303, cibleApresConnexion(url.searchParams.get('suite')));
+	/* Une tentative à la fois par origine — voir `aSonTour()`. */
+	default: async (evenement) => {
+		const tour = await aSonTour(evenement.getClientAddress(), () => tenter(evenement));
+		if (!tour.servie) return fail(429, { issue: 'trop', secondes: BAREME.blocageEnSecondes });
+		return tour.valeur;
 	}
 };
+
+async function tenter({
+	request,
+	cookies,
+	url,
+	getClientAddress
+}: Parameters<Actions['default']>[0]) {
+	const champs = await request.formData();
+	const identifiant = String(champs.get('identifiant') ?? '');
+	const motdepasse = String(champs.get('motdepasse') ?? '');
+	/* La case du gel n'a pas d'attribut `name` (`V-05:582`) : sa présence
+	   suffit, quelle que soit la valeur qu'un client lui donnera. */
+	const souvenir = champs.get('souvenir') !== null;
+
+	/* RG-M16-01 — « depuis une même origine ». `getClientAddress()` rend
+	   l'adresse de l'appelant telle que l'adaptateur la voit. DERRIÈRE LE
+	   FRONTAL, CE N'EST PAS CELLE DU CLIENT : voir l'écart au rapport du lot. */
+	const origine = getClientAddress();
+	const base = basePartagee();
+	const maintenant = new Date();
+
+	const etat = etatDesTentatives(await tentativesDeLOrigine(base, origine), maintenant);
+
+	/* Déjà bloquée : rien n'est évalué, et rien n'est compté. Le gel fait de
+	   même — le formulaire est désactivé, donc aucune soumission ne part
+	   (`V-05:714`, `champs.disabled = true`). */
+	if (etat.bloquee) {
+		return fail(429, { issue: 'trop', secondes: etat.secondesRestantes });
+	}
+
+	/* Le ralentissement s'applique AVANT toute évaluation : il ne dépend donc
+	   pas de ce qui va échouer, et il n'ajoute aucun écart de temps entre un
+	   identifiant inconnu et un mot de passe faux (ARB-005). */
+	await attendre(etat.attenteSecondes);
+
+	if (etat.ouvreLeBlocage) {
+		const jusqua = finDuBlocage(maintenant);
+		await enregistrerLaTentative(base, {
+			origine,
+			reussie: false,
+			attenteSecondes: etat.attenteSecondes,
+			blocageJusquA: jusqua
+		});
+		return fail(429, { issue: 'trop', secondes: BAREME.blocageEnSecondes });
+	}
+
+	const compte = await compteParIdentifiant(base, identifiant);
+	const decision = await authentifier(compte, motdepasse);
+
+	await enregistrerLaTentative(base, {
+		origine,
+		reussie: decision.reussie,
+		attenteSecondes: etat.attenteSecondes,
+		blocageJusquA: null
+	});
+
+	if (!decision.reussie) {
+		/* Un seul et même retour, quelle que soit la cause : identifiant
+		   inconnu, compte désactivé, mot de passe faux, aucun mot de passe
+		   posé. Même code, même corps, mêmes en-têtes (`V-05:691-696`). */
+		return fail(401, { issue: 'echec' });
+	}
+
+	const jeton = tirerUnJeton();
+	/* `maintenant` est celui de la requête : la dernière connexion et la tentative
+	   enregistrée portent le même instant. */
+	await ouvrirUneSession(
+		base,
+		decision.identite.compteId,
+		condensatDeJeton(jeton),
+		souvenir,
+		maintenant
+	);
+	cookies.set(NOM_DU_COOKIE, jeton, attributsDuCookie(souvenir));
+
+	/* §5.2 — « après connexion : {suite} si présent, sinon / ». 303 et non
+	   302 : la requête était un POST, et la cible se lit en GET. */
+	redirect(303, cibleApresConnexion(url.searchParams.get('suite')));
+}

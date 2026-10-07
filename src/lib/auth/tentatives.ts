@@ -123,3 +123,36 @@ export async function attendre(secondes: number): Promise<void> {
 	if (secondes <= 0) return;
 	await new Promise<void>((tenir) => setTimeout(tenir, secondes * 1000));
 }
+
+/**
+ * LES TENTATIVES D'UNE MÊME ORIGINE PASSENT UNE À LA FOIS. Le barème lit les tentatives
+ * enregistrées avant de vérifier le mot de passe : quarante requêtes lancées ensemble
+ * lisaient toutes zéro échec, et trente-neuf mots de passe étaient éprouvés là où le
+ * barème en admet six. En file, chaque tentative lit celles qui la précèdent.
+ *
+ * La file est bornée : au-delà, la tentative est refusée sans attendre son tour. Elle
+ * vit dans le processus — l'application en tourne un seul.
+ */
+export const ATTENTES_MAX_PAR_ORIGINE = 5;
+
+const files = new Map<string, { fin: Promise<void>; enAttente: number }>();
+
+export type Tour<T> = { readonly servie: true; readonly valeur: T } | { readonly servie: false };
+
+export async function aSonTour<T>(origine: string, faire: () => Promise<T>): Promise<Tour<T>> {
+	const file = files.get(origine) ?? { fin: Promise.resolve(), enAttente: 0 };
+	if (file.enAttente >= ATTENTES_MAX_PAR_ORIGINE) return { servie: false };
+	file.enAttente += 1;
+	files.set(origine, file);
+	const precedente = file.fin;
+	let liberer: () => void = () => {};
+	file.fin = new Promise<void>((tenir) => (liberer = tenir));
+	try {
+		await precedente;
+		return { servie: true, valeur: await faire() };
+	} finally {
+		file.enAttente -= 1;
+		if (file.enAttente === 0) files.delete(origine);
+		liberer();
+	}
+}

@@ -10,7 +10,14 @@
  * qui décide.
  */
 import { describe, expect, it } from 'vitest';
-import { BAREME, type LigneDeTentative, etatDesTentatives, finDuBlocage } from './tentatives';
+import {
+	ATTENTES_MAX_PAR_ORIGINE,
+	BAREME,
+	type LigneDeTentative,
+	aSonTour,
+	etatDesTentatives,
+	finDuBlocage
+} from './tentatives';
 
 const T0 = new Date('2026-08-20T09:00:00.000Z');
 
@@ -150,5 +157,43 @@ describe('l’ordre des lignes n’a aucune influence', () => {
 		const droit = etatDesTentatives(lignes, T0);
 		const inverse = etatDesTentatives([...lignes].reverse(), T0);
 		expect(inverse).toEqual(droit);
+	});
+});
+
+describe('une tentative à la fois par origine', () => {
+	it('les tentatives simultanées d’une origine passent l’une après l’autre', async () => {
+		const journal: string[] = [];
+		const tentative = (nom: string) =>
+			aSonTour('198.51.100.1', async () => {
+				journal.push(`début ${nom}`);
+				await new Promise((tenir) => setTimeout(tenir, 5));
+				journal.push(`fin ${nom}`);
+				return nom;
+			});
+		const tours = await Promise.all([tentative('a'), tentative('b'), tentative('c')]);
+		expect(tours.every((t) => t.servie)).toBe(true);
+		expect(journal).toEqual(['début a', 'fin a', 'début b', 'fin b', 'début c', 'fin c']);
+	});
+
+	it('au-delà de la file, la tentative est refusée sans attendre', async () => {
+		const tours = await Promise.all(
+			Array.from({ length: ATTENTES_MAX_PAR_ORIGINE + 3 }, () =>
+				aSonTour('198.51.100.2', async () => {
+					await new Promise((tenir) => setTimeout(tenir, 5));
+					return true;
+				})
+			)
+		);
+		expect(tours.filter((t) => t.servie)).toHaveLength(ATTENTES_MAX_PAR_ORIGINE);
+	});
+
+	it('deux origines ne s’attendent pas, et une erreur libère la file', async () => {
+		await expect(
+			aSonTour('198.51.100.3', async () => {
+				throw new Error('échec');
+			})
+		).rejects.toThrow('échec');
+		const tour = await aSonTour('198.51.100.3', async () => 'suite');
+		expect(tour).toEqual({ servie: true, valeur: 'suite' });
 	});
 });

@@ -46,6 +46,7 @@ import {
 import { lireRelationsLisibles } from '$lib/donnees/outils';
 import { ouvrirLAcces } from '$lib/donnees/rangement';
 import type { Actions, PageServerLoad } from './$types';
+import { NOM_DU_COOKIE, attributsDuCookie } from '$lib/auth/sessions';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import type { NomDAuteur, NomDeDomaine, RoleDeCompte } from '../../../seeds/corpus';
 
@@ -165,11 +166,14 @@ export const actions: Actions = {
 	 * connexion pose et que `sessionExpiree()` lit. La case du gel n'a pas d'attribut
 	 * `name` : sa PRÉSENCE vaut vrai, quelle que soit la valeur qu'un client donnera.
 	 */
-	preferenceDeSession: async ({ locals, request }) => {
+	preferenceDeSession: async ({ locals, request, cookies }) => {
 		const { base, sessionId } = await titulaire(locals);
 		const champs = await request.formData();
 		const souvenir = champs.get('p-session') !== null;
 		await ecrirePreferenceDeSession(base, sessionId, souvenir);
+		/* Le cookie suit la préférence : persistant, ou de session. */
+		const jeton = cookies.get(NOM_DU_COOKIE);
+		if (jeton !== undefined) cookies.set(NOM_DU_COOKIE, jeton, attributsDuCookie(souvenir));
 		return { issue: 'preference-enregistree', souvenir };
 	},
 

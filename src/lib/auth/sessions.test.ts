@@ -7,14 +7,16 @@
  * session se ferme après deux heures d'inactivité ».
  *
  * LES DEUX POLARITÉS SONT JOUÉES (`P-5`, second paragraphe) : la session
- * ordinaire QUI SE FERME, et la session « se souvenir de moi » QUI NE SE FERME
- * PAS. Une épreuve qui n'aurait que la première laisserait l'exemption
+ * ordinaire QUI SE FERME, et la session « se souvenir de moi » QUI SE FERME
+ * PLUS TARD. Une épreuve qui n'aurait que la première laisserait l'exemption
  * inéprouvée — c'est-à-dire espérée.
  */
 import { CONFIGURATION_PAR_DEFAUT } from '../base/schema';
 import { describe, expect, it } from 'vitest';
 import {
 	ATTRIBUTS_DU_COOKIE,
+	DUREE_DU_SOUVENIR_EN_JOURS,
+	attributsDuCookie,
 	DureeDeSessionIllisibleErreur,
 	NOM_DU_COOKIE,
 	condensatDeJeton,
@@ -131,9 +133,18 @@ describe('le délai d’inactivité — et son exemption', () => {
 		expect(sessionExpiree(session, 60, maintenant)).toBe(false);
 	});
 
-	it('EXEMPTE « se souvenir de moi », quelle que soit l’inactivité', () => {
-		expect(
-			sessionExpiree({ souvenir: true, derniereActiviteLe: ilYA(100_000) }, 30, maintenant)
-		).toBe(false);
+	it('« se souvenir de moi » ignore le délai réglé, et se ferme après trente jours', () => {
+		const jours = (n: number) => ilYA(n * 24 * 60);
+		expect(sessionExpiree({ souvenir: true, derniereActiviteLe: jours(29) }, 30, maintenant)).toBe(
+			false
+		);
+		expect(sessionExpiree({ souvenir: true, derniereActiviteLe: jours(31) }, 30, maintenant)).toBe(
+			true
+		);
+	});
+
+	it('le cookie d’une session mémorisée survit à la fermeture du navigateur', () => {
+		expect(attributsDuCookie(true).maxAge).toBe(DUREE_DU_SOUVENIR_EN_JOURS * 24 * 60 * 60);
+		expect('maxAge' in attributsDuCookie(false)).toBe(false);
 	});
 });

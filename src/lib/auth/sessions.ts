@@ -89,16 +89,31 @@ export interface SessionPourInactivite {
 }
 
 /**
+ * « Se souvenir de moi » garde la session trente jours sans activité, et le cookie
+ * trente jours. Sans durée, le cookie mourait à la fermeture du navigateur — l'option ne
+ * se souvenait de rien — et la session, elle, ne se fermait jamais.
+ */
+export const DUREE_DU_SOUVENIR_EN_JOURS = 30;
+
+/** Les attributs du cookie : persistant pour une session mémorisée, de session sinon. */
+export function attributsDuCookie(souvenir: boolean): typeof ATTRIBUTS_DU_COOKIE & {
+	readonly maxAge?: number;
+} {
+	return souvenir
+		? { ...ATTRIBUTS_DU_COOKIE, maxAge: DUREE_DU_SOUVENIR_EN_JOURS * 24 * 60 * 60 }
+		: ATTRIBUTS_DU_COOKIE;
+}
+
+/**
  * LA RÈGLE D'INACTIVITÉ — une seule définition, et elle se joue sans base.
- * `souvenir` exempte : la session ne se ferme alors jamais d'elle-même
- * (`V-33:1361`).
+ * `souvenir` remplace le délai réglé par `DUREE_DU_SOUVENIR_EN_JOURS` (`V-33:1361`).
  */
 export function sessionExpiree(
 	session: SessionPourInactivite,
 	dureeEnMinutes: number,
 	maintenant: Date
 ): boolean {
-	if (session.souvenir) return false;
+	const delai = session.souvenir ? DUREE_DU_SOUVENIR_EN_JOURS * 24 * 60 : dureeEnMinutes;
 	const ecoule = maintenant.getTime() - session.derniereActiviteLe.getTime();
-	return ecoule > dureeEnMinutes * 60 * 1000;
+	return ecoule > delai * 60 * 1000;
 }
