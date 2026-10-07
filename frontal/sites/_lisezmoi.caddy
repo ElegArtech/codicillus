@@ -1,0 +1,3 @@
+# Sites supplémentaires servis par le frontal, à côté de Codicillus.
+# Chaque fichier *.caddy de ce dossier (ou de DOSSIER_SITES_FRONTAL) est importé tel quel.
+# Ce fichier ne déclare rien : il garantit seulement que l'import trouve au moins un fichier.

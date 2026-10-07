@@ -63,3 +63,6 @@ http://127.0.0.1 {
 		}
 	}
 }
+
+# Sites supplémentaires (autres applications derrière le même frontal).
+import /etc/caddy/sites/*.caddy

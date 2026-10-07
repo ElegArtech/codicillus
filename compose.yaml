@@ -27,6 +27,7 @@ services:
       - '${PORT_HTTPS:-19443}:443'
     volumes:
       - ./frontal/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${DOSSIER_SITES_FRONTAL:-./frontal/sites}:/etc/caddy/sites:ro
       - ./frontal/indisponibilite:/srv/indisponibilite:ro
       - ./certificats:/etc/codicillus/certificats:ro
       - caddy_donnees:/data
