@@ -44,6 +44,27 @@ function normaliserLesListesDeTaches(racine: HTMLElement): void {
 }
 
 /**
+ * Le format exige une alternative à toute image. Un gabarit écrit à la main en omet
+ * souvent : l'analyse échouait alors en entier, et le gabarit ne s'appliquait pas. Le nom
+ * du fichier sert d'alternative, que le rédacteur corrigera.
+ */
+function donnerUneAlternativeAuxImages(racine: Element): void {
+	for (const image of Array.from(racine.querySelectorAll('img'))) {
+		if ((image.getAttribute('alt') ?? '').trim() !== '') continue;
+		const source = image.getAttribute('src') ?? '';
+		const brut = source.split(/[?#]/)[0]?.split('/').pop() ?? '';
+		let nom = brut;
+		try {
+			nom = decodeURIComponent(brut);
+		} catch {
+			/* Une adresse mal encodée garde son nom brut. */
+		}
+		nom = nom.trim();
+		image.setAttribute('alt', nom === '' ? 'Image' : nom);
+	}
+}
+
+/**
  * LE DOCUMENT CANONIQUE D'UN SQUELETTE HTML.
  *
  * @param html le balisage du gabarit, tel que le référentiel le porte
@@ -54,9 +75,13 @@ function normaliserLesListesDeTaches(racine: HTMLElement): void {
  *   refuse. Rien n'est réparé (`ADR-003`).
  */
 export function documentDepuisHtml(html: string, document: globalThis.Document): Document {
-	const porteur = document.createElement('div');
+	/* Le balisage est analysé dans un document SANS fenêtre : ni script, ni image
+	   chargée, ni gestionnaire d'événement ne s'y exécute avant que le schéma ne
+	   le réduise à ce qu'il admet. */
+	const porteur = document.implementation.createHTMLDocument('').createElement('div');
 	porteur.innerHTML = html;
 	normaliserLesListesDeTaches(porteur);
+	donnerUneAlternativeAuxImages(porteur);
 	const noeud = DOMParser.fromSchema(schemaDeLEditeur).parse(porteur);
 	return documentDepuisNoeud(noeud);
 }
