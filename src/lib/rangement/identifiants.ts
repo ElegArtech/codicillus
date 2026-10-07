@@ -21,7 +21,7 @@
  * Le préfixe RÉSERVE l'espace de nommage : `nouvelle` ne peut pas être produit par
  * `identifiantDeNote()`, quel que soit le titre.
  */
-import { identifiantLisible } from './adresses';
+import { identifiantAscii } from './adresses';
 
 /** `ARB-062` §2.1 — la forme que porte le corpus entier. */
 export const PREFIXE_DE_NOTE = 'n-';
@@ -63,7 +63,11 @@ function tronquer(slug: string): string {
  * cause ». Le titre vide est refusé AILLEURS, par le contrat de soumission.
  */
 export function identifiantDeNote(titre: string): string {
-	return PREFIXE_DE_NOTE + (tronquer(identifiantLisible(titre)) || CORPS_PAR_DEFAUT);
+	/* L'IDENTIFIANT D'UNE NOTE RESTE EN ASCII : il est aussi celui du document dans le
+	   moteur de recherche, qui refuse tout autre caractère — une note au titre
+	   cyrillique faisait échouer toute la réindexation. Un titre sans lettre latine
+	   retombe sur le corps par défaut, et le suffixe le rend libre. */
+	return PREFIXE_DE_NOTE + (tronquer(identifiantAscii(titre)) || CORPS_PAR_DEFAUT);
 }
 
 /**

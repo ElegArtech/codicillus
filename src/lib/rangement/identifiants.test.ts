@@ -103,10 +103,16 @@ describe('ARB-062 §2.2 — la troncature à 48, sur frontière de tiret', () =>
 });
 
 describe('ARB-062 §2.3 — le slug vide donne le corps `note`', () => {
-	it('vaut pour un titre vide, blanc, ponctué ou idéographique', () => {
-		for (const titre of ['', '   ', '???', '— — —', '汉字']) {
+	it('vaut pour un titre vide, blanc ou ponctué', () => {
+		for (const titre of ['', '   ', '???', '— — —']) {
 			expect(identifiantDeNote(titre)).toBe(PREFIXE_DE_NOTE + CORPS_PAR_DEFAUT);
 		}
+	});
+
+	it('reste en ASCII, que le moteur de recherche exige', () => {
+		expect(identifiantDeNote('汉字')).toBe(PREFIXE_DE_NOTE + CORPS_PAR_DEFAUT);
+		expect(identifiantDeNote('Отчёт 2026')).toBe(PREFIXE_DE_NOTE + '2026');
+		expect(identifiantDeNote('Été 2026')).toBe(PREFIXE_DE_NOTE + 'ete-2026');
 	});
 
 	it('est une fonction TOTALE : aucun titre ne fait lever', () => {
@@ -186,5 +192,25 @@ describe('identifiantLisible — appliquée deux fois, elle ne bouge plus', () =
 		expect(identifiantLisible('Réseau')).toBe('reseau');
 		expect(identifiantLisible('Poste de travail')).toBe('poste-de-travail');
 		expect(identifiantLisible('Business Analysis')).toBe('business-analysis');
+	});
+});
+
+describe('l’adresse d’un nom dans toutes les écritures', () => {
+	it.each([
+		['Été 2026', 'ete-2026'],
+		['Отчёты', 'отчеты'],
+		['東京 支社', '東京-支社'],
+		['Ελληνικά', 'ελληνικα'],
+		['..', ''],
+		['📁', '']
+	])('« %s » → « %s »', (nom, attendu) => {
+		expect(identifiantLisible(nom)).toBe(attendu);
+	});
+
+	it('est stable : l’adresse d’une adresse est elle-même', () => {
+		for (const nom of ['Отчёты', '東京 支社', 'Été 2026']) {
+			const une = identifiantLisible(nom);
+			expect(identifiantLisible(une)).toBe(une);
+		}
 	});
 });

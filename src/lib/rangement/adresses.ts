@@ -44,11 +44,15 @@ const DEJA_UN_IDENTIFIANT = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
  */
 export function identifiantLisible(nom: string): string {
 	if (DEJA_UN_IDENTIFIANT.test(nom)) return nom;
+	/* Les lettres et chiffres de TOUTES les écritures sont gardés : réduit à `a-z0-9`, un
+	   nom cyrillique, grec ou japonais n'avait plus d'adresse, et le menu latéral tombait
+	   en erreur pour tous ceux qui voyaient le dossier. Les accents latins sont retirés,
+	   et les noms latins gardent l'adresse qu'ils avaient. */
 	return nom
 		.normalize('NFD')
-		.replace(/[\u0300-\u036f]/g, '')
+		.replace(/\p{M}/gu, '')
 		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/[^\p{L}\p{N}]+/gu, '-')
 		.replace(/^-+|-+$/g, '');
 }
 
@@ -78,6 +82,16 @@ export function adresseDeDossier(
 ): string {
 	const segments = chemin.map(identifiantLisible).join('/');
 	return `${adresseDeDomaine(univers, domaine)}/dossiers${segments ? `/${segments}` : ''}`;
+}
+
+/**
+ * L'ADRESSE RÉDUITE À L'ASCII — celle d'une note. L'identifiant d'une note est aussi celui
+ * de son document dans le moteur de recherche, qui n'admet que `a-z`, `0-9`, `-` et `_`.
+ */
+export function identifiantAscii(nom: string): string {
+	return identifiantLisible(nom)
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '');
 }
 
 /** `/notes/{identifiant}` — l'adresse PLATE d'une note (RG-M03-03, §2.1). */

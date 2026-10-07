@@ -38,7 +38,7 @@ import type { Document } from '../contenu/document';
 import { analyserMarkdown, markdownImporte } from '../contenu/markdown';
 import { ecrireLesOctets } from '../fichiers/entrepot';
 import { entretenirLIndex } from '../recherche/entretien';
-import { adresseDePieceJointe, identifiantLisible } from '../rangement/adresses';
+import { adresseDePieceJointe, identifiantAscii, identifiantLisible } from '../rangement/adresses';
 import { PROFONDEUR_MAX } from './rangement';
 import { proprietesSoumises, retenirLesProprietes } from './creation';
 import {
@@ -909,7 +909,7 @@ function nomSansExtension(chemin: string): string {
  * rang, faute de quoi il n'aurait pas d'adresse.
  */
 export function identifiantLibre(nom: string, pris: ReadonlySet<string>, rang: number): string {
-	const racine = identifiantLisible(nom) || `note-${rang}`;
+	const racine = identifiantAscii(nom) || `note-${rang}`;
 	if (!pris.has(racine)) return racine;
 	let suffixe = 2;
 	while (pris.has(`${racine}-${suffixe}`)) suffixe += 1;
@@ -935,7 +935,7 @@ export function identifiantDuFichier(
 	const deja = notesParPlaceEtTitre.get(clePlaceEtTitre(segments, titre));
 	if (deja !== undefined) return deja;
 
-	const racine = identifiantLisible(titre) || `note-${rang}`;
+	const racine = identifiantAscii(titre) || `note-${rang}`;
 	const place = notesDeLaCible.get(racine);
 	if (place !== undefined && place === segments.join('/')) return racine;
 	return identifiantLibre(titre, pris, rang);
