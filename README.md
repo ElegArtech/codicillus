@@ -26,7 +26,7 @@ la console, puis les utilisateurs ajoutent leurs notes.
 Docker Engine et Docker Compose v2.24 ou ultérieur doivent être installés et accessibles.
 Les images fournies sont prévues pour Linux x86-64.
 
-[![Télécharger Codicillus](docs/telecharger.svg)](https://github.com/ElegArtech/codicillus/releases/download/v1.0.1/codicillus-1.0.1-compose.tar.gz)
+[![Télécharger Codicillus](docs/telecharger.svg)](https://github.com/ElegArtech/codicillus/releases/download/v1.0.2/codicillus-1.0.2-compose.tar.gz)
 
 Le kit contient Compose, la configuration, les outils d'installation et les guides.
 Les images de l'application et de ses services sont téléchargées automatiquement depuis les registres publics.
@@ -34,7 +34,7 @@ Les images de l'application et de ses services sont téléchargées automatiquem
 **Pour être guidé, une seule ligne dans un terminal :**
 
 ```sh
-curl -fL https://github.com/ElegArtech/codicillus/releases/download/v1.0.1/installer-codicillus.sh -o installer-codicillus.sh && bash installer-codicillus.sh
+curl -fL https://github.com/ElegArtech/codicillus/releases/download/v1.0.2/installer-codicillus.sh -o installer-codicillus.sh && bash installer-codicillus.sh
 ```
 
 L'assistant demande l'adresse du site et les informations du premier administrateur, génère les
@@ -46,7 +46,7 @@ les valeurs indiquées, puis lancer `docker compose up -d --wait`. Aucune constr
 de Node, Python ou PostgreSQL sur l'hôte n'est nécessaire.
 
 - **[Installation et configuration](docs/installation.md)** : démarrage, HTTPS et construction depuis les sources.
-- **[Installation hors ligne](docs/hors-ligne.md)** : [archive complète avec les images](https://github.com/ElegArtech/codicillus/releases/download/v1.0.1/codicillus-1.0.1-linux-amd64.tar.gz) pour les serveurs sans Internet.
+- **[Installation hors ligne](docs/hors-ligne.md)** : [archive complète avec les images](https://github.com/ElegArtech/codicillus/releases/download/v1.0.2/codicillus-1.0.2-linux-amd64.tar.gz) pour les serveurs sans Internet.
 - **[Utilisation](docs/utilisation.md)** : organiser le corpus, rédiger et vérifier les notes.
 - **[Exploitation](docs/exploitation.md)** : mises à jour, sauvegardes, restauration et diagnostic.
 
@@ -55,10 +55,10 @@ accessibles.
 
 ## État de la version
 
-La version `1.0.1` corrige la `1.0.0`, première version stable de Codicillus : elle ferme deux
-failles de script dans les notes et les pièces jointes, durcit la connexion, pose une politique
-de contenu et retire l'extension pgvector. L’installation
-sur une base vide, les principaux parcours dans le navigateur, la migration depuis la préversion et la
+La version `1.0.2` corrige la `1.0.0`, première version stable de Codicillus : failles de script
+dans les notes et les pièces jointes, connexion, politique de contenu, noms de dossier dans toutes
+les écritures, pièces jointes des guides publics. L’installation sur une base vide, la mise à jour,
+les principaux parcours dans le navigateur, les droits d’accès et la
 sauvegarde-restauration ont été vérifiés sur Linux x86-64. La documentation décrit les fonctionnalités présentes ; elle ne constitue pas
 un engagement de support ou de disponibilité.
 
