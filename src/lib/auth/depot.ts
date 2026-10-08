@@ -45,6 +45,7 @@ export async function compteParIdentifiant(
 export interface SessionEtCompte {
 	readonly sessionId: string;
 	readonly souvenir: boolean;
+	readonly creeeLe: Date;
 	readonly derniereActiviteLe: Date;
 	readonly compte: CompteAAuthentifier;
 	/**
@@ -70,6 +71,7 @@ export async function sessionParCondensat(
 		.select({
 			sessionId: sessions.id,
 			souvenir: sessions.souvenir,
+			creeeLe: sessions.creeeLe,
 			derniereActiviteLe: sessions.derniereActiviteLe,
 			compteId: comptes.id,
 			role: comptes.role,
@@ -87,6 +89,7 @@ export async function sessionParCondensat(
 	return {
 		sessionId: l.sessionId,
 		souvenir: l.souvenir,
+		creeeLe: l.creeeLe,
 		derniereActiviteLe: l.derniereActiviteLe,
 		compte: {
 			id: l.compteId,

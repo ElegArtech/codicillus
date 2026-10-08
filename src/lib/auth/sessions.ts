@@ -86,6 +86,8 @@ export function dureeDInactiviteEnMinutes(valeur: unknown): number {
 export interface SessionPourInactivite {
 	readonly souvenir: boolean;
 	readonly derniereActiviteLe: Date;
+	/** L'ouverture ; absente, seule l'inactivité est jugée. */
+	readonly creeeLe?: Date;
 }
 
 /**
@@ -105,8 +107,17 @@ export function attributsDuCookie(souvenir: boolean): typeof ATTRIBUTS_DU_COOKIE
 }
 
 /**
- * LA RÈGLE D'INACTIVITÉ — une seule définition, et elle se joue sans base.
- * `souvenir` remplace le délai réglé par `DUREE_DU_SOUVENIR_EN_JOURS` (`V-33:1361`).
+ * LA DURÉE DE VIE ABSOLUE D'UNE SESSION, quelle que soit son activité. Sans elle, une
+ * session utilisée chaque jour ne se fermait jamais, et un jeton dérobé restait valable
+ * aussi longtemps que son titulaire travaillait. Une session ordinaire vit une journée ;
+ * une session mémorisée, la durée de son cookie.
+ */
+export const DUREE_ABSOLUE_EN_HEURES = { ordinaire: 24, souvenir: DUREE_DU_SOUVENIR_EN_JOURS * 24 };
+
+/**
+ * LA RÈGLE D'EXPIRATION — une seule définition, et elle se joue sans base. L'inactivité
+ * d'abord : `souvenir` remplace le délai réglé par `DUREE_DU_SOUVENIR_EN_JOURS`
+ * (`V-33:1361`). Puis la durée de vie absolue, comptée depuis l'ouverture.
  */
 export function sessionExpiree(
 	session: SessionPourInactivite,
@@ -115,5 +126,10 @@ export function sessionExpiree(
 ): boolean {
 	const delai = session.souvenir ? DUREE_DU_SOUVENIR_EN_JOURS * 24 * 60 : dureeEnMinutes;
 	const ecoule = maintenant.getTime() - session.derniereActiviteLe.getTime();
-	return ecoule > delai * 60 * 1000;
+	if (ecoule > delai * 60 * 1000) return true;
+	if (session.creeeLe === undefined) return false;
+	const vie = session.souvenir
+		? DUREE_ABSOLUE_EN_HEURES.souvenir
+		: DUREE_ABSOLUE_EN_HEURES.ordinaire;
+	return maintenant.getTime() - session.creeeLe.getTime() > vie * 3600 * 1000;
 }

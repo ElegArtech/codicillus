@@ -148,3 +148,32 @@ describe('le délai d’inactivité — et son exemption', () => {
 		expect('maxAge' in attributsDuCookie(false)).toBe(false);
 	});
 });
+
+describe('la durée de vie absolue d’une session', () => {
+	const maintenant = new Date('2026-08-20T12:00:00Z');
+	const heuresAvant = (h: number) => new Date(maintenant.getTime() - h * 3600 * 1000);
+	it('ferme une session ordinaire active au-delà d’une journée', () => {
+		const session = {
+			souvenir: false,
+			creeeLe: heuresAvant(25),
+			derniereActiviteLe: heuresAvant(0)
+		};
+		expect(sessionExpiree(session, 120, maintenant)).toBe(true);
+	});
+	it('ferme une session mémorisée active au-delà de son cookie', () => {
+		const session = {
+			souvenir: true,
+			creeeLe: heuresAvant(DUREE_DU_SOUVENIR_EN_JOURS * 24 + 1),
+			derniereActiviteLe: heuresAvant(0)
+		};
+		expect(sessionExpiree(session, 120, maintenant)).toBe(true);
+	});
+	it('garde une session récente et active', () => {
+		const session = {
+			souvenir: false,
+			creeeLe: heuresAvant(3),
+			derniereActiviteLe: heuresAvant(0)
+		};
+		expect(sessionExpiree(session, 120, maintenant)).toBe(false);
+	});
+});
