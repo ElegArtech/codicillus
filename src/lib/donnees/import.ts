@@ -1262,6 +1262,8 @@ export interface EntreeDeJournalDImport {
 	/** Le NOM du domaine où le lot a atterri, tel qu'il était ce jour-là. */
 	readonly domaine: string;
 	readonly domaineId: string;
+	/** Le dossier qui a reçu le lot. */
+	readonly dossierId: string;
 	/** La durée mesurée du traitement, en millisecondes. */
 	readonly dureeMs: number;
 	readonly volume: {
@@ -1311,6 +1313,7 @@ export function entreeDeJournal(
 		scenario: contexte.scenario,
 		domaine: contexte.domaine,
 		domaineId: cible.domaineId,
+		dossierId: cible.dossierId,
 		dureeMs: contexte.dureeMs,
 		volume: {
 			total: rapport.total,
@@ -1346,6 +1349,7 @@ export async function enregistrerLeLot(
 			.values({
 				source: entree.source,
 				domaineId: entree.domaineId,
+				dossierId: entree.dossierId,
 				domaine: entree.domaine,
 				auteurId: entree.auteurId,
 				le: new Date(entree.date),

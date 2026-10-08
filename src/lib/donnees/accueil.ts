@@ -424,13 +424,16 @@ async function lireLesTraces(
 	   DEUX FILTRES QUI DISENT LA MÊME CHOSE — « quelque chose a été écrit » : une
 	   simulation n'écrit rien (`RG-M12-02`), un lot refusé en bloc non plus
 	   (`RG-M12-03`), et son journal compte alors zéro note. */
-	const domainesLisibles = await base
-		.selectDistinct({ id: notes.domaineId })
+	/* LE LOT SE VOIT DEPUIS LE DOSSIER QUI L'A REÇU, et non depuis tout son domaine : il
+	   nomme son auteur, sa source et ses volumes. Les dossiers retenus sont ceux où
+	   l'appelant lit une note. */
+	const dossiersLisibles = await base
+		.selectDistinct({ id: notes.dossierId })
 		.from(notes)
 		.where(perimetre);
 
 	const lots =
-		domainesLisibles.length === 0
+		dossiersLisibles.length === 0
 			? []
 			: await base
 					.select({
@@ -447,8 +450,8 @@ async function lireLesTraces(
 							gte(lotsDImport.le, depuis),
 							eq(lotsDImport.simulation, false),
 							inArray(
-								lotsDImport.domaineId,
-								domainesLisibles.map((d) => d.id)
+								lotsDImport.dossierId,
+								dossiersLisibles.map((d) => d.id)
 							)
 						)
 					);

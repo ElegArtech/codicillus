@@ -716,6 +716,8 @@ export const lotsDImport = pgTable(
 		id: uuid('id').primaryKey().defaultRandom(),
 		source: text('source').notNull(),
 		domaineId: uuid('domaine_id').references(() => domaines.id, { onDelete: 'set null' }),
+		/** Le dossier qui a reçu le lot : c'est lui qui borne qui voit passer le lot. */
+		dossierId: uuid('dossier_id').references(() => dossiers.id, { onDelete: 'set null' }),
 		domaine: text('domaine').notNull(),
 		auteurId: uuid('auteur_id')
 			.notNull()

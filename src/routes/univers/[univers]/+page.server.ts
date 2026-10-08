@@ -338,7 +338,9 @@ async function lireLActiviteRecente(
 			and(
 				gte(lotsDImport.le, depuis),
 				eq(lotsDImport.simulation, false),
-				inArray(lotsDImport.domaineId, [...domainesOuverts])
+				inArray(lotsDImport.domaineId, [...domainesOuverts]),
+				/* Le lot se voit depuis le dossier qui l'a reçu, comme ses notes. */
+				autorises === null ? undefined : inArray(lotsDImport.dossierId, autorises)
 			)
 		);
 
@@ -426,9 +428,12 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	 *
 	 * Les deux refus ne bougent pas — univers absent, ou univers dont aucun domaine
 	 * n'est lisible : 404 par le même point de sortie (`ADR-007`).
+	 *
+	 * IL S'OUVRE À QUI PEUT LE REMPLIR, c'est-à-dire à la console : à tout autre compte,
+	 * il nommait et décrivait un univers où rien ne lui est donné à lire.
 	 */
 	const vide = universOuvert !== undefined && tousLesDomaines.length === 0;
-	const ouvrable = locals.identite.type === 'authentifie' && vide;
+	const ouvrable = accesALaConsole(locals.identite) && vide;
 	const resolution = resoudre(universOuvert ?? null, () => lisibles.length > 0 || ouvrable);
 	if (!resolution.trouve) refuserLAdresse(url.pathname);
 	const univers = resolution.ressource;

@@ -7,15 +7,18 @@
  * recopié onze fois (`P-35`), et le défaut se lirait comme un compteur juste sur une
  * section et faux sur la voisine.
  *
- * CE CHARGEUR NE GARDE RIEN, et il n'a pas à le faire : `garde.ts` redirige
- * l'anonyme sur le préfixe `/console`, et les pages résolvent chacune leur
- * droit par `resoudreLaConsole()`. Ce qu'il lit, c'est HUIT `count(*)`, qui ne
- * nomment aucune ressource.
+ * LE GABARIT GARDE SA PROPRE DONNÉE. Chaque page résout son droit, mais les données d'un
+ * gabarit se demandent aussi seules (`__data.json`) : sans cette garde, n'importe quel
+ * compte lisait les effectifs de l'instance — comptes actifs, requêtes à traiter, lots
+ * d'import — sous une page qui lui répondait 404.
  */
+import { error } from '@sveltejs/kit';
 import { basePartagee } from '$lib/base/acces';
-import { lireLesEffectifsDeConsole } from '$lib/donnees/consoles';
+import { accesALaConsole, lireLesEffectifsDeConsole } from '$lib/donnees/consoles';
+import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async () => ({
-	effectifs: await lireLesEffectifsDeConsole(basePartagee())
-});
+export const load: LayoutServerLoad = async ({ locals }) => {
+	if (!accesALaConsole(locals.identite)) error(404, MESSAGE_INTROUVABLE);
+	return { effectifs: await lireLesEffectifsDeConsole(basePartagee()) };
+};
