@@ -190,7 +190,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		typesNote: creation.referentiels.typesNote,
 		typesFiche: creation.referentiels.typesFiche,
 		templates: creation.referentiels.templates,
-		dossiersParDomaine: await lireLArborescenceDeChoix(base)
+		dossiersParDomaine: await lireLArborescenceDeChoix(base, locals.identite)
 	};
 };
 

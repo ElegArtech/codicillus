@@ -134,7 +134,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		/* L'ARBORESCENCE DE CHOIX, LA MÊME LECTURE QU'À LA CRÉATION. Sans elle, la
 		   liste des dossiers de l'écran sortait vide et aucun déplacement n'était
 		   possible. */
-		dossiersParDomaine: await lireLArborescenceDeChoix(base),
+		dossiersParDomaine: await lireLArborescenceDeChoix(base, locals.identite),
 		/**
 		 * LE CORPS À ÉDITER, ET CE QUE L'ÉDITEUR N'EN SAIT PAS PORTER. Le second
 		 * champ n'est pas décoratif : une marque que le schéma de l'éditeur ne connaît

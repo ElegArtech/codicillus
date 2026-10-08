@@ -131,9 +131,15 @@ export interface DossierDeChoix {
  * de ses enfants n'en portent pas le préfixe. `Note.dossier` étant VIDE pour une note
  * rangée à la racine, c'est V-17 qui fait l'équivalence « vide = nom du domaine » ;
  * `dossierDeDestination()` retire ce segment en tête à l'écriture.
+ *
+ * SEULS LES DOSSIERS OÙ L'APPELANT PEUT ÉCRIRE SONT OFFERTS, avec les ancêtres qui y
+ * mènent : c'est un choix de destination, et l'arborescence entière nommait chaque
+ * domaine et chaque dossier de l'instance, avec son nombre de notes, à quiconque pouvait
+ * écrire quelque part. Un ancêtre offert pour le seul chemin n'annonce aucun décompte.
  */
 export async function lireLArborescenceDeChoix(
-	base: Base
+	base: Base,
+	identite: Identite
 ): Promise<Readonly<Record<string, readonly DossierDeChoix[]>>> {
 	const lignes = await base
 		.select({
@@ -146,24 +152,42 @@ export async function lireLArborescenceDeChoix(
 		.from(dossiers)
 		.innerJoin(domaines, eq(domaines.id, dossiers.domaineId));
 
+	const index = await lireIndexDesDroits(base, identite);
+	const ecrivable = new Set(
+		lignes.filter((l) => peutEcrireSurLeDossierSelon(identite, l.id, index)).map((l) => l.id)
+	);
+	/* Un dossier est offert s'il est écrivable ou s'il mène à un dossier écrivable. */
+	const parentDe = new Map(lignes.map((l) => [l.id, l.parentId]));
+	const offert = new Set<string>();
+	for (const id of ecrivable) {
+		for (let courant: string | null | undefined = id; courant != null && !offert.has(courant);) {
+			offert.add(courant);
+			courant = parentDe.get(courant);
+		}
+	}
+
 	const decomptes = await base
 		.select({ dossierId: notes.dossierId, combien: count() })
 		.from(notes)
 		.groupBy(notes.dossierId);
 	const parDossier = new Map(decomptes.map((c) => [c.dossierId, Number(c.combien)]));
+	const decompte = (id: string): number => (ecrivable.has(id) ? (parDossier.get(id) ?? 0) : 0);
 
 	const enfantsDe = new Map<string | null, typeof lignes>();
-	for (const l of lignes) enfantsDe.set(l.parentId, [...(enfantsDe.get(l.parentId) ?? []), l]);
+	for (const l of lignes) {
+		if (!offert.has(l.id)) continue;
+		enfantsDe.set(l.parentId, [...(enfantsDe.get(l.parentId) ?? []), l]);
+	}
 
 	const batir = (parentId: string | null): readonly DossierDeChoix[] =>
 		[...(enfantsDe.get(parentId) ?? [])]
 			.sort((a, b) => a.position - b.position || a.nom.localeCompare(b.nom, 'fr'))
-			.map((l) => ({ nom: l.nom, notes: parDossier.get(l.id) ?? 0, enfants: batir(l.id) }));
+			.map((l) => ({ nom: l.nom, notes: decompte(l.id), enfants: batir(l.id) }));
 
 	const parDomaine: Record<string, readonly DossierDeChoix[]> = {};
 	for (const racine of enfantsDe.get(null) ?? []) {
 		parDomaine[racine.domaine] = [
-			{ nom: racine.nom, notes: parDossier.get(racine.id) ?? 0, enfants: [] },
+			{ nom: racine.nom, notes: decompte(racine.id), enfants: [] },
 			...batir(racine.id)
 		];
 	}
