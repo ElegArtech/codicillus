@@ -1143,7 +1143,11 @@ export async function creerLePremierAdministrateur(
 		role: 'administrateur',
 		actif: true,
 		arriveLe: new Date().toISOString().slice(0, 10),
-		condensatMotDePasse: await hacherMotDePasse(qui.motDePasse)
+		condensatMotDePasse: await hacherMotDePasse(qui.motDePasse),
+		/* LE MOT DE PASSE D'AMORÇAGE EST À CHANGER À LA PREMIÈRE CONNEXION : il a transité
+		   par `.env` et par l'environnement du conteneur, où il reste lisible. Changé, ces
+		   copies ne valent plus rien. */
+		motDePasseAChanger: true
 	});
 	return { cree: true };
 }

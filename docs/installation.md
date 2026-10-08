@@ -76,7 +76,9 @@ absente ; `MODE_IMAGES=never` interdit tout téléchargement pour le parcours ho
 n'existe et prépare l'index. L'application démarre seulement après son succès.
 
 Une installation neuve ne contient aucun univers, domaine ou contenu de démonstration.
-Ouvrir l'adresse publique, se connecter, puis suivre [les premiers pas](utilisation.md).
+Ouvrir l'adresse publique et se connecter : Codicillus demande aussitôt de remplacer le mot de passe
+d'amorçage, qui reste lisible dans `.env` et dans l'environnement du conteneur. Suivre ensuite
+[les premiers pas](utilisation.md).
 
 Retirer `ADMIN_IDENTIFIANT`, `ADMIN_NOM`, `ADMIN_COURRIEL` et `MDP_ADMINISTRATEUR` de `.env`
 après le premier démarrage. Les démarrages suivants conservent les comptes et leurs mots de passe,
