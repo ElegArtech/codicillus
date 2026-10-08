@@ -690,7 +690,8 @@ export const piecesJointes = pgTable(
 	},
 	(t) => [
 		check('pieces_jointes_taille_positive', sql`${t.tailleOctets} >= 0`),
-		index('pieces_jointes_note_idx').on(t.noteId)
+		index('pieces_jointes_note_idx').on(t.noteId),
+		unique('pieces_jointes_nom_unique').on(t.noteId, t.nom)
 	]
 );
 

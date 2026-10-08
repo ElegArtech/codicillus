@@ -28,6 +28,7 @@ import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolutio
 import { adresseDePieceJointe } from '../rangement/adresses';
 import { typeMediaNormalise } from '../fichiers/affichage';
 import { peutEcrireSurLeDossier } from './edition';
+import { violeLUnicite } from './creation';
 import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
 import { lireConfiguration } from './lecture';
 
@@ -171,6 +172,9 @@ export async function deposerUnePieceJointe(
 		});
 	} catch (cause) {
 		await effacerLesOctets(racine, note.id, id);
+		/* LA CONTRAINTE TRANCHE LA COURSE que la lecture préalable ne voit pas : deux
+		   dépôts simultanés du même nom passent tous deux la vérification. */
+		if (violeLUnicite(cause, 'pieces_jointes_nom_unique')) throw new NomDePieceDejaPris(nom);
 		throw cause;
 	}
 

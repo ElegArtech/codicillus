@@ -549,13 +549,16 @@ const PROFONDEUR_DES_CAUSES = 8;
  * d'un seul niveau : la profondeur appartient à une bibliothèque et peut changer.
  */
 export function estUneCollisionDIdentifiant(cause: unknown): boolean {
+	return violeLUnicite(cause, CONTRAINTE_D_IDENTIFIANT);
+}
+
+/** L'échec est-il la violation de CETTE contrainte d'unicité ? Même parcours des causes. */
+export function violeLUnicite(cause: unknown, contrainte: string): boolean {
 	let echec: unknown = cause;
 	for (let niveau = 0; niveau < PROFONDEUR_DES_CAUSES; niveau += 1) {
 		if (typeof echec !== 'object' || echec === null) return false;
 		const erreur = echec as { code?: unknown; constraint?: unknown; cause?: unknown };
-		if (erreur.code === VIOLATION_D_UNICITE && erreur.constraint === CONTRAINTE_D_IDENTIFIANT) {
-			return true;
-		}
+		if (erreur.code === VIOLATION_D_UNICITE && erreur.constraint === contrainte) return true;
 		echec = erreur.cause;
 	}
 	return false;
