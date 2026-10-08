@@ -53,7 +53,7 @@ services:
     networks: [codicillus, acces]
 
   initialisation:
-    image: ${REGISTRE_CODICILLUS:-ghcr.io/elegartech}/codicillus-gestion:${VERSION_CODICILLUS:-1.0.2}
+    image: ${REGISTRE_CODICILLUS:-ghcr.io/elegartech}/codicillus-gestion:${VERSION_CODICILLUS:-1.0.3}
     pull_policy: ${MODE_IMAGES:-missing}
     restart: 'no'
     <<: *durci
@@ -74,7 +74,7 @@ services:
     networks: [codicillus]
 
   app:
-    image: ${REGISTRE_CODICILLUS:-ghcr.io/elegartech}/codicillus:${VERSION_CODICILLUS:-1.0.2}
+    image: ${REGISTRE_CODICILLUS:-ghcr.io/elegartech}/codicillus:${VERSION_CODICILLUS:-1.0.3}
     pull_policy: ${MODE_IMAGES:-missing}
     restart: unless-stopped
     <<: *durci
@@ -113,7 +113,7 @@ services:
     networks: [codicillus]
 
   gestion:
-    image: ${REGISTRE_CODICILLUS:-ghcr.io/elegartech}/codicillus-gestion:${VERSION_CODICILLUS:-1.0.2}
+    image: ${REGISTRE_CODICILLUS:-ghcr.io/elegartech}/codicillus-gestion:${VERSION_CODICILLUS:-1.0.3}
     pull_policy: ${MODE_IMAGES:-missing}
     profiles: [gestion]
     <<: *durci
@@ -170,7 +170,7 @@ services:
     networks: [codicillus]
 
   conversion:
-    image: ${REGISTRE_CODICILLUS:-ghcr.io/elegartech}/codicillus-conversion:${VERSION_CODICILLUS:-1.0.2}
+    image: ${REGISTRE_CODICILLUS:-ghcr.io/elegartech}/codicillus-conversion:${VERSION_CODICILLUS:-1.0.3}
     pull_policy: ${MODE_IMAGES:-missing}
     profiles: [conversion]
     restart: unless-stopped
