@@ -62,7 +62,9 @@ def _pandoc(arguments: list[str], entree: bytes | None, travail: Path) -> str:
     """
     try:
         acheve = subprocess.run(
-            ["pandoc", *arguments],
+            # `--sandbox` borne Pandoc aux fichiers de sa ligne de commande : un document
+            # qui désignerait un fichier local ou une adresse distante n'y accède pas.
+            ["pandoc", "--sandbox", *arguments],
             input=entree,
             capture_output=True,
             cwd=travail,

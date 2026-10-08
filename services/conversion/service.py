@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -119,24 +120,32 @@ def _verdict_du_sous_processus(fichier: Path, format_: str, travail: Path) -> di
         Le fichier est alors endommagé, ce qui est la seule chose que le service
         puisse honnêtement en dire.
     """
+    # LE SOUS-PROCESSUS OUVRE SON PROPRE GROUPE, ET C'EST LE GROUPE QUI EST TUÉ. Tuer
+    # le seul enfant Python laissait Pandoc, son propre enfant, tourner au-delà du
+    # délai : la borne de RG-M12-04 ne bornait que le processus qui attendait.
     try:
-        acheve = subprocess.run(
+        processus = subprocess.Popen(
             [sys.executable, "-m", "convertisseurs", str(fichier), format_, str(travail)],
-            capture_output=True,
-            timeout=delai_maximal(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             cwd=str(Path(__file__).parent),
-            check=False,
+            start_new_session=True,
         )
+    except OSError as impossible:
+        print(f"[conversion] sous-processus impossible : {impossible}", file=sys.stderr, flush=True)
+        return {"issue": "echec", "motif": "fichier-endommage"}
+    try:
+        sortie, erreurs = processus.communicate(timeout=delai_maximal())
     except subprocess.TimeoutExpired:
+        os.killpg(processus.pid, signal.SIGKILL)
+        processus.communicate()
         print(
-            f"[conversion] délai dépassé sur un fichier .{format_}, sous-processus tué",
+            f"[conversion] délai dépassé sur un fichier .{format_}, groupe de processus tué",
             file=sys.stderr,
             flush=True,
         )
         return {"issue": "echec", "motif": "delai-depasse"}
-    except OSError as impossible:
-        print(f"[conversion] sous-processus impossible : {impossible}", file=sys.stderr, flush=True)
-        return {"issue": "echec", "motif": "fichier-endommage"}
+    acheve = subprocess.CompletedProcess(processus.args, processus.returncode, sortie, erreurs)
 
     if acheve.stderr:
         print(

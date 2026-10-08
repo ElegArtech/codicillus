@@ -19,6 +19,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
+          # Une étiquette d'image publiée ne se réécrit que depuis l'étiquette Git de sa
+          # version : lancé à la main depuis une branche, le flux écrasait une version
+          # déjà installée ailleurs avec un autre contenu.
+          if [ "$GITHUB_REF" != "refs/tags/v$VERSION" ]; then
+            echo "Publication refusée : $GITHUB_REF n'est pas l'étiquette v$VERSION." >&2
+            exit 1
+          fi
           REGISTRE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker build --target execution --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "$REGISTRE/codicillus:$VERSION" .

@@ -1,0 +1,6 @@
+# Dépendances directes du service. Le verrou complet, avec empreintes, est
+# dependances.txt, produit à partir de ce fichier par pip-compile --generate-hashes.
+fastapi==0.141.1
+python-pptx==1.0.2
+pdfplumber==0.11.10
+uvicorn==0.52.4
