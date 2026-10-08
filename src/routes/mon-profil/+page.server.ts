@@ -47,6 +47,7 @@ import { lireRelationsLisibles } from '$lib/donnees/outils';
 import { ouvrirLAcces } from '$lib/donnees/rangement';
 import { enregistrerLaTentative, tentativesDuCompte } from '$lib/auth/depot';
 import { aSonTour, attendre, attenteDuCompte, fileDuCompte } from '$lib/auth/tentatives';
+import { origineDe } from '$lib/auth/plafond';
 import type { Actions, PageServerLoad } from './$types';
 import { NOM_DU_COOKIE, attributsDuCookie } from '$lib/auth/sessions';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
@@ -226,7 +227,7 @@ export const actions: Actions = {
 			});
 			if (issue.issue === 'actuel-faux' || issue.issue === 'change') {
 				await enregistrerLaTentative(base, {
-					origine: getClientAddress(),
+					origine: origineDe(getClientAddress()),
 					compteId: profil.compteId,
 					reussie: issue.issue === 'change',
 					attenteSecondes: attente,

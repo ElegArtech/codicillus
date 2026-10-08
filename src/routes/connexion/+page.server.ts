@@ -39,6 +39,7 @@ import {
 	fileDuCompte,
 	finDuBlocage
 } from '$lib/auth/tentatives';
+import { origineDe } from '$lib/auth/plafond';
 import { basePartagee } from '$lib/base/acces';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -54,7 +55,7 @@ export const load: PageServerLoad = ({ url }) => ({
 export const actions: Actions = {
 	/* Une tentative à la fois par origine — voir `aSonTour()`. */
 	default: async (evenement) => {
-		const tour = await aSonTour(evenement.getClientAddress(), () => tenter(evenement));
+		const tour = await aSonTour(origineDe(evenement.getClientAddress()), () => tenter(evenement));
 		if (!tour.servie) return fail(429, { issue: 'trop', secondes: BAREME.blocageEnSecondes });
 		return tour.valeur;
 	}
@@ -76,7 +77,7 @@ async function tenter({
 	/* RG-M16-01 — « depuis une même origine ». `getClientAddress()` rend
 	   l'adresse de l'appelant telle que l'adaptateur la voit. DERRIÈRE LE
 	   FRONTAL, CE N'EST PAS CELLE DU CLIENT : voir l'écart au rapport du lot. */
-	const origine = getClientAddress();
+	const origine = origineDe(getClientAddress());
 	const base = basePartagee();
 	const maintenant = new Date();
 
