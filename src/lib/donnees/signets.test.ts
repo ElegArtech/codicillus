@@ -36,7 +36,7 @@ import {
 import { SEUILS_PAR_DEFAUT } from '../fraicheur';
 import {
 	domaineLisible,
-	ecritureDansLeDomaine,
+	ecritureALaRacine,
 	noteDepuisLaLigne,
 	resoudreLAccesAuxSignets,
 	vecteurDeV22,
@@ -97,48 +97,43 @@ describe('domaineLisible — RG-DRO-02 en fermeture, RG-DRO-05 en ouverture', ()
 	});
 });
 
-describe('ecritureDansLeDomaine — la table de CDC §2.3, jamais réécrite', () => {
+describe('ecritureALaRacine — la table de CDC §2.3, jamais réécrite', () => {
 	it('ferme par défaut : aucun droit explicite, aucune écriture', () => {
-		expect(ecritureDansLeDomaine(MOI, indexerLesDroits(ARBRE), ARBRE)).toBe(false);
+		expect(ecritureALaRacine(MOI, indexerLesDroits(ARBRE), ARBRE)).toBe(false);
 	});
 
 	it('refuse l’écriture au lecteur, l’accorde au rédacteur et au gestionnaire', () => {
 		const index = (droit: DroitExplicite['droit']) =>
 			indexerLesDroits(ARBRE, [droitSur(RACINE, droit)]);
-		expect(ecritureDansLeDomaine(MOI, index('lecteur'), ARBRE)).toBe(false);
-		expect(ecritureDansLeDomaine(MOI, index('redacteur'), ARBRE)).toBe(true);
-		expect(ecritureDansLeDomaine(MOI, index('gestionnaire'), ARBRE)).toBe(true);
+		expect(ecritureALaRacine(MOI, index('lecteur'), ARBRE)).toBe(false);
+		expect(ecritureALaRacine(MOI, index('redacteur'), ARBRE)).toBe(true);
+		expect(ecritureALaRacine(MOI, index('gestionnaire'), ARBRE)).toBe(true);
 	});
 
-	it('accorde l’écriture sur un droit posé au seul sous-dossier profond', () => {
+	it('n’accorde pas l’écriture sur un droit posé au seul sous-dossier profond', () => {
+		/* Le signet s'écrit à la racine : un droit sur un sous-dossier n'y ouvre rien. */
 		const index = indexerLesDroits(ARBRE, [droitSur(PROFOND, 'redacteur')]);
-		expect(ecritureDansLeDomaine(MOI, index, ARBRE)).toBe(true);
+		expect(ecritureALaRacine(MOI, index, ARBRE)).toBe(false);
 	});
 
 	it('n’accorde rien à l’anonyme, quel que soit le droit posé', () => {
 		/* `RG-DRO-04` — les droits de dossier ne concernent pas l'anonyme. Le
 		   droit est posé sur le compte `c-moi` ; l'anonyme ne peut pas en hériter. */
 		const index = indexerLesDroits(ARBRE, [droitSur(RACINE, 'gestionnaire')]);
-		expect(ecritureDansLeDomaine(ANONYME, index, ARBRE)).toBe(false);
+		expect(ecritureALaRacine(ANONYME, index, ARBRE)).toBe(false);
 	});
 
 	it('accorde l’écriture à l’administrateur sans aucun droit explicite', () => {
 		/* `RG-DRO-03` — « le rôle administrateur voit tout, sans filtre ». */
-		expect(ecritureDansLeDomaine(ADMIN, indexerLesDroits(ARBRE), ARBRE)).toBe(true);
+		expect(ecritureALaRacine(ADMIN, indexerLesDroits(ARBRE), ARBRE)).toBe(true);
 	});
 
-	it('le droit LE PLUS PROCHE l’emporte, y compris pour fermer l’écriture', () => {
-		/* `RG-DRO-01`. Rédacteur à la racine, lecteur sur le sous-dossier : le
-		   sous-dossier n'autorise plus l'écriture, mais le domaine oui — par ses
-		   autres dossiers. Le contrôle porte donc sur l'arbre restreint. */
+	it('un lecteur à la racine ne gagne rien d’un rédacteur plus bas — RG-DRO-01', () => {
 		const index = indexerLesDroits(ARBRE, [
-			droitSur(RACINE, 'redacteur'),
-			droitSur(PROFOND, 'lecteur')
+			droitSur(RACINE, 'lecteur'),
+			droitSur(PROFOND, 'redacteur')
 		]);
-		expect(ecritureDansLeDomaine(MOI, index, [{ id: PROFOND, parentId: INTERMEDIAIRE }])).toBe(
-			false
-		);
-		expect(ecritureDansLeDomaine(MOI, index, ARBRE)).toBe(true);
+		expect(ecritureALaRacine(MOI, index, ARBRE)).toBe(false);
 	});
 });
 

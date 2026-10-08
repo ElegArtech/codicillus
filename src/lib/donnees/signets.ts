@@ -208,20 +208,20 @@ export function domaineLisible(
 }
 
 /**
- * Le droit de rédaction dans le domaine — `capacites().ecrireDesNotes`, sur au moins un
- * dossier. La granularité est celle du GEL : `V-22` n'a qu'un réglage `droits` pour la page
- * entière et `V-23` n'en a aucun, quand le droit est par dossier. La page répond donc à la
- * question que la page pose. `P-09` se joue ici : c'est ce booléen que le chargeur traduit
- * en `droits: 'lecture'`, et la vue n'émet alors aucune action d'écriture.
+ * Le droit de rédaction des signets — `capacites().ecrireDesNotes` sur la RACINE du
+ * domaine, là où un signet est créé. Un droit posé sur un seul sous-dossier n'ouvre pas
+ * la racine : il ne permet pas d'y écrire une note, il ne permet pas davantage d'y écrire
+ * un signet. `P-09` se joue ici : c'est ce booléen que le chargeur traduit en
+ * `droits: 'lecture'`, et la vue n'émet alors aucune action d'écriture.
  */
-export function ecritureDansLeDomaine(
+export function ecritureALaRacine(
 	identite: Identite,
 	index: IndexDesDroits,
 	dossiersDuDomaine: readonly DossierDeLArbre[]
 ): boolean {
-	return dossiersDuDomaine.some(
-		(d) => capacites(resoudreDroitDeDossier(identite, d.id, index)).ecrireDesNotes
-	);
+	const racine = dossiersDuDomaine.find((d) => d.parentId === null);
+	if (racine === undefined) return false;
+	return capacites(resoudreDroitDeDossier(identite, racine.id, index)).ecrireDesNotes;
 }
 
 interface LigneDeNote {
@@ -381,7 +381,7 @@ export async function resoudreLAccesAuxSignets(
 
 	if (!domaineLisible(perimetre, arbre)) return INTROUVABLE;
 
-	const ecriture = ecritureDansLeDomaine(identite, index, arbre);
+	const ecriture = ecritureALaRacine(identite, index, arbre);
 	if (exigeEcriture && !ecriture) return INTROUVABLE;
 
 	const lisibles = await lireLesNotesDuDomaine(

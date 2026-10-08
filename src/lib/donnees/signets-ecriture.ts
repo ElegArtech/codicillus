@@ -26,6 +26,7 @@ import type { Identite, Resolution } from '../droits/resolution';
 import { INTROUVABLE } from '../droits/resolution';
 import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
 import { creerUneNote, etiquetteDuLibelle } from './creation';
+import { peutEcrireSurLeDossier } from './edition';
 import { MOTIF_TITRE_TROP_LONG, tropLong } from './limites';
 
 /** Le type de note que porte tout signet — `seeds/corpus.ts`, `TypeDeNote`. */
@@ -138,6 +139,7 @@ export async function creerUnSignet(
 		typeSignet(base)
 	]);
 	if (dossierId === null || typeDeNoteId === null) return INTROUVABLE;
+	if (!(await peutEcrireSurLeDossier(base, demande.identite, dossierId))) return INTROUVABLE;
 
 	const fait = await creerUneNote(base, client, {
 		saisie: {
@@ -189,11 +191,14 @@ export async function enregistrerUnSignet(
 	demande: DemandeDeSignet & { readonly identifiant: string }
 ): Promise<Resolution<{ identifiant: string }>> {
 	const [ligne] = await base
-		.select({ id: notes.id, domaineId: notes.domaineId })
+		.select({ id: notes.id, domaineId: notes.domaineId, dossierId: notes.dossierId })
 		.from(notes)
 		.where(eq(notes.identifiant, demande.identifiant))
 		.limit(1);
 	if (ligne === undefined || ligne.domaineId !== demande.domaineId) return INTROUVABLE;
+	/* Le droit est celui du DOSSIER QUI PORTE LE SIGNET, pas d'un dossier quelconque du
+	   domaine : le même que pour modifier toute autre note rangée là. */
+	if (!(await peutEcrireSurLeDossier(base, demande.identite, ligne.dossierId))) return INTROUVABLE;
 
 	const description = markdownDeFormulaire(demande.saisie.description);
 	const corps = description.trim() === '' ? corpsVide() : analyserMarkdown(description);
@@ -244,11 +249,17 @@ export async function supprimerUnSignet(
 	const [ligne] = await base
 		/* Le titre ne sert QU'À LA TRACE de `RG-NF-05` : après la destruction, plus rien
 		   ne dirait quel signet a disparu. */
-		.select({ id: notes.id, domaineId: notes.domaineId, titre: notes.titre })
+		.select({
+			id: notes.id,
+			domaineId: notes.domaineId,
+			dossierId: notes.dossierId,
+			titre: notes.titre
+		})
 		.from(notes)
 		.where(eq(notes.identifiant, identifiant))
 		.limit(1);
 	if (ligne === undefined || ligne.domaineId !== domaineId) return INTROUVABLE;
+	if (!(await peutEcrireSurLeDossier(base, identite, ligne.dossierId))) return INTROUVABLE;
 
 	/* `RG-NF-05` — l'auteur est exigé avant la transaction. */
 	const auteur = auteurDeLaSuppression(identite);
