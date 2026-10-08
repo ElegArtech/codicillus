@@ -1,0 +1,10 @@
+# Versions corrigées imposées aux dépendances transitives que leurs parents n'ont pas
+# encore relevées. Chaque ligne répond à un avis de sécurité publié ; elle se retire
+# quand le parent exige lui-même une version corrigée.
+overrides:
+  devalue: ^5.9.3
+  cookie: ^0.7.2
+  brace-expansion@>=4: ^5.0.12
+  katex: ^0.18.2
+  source-map-js: ^1.2.2
+  postcss-selector-parser: ^7.1.6

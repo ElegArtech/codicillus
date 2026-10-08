@@ -7,7 +7,7 @@ ENV PNPM_HOME=/pnpm \
 RUN npm install --global --no-fund --no-audit pnpm@11.22.0
 
 WORKDIR /application
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY svelte.config.js vite.config.ts tsconfig.json ./
 COPY src ./src
