@@ -65,12 +65,6 @@ import {
 	type UniversSeme
 } from '../../../seeds/conformite';
 
-/**
- * Le mot de passe des comptes que ce chargeur CRÉE. Il n'en repose jamais un sur un compte
- * existant : `a.berge` est un compte réel sur l'instance de développement.
- */
-export const MOT_DE_PASSE_DE_CONFORMITE = 'conformite-2026';
-
 /** Le dossier des deux notes écrites en toutes lettres. */
 const DOSSIER_DU_CONTENU = path.join('seeds', 'conformite');
 
@@ -430,8 +424,13 @@ export interface RapportDeConformite {
  *   du jour courant, ce qui met chaque date de vérification au milieu de son jour civil : à
  *   quelques secondes de minuit, un décalage d'heure d'été aurait fait glisser un état.
  */
+/**
+ * @param motDePasse le mot de passe des comptes que ce chargeur CRÉE, tiré à chaque
+ *   chargement. Il n'en repose jamais un sur un compte existant.
+ */
 export async function chargerLaConformite(
 	session: Session,
+	motDePasse: string,
 	racine = process.cwd(),
 	maintenant = midiDuJour(new Date())
 ): Promise<RapportDeConformite> {
@@ -455,7 +454,7 @@ export async function chargerLaConformite(
 	/* LA DÉRIVATION D'ABORD, L'ÉCRITURE ENSUITE. Un jeu qui se contredit est refusé
 	   avant la transaction, et la base n'a rien vu passer. */
 	const aPoser = notesDuJeu(lues);
-	const condensat = await hacherMotDePasse(MOT_DE_PASSE_DE_CONFORMITE);
+	const condensat = await hacherMotDePasse(motDePasse);
 
 	return session.db.transaction(async (tx) => {
 		/**

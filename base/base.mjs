@@ -43,6 +43,20 @@ if (commande === undefined || commande === '--aide' || commande === '-h') {
 	exit(commande === undefined ? 1 : 0);
 }
 
+/**
+ * LES COMMANDES QUI REMPLACENT LE CONTENU NE TOURNENT PAS DANS L'IMAGE DE PRODUCTION. Elle
+ * porte la base réelle et ses identifiants : une commande tapée de travers y effaçait
+ * l'instance. `CODICILLUS_PRODUCTION` est posée par l'image de gestion ; une instance de
+ * démonstration se charge depuis une copie de travail.
+ */
+const COMMANDES_QUI_REMPLACENT = new Set(['semer', 'peupler', 'conformite', 'reversibilite']);
+if (COMMANDES_QUI_REMPLACENT.has(commande) && process.env.CODICILLUS_PRODUCTION === '1') {
+	console.error(
+		`« ${commande} » remplace le contenu de la base et ne s’exécute pas dans l’image de production.`
+	);
+	exit(1);
+}
+
 const { createServer } = await import('vite');
 const vite = await createServer({
 	server: { middlewareMode: true },
@@ -57,6 +71,12 @@ const session = B.ouvrir(process.env);
 console.log(`base : ${session.lisible}`);
 
 let code = 0;
+
+/** Le mot de passe d'un jeu de démonstration, tiré à chaque chargement. */
+async function motDePasseDuJeu() {
+	const M = await vite.ssrLoadModule('/src/lib/auth/mot-de-passe-temporaire.ts');
+	return M.motDePasseTemporaire('demonstration');
+}
 
 /** Imprime un tableau simple, sans dépendance. */
 const ligne = (gauche, droite) => console.log(`  ${gauche.padEnd(58)} ${droite}`);
@@ -272,12 +292,11 @@ try {
 
 		case 'peupler': {
 			const D = await vite.ssrLoadModule('/src/lib/base/demonstration.ts');
-			const rapport = await D.peupler(session);
+			const motDePasse = await motDePasseDuJeu();
+			const rapport = await D.peupler(session, motDePasse);
 			for (const [quoi, combien] of Object.entries(rapport)) ligne(quoi, String(combien));
 			console.log('');
-			console.log(
-				`Tous les comptes du jeu ont le mot de passe : ${D.MOT_DE_PASSE_DE_DEMONSTRATION}`
-			);
+			console.log(`Tous les comptes du jeu ont le mot de passe : ${motDePasse}`);
 			console.log("Le compte a.berge, s'il existait, est conservé avec son mot de passe.");
 			console.log('');
 			console.log('Pense à réindexer la recherche : pnpm base:reindexer');
@@ -292,15 +311,14 @@ try {
 		 */
 		case 'conformite': {
 			const C = await vite.ssrLoadModule('/src/lib/base/conformite.ts');
-			const rapport = await C.chargerLaConformite(session);
+			const motDePasse = await motDePasseDuJeu();
+			const rapport = await C.chargerLaConformite(session, motDePasse);
 			for (const [quoi, combien] of Object.entries(rapport)) {
 				ligne(quoi, Array.isArray(combien) ? combien.join(' / ') : String(combien));
 			}
 			console.log('');
 			console.log('La répartition ci-dessus a été RELUE depuis la base, pas annoncée.');
-			console.log(
-				`Les comptes créés par cette commande ont le mot de passe : ${C.MOT_DE_PASSE_DE_CONFORMITE}`
-			);
+			console.log(`Les comptes créés par cette commande ont le mot de passe : ${motDePasse}`);
 			console.log('Les comptes qui existaient déjà conservent leur mot de passe.');
 			console.log('');
 			console.log('Pense à réindexer la recherche : pnpm base:reindexer');

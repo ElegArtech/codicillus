@@ -24,7 +24,8 @@ FROM constructeur AS gestion
 LABEL org.opencontainers.image.source="https://github.com/ElegArtech/codicillus" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.title="Codicillus"
-ENV RACINE_FICHIERS=/var/lib/codicillus/fichiers
+ENV RACINE_FICHIERS=/var/lib/codicillus/fichiers \
+    CODICILLUS_PRODUCTION=1
 RUN mkdir -p "$RACINE_FICHIERS" \
     && chown -R node:node /application "$RACINE_FICHIERS"
 USER node

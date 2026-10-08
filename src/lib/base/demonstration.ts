@@ -45,9 +45,6 @@ import {
 	UNIVERS
 } from '../../../seeds/demonstration';
 
-/** Le mot de passe de tous les comptes du jeu. Une démonstration, pas une instance. */
-export const MOT_DE_PASSE_DE_DEMONSTRATION = 'demonstration-2026';
-
 const SEPARATEUR_DE_REGISTRE = '--- OPERATIONNEL ---';
 const JOUR = 86_400_000;
 
@@ -135,8 +132,14 @@ export interface RapportDePeuplement {
 	readonly verifications: number;
 }
 
+/**
+ * @param motDePasse le mot de passe de tous les comptes du jeu, TIRÉ À CHAQUE CHARGEMENT
+ *   par l'appelant : un mot de passe écrit dans un dépôt public ouvrirait, en
+ *   administrateur, toute instance de démonstration joignable.
+ */
 export async function peupler(
 	session: Session,
+	motDePasse: string,
 	racine = process.cwd()
 ): Promise<RapportDePeuplement> {
 	const dossierDuContenu = path.join(racine, 'seeds', 'demonstration');
@@ -154,7 +157,7 @@ export async function peupler(
 	);
 
 	const maintenant = Date.now();
-	const condensat = await hacherMotDePasse(MOT_DE_PASSE_DE_DEMONSTRATION);
+	const condensat = await hacherMotDePasse(motDePasse);
 
 	return session.db.transaction(async (tx) => {
 		/**
