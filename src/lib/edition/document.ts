@@ -23,7 +23,7 @@
  * de Markdown, il fait passer un document canonique dans la représentation en mémoire
  * de ProseMirror, et retour.
  */
-import { Node as NoeudProseMirror } from 'prosemirror-model';
+import { Node as NoeudProseMirror } from '@tiptap/pm/model';
 import { analyserDocument, type Document } from '../contenu/document';
 import { MARQUES_DU_FORMAT_SANS_EXTENSION, schemaDeLEditeur } from './schema';
 

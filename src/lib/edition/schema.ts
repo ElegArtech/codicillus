@@ -29,7 +29,7 @@ import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
 import Image from '@tiptap/extension-image';
-import { Schema, type MarkSpec, type NodeSpec } from 'prosemirror-model';
+import { Schema, type MarkSpec, type NodeSpec } from '@tiptap/pm/model';
 import { RANG_DE_MARQUE, type Marque } from '../contenu/document';
 import { sourceDePieceJointeSure } from '../contenu/adresses-sures';
 
