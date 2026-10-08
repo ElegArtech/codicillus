@@ -471,6 +471,9 @@ export async function renommerOuDeplacerUnDossier(
 	   destination », c'est-à-dire la confirmation que le dossier existe.
 	   `RG-ACC-04` veut que rien ne distingue le refus de l'inexistence. */
 	if (!capacites(demande.droit(dossier.id)).administrerLeDossier) return REFUS_MUET;
+	if (!brancheAdministree(demande.lignes, dossier.id, demande.droit)) {
+		return { fait: false, message: BRANCHE_RESTREINTE };
+	}
 
 	if (destination === undefined) return { fait: false, message: DESTINATION_MANQUANTE };
 	if (!capacites(demande.droit(destination.id)).creerDesSousDossiers) return REFUS_MUET;
@@ -479,116 +482,60 @@ export async function renommerOuDeplacerUnDossier(
 	if (nom === '') return { fait: false, message: NOM_VIDE };
 	if (tropLong(nom)) return { fait: false, message: PHRASE_NOM_TROP_LONG };
 
-	const motif = motifDeRefusDeDestination(demande.lignes, dossier.id, destination.id);
-	if (motif !== null) return { fait: false, message: motif };
+	/* UNE PREMIÈRE ÉPREUVE SUR LES LIGNES LUES PAR LA ROUTE, pour répondre vite ; la
+	   seconde, qui fait foi, se rejoue dans la transaction sur l'arbre relu. */
+	const prevu = planDuDeplacement(demande.lignes, dossier.id, destination.id, nom);
+	if ('message' in prevu) return { fait: false, message: prevu.message };
 
-	const segment = identifiantLisible(nom);
-	if (segment === '') return { fait: false, message: NOM_VIDE };
-	const collision = demande.lignes.some(
-		(d) =>
-			d.parentId === destination.id && d.id !== dossier.id && identifiantLisible(d.nom) === segment
-	);
-	if (collision) return { fait: false, message: nomDejaPris(nom) };
-
-	const nouvelleProfondeur = destination.profondeur + 1;
-	const ecart = nouvelleProfondeur - dossier.profondeur;
-	const branche = sousArbre(demande.lignes, dossier.id);
-	const descendants = branche.filter((d) => d.id !== dossier.id);
-	const freres = demande.lignes.filter((d) => d.parentId === destination.id && d.id !== dossier.id);
 	const maintenant = new Date();
-	const changeDeDomaine = dossier.domaineId !== destination.domaineId;
-	const notesDeplacees = await base
-		.select({ id: notes.id, identifiant: notes.identifiant, dossierId: notes.dossierId })
-		.from(notes)
-		.where(
-			inArray(
-				notes.dossierId,
-				branche.map((d) => d.id)
-			)
-		);
-
-	await base.transaction(async (tx) => {
-		if (changeDeDomaine && notesDeplacees.length > 0) {
-			/* Les deux clés étrangères composites ne sont pas différables. Les notes se
-			   posent donc, dans CETTE transaction, sur la destination valide avant que
-			   tout le sous-arbre change de domaine en une seule instruction. Elles
-			   retrouvent ensuite leur dossier d'origine, dont l'identifiant est stable. */
-			await tx
-				.update(notes)
-				.set({
-					domaineId: destination.domaineId,
-					dossierId: destination.id,
-					modifieLe: maintenant
+	let plan: PlanDeDeplacement;
+	let notesDeplacees: readonly { id: string; identifiant: string; dossierId: string }[];
+	try {
+		[plan, notesDeplacees] = await base.transaction(async (tx) => {
+			/* LES DÉPLACEMENTS PASSENT UN À UN, ET CHACUN RELIT L'ARBRE. Deux déplacements
+			   croisés — X sous Y, Y sous X — passaient chacun l'épreuve du cycle sur l'arbre
+			   d'avant l'autre, et laissaient une boucle coupée de la racine. */
+			await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${VERROU_DE_L_ARBORESCENCE}))`);
+			const fraiches = await tx
+				.select({
+					id: dossiers.id,
+					parentId: dossiers.parentId,
+					domaineId: dossiers.domaineId,
+					nom: dossiers.nom,
+					profondeur: dossiers.profondeur,
+					position: dossiers.position
 				})
+				.from(dossiers);
+			const p = planDuDeplacement(fraiches, dossier.id, destination.id, nom);
+			if ('message' in p) throw new DeplacementRefuse(p.message);
+			const deplacees = await tx
+				.select({ id: notes.id, identifiant: notes.identifiant, dossierId: notes.dossierId })
+				.from(notes)
 				.where(
 					inArray(
-						notes.id,
-						notesDeplacees.map((n) => n.id)
+						notes.dossierId,
+						p.branche.map((d) => d.id)
 					)
 				);
-		}
-
-		if (changeDeDomaine) {
-			const identifiantsDeLaBranche = branche.map((d) => d.id);
-			await tx
-				.update(dossiers)
-				.set({
-					domaineId: destination.domaineId,
-					parentId: sql`case when ${dossiers.id} = ${dossier.id} then ${destination.id} else ${dossiers.parentId} end`,
-					profondeur: sql`${dossiers.profondeur} + ${ecart}`,
-					position: sql`case when ${dossiers.id} = ${dossier.id} then ${freres.length} else ${dossiers.position} end`,
-					modifieLe: maintenant
-				})
-				.where(inArray(dossiers.id, identifiantsDeLaBranche));
-
-			for (const dossierDeNote of new Set(notesDeplacees.map((n) => n.dossierId))) {
-				const identifiants = notesDeplacees
-					.filter((n) => n.dossierId === dossierDeNote)
-					.map((n) => n.id);
-				await tx
-					.update(notes)
-					.set({ dossierId: dossierDeNote })
-					.where(inArray(notes.id, identifiants));
-			}
-			return;
-		}
-
-		await tx
-			.update(dossiers)
-			.set({
-				nom,
-				parentId: destination.id,
-				profondeur: nouvelleProfondeur,
-				/* Le rang ne bouge que si le parent bouge : un renommage sur place ne
-				   doit pas renvoyer le dossier en fin de fratrie. */
-				...(dossier.parentId === destination.id ? {} : { position: freres.length }),
-				modifieLe: maintenant
-			})
-			.where(eq(dossiers.id, dossier.id));
-
-		/* Les descendants suivent. L'écart a déjà été refusé plus haut s'il devait
-		   violer le plafond : aucune ligne intermédiaire ne sort de 1..10. */
-		if (ecart !== 0) {
-			for (const d of descendants) {
-				await tx
-					.update(dossiers)
-					.set({ profondeur: d.profondeur + ecart, modifieLe: maintenant })
-					.where(eq(dossiers.id, d.id));
-			}
-		}
-	});
+			await ecrireLeDeplacement(tx as unknown as Base, p, nom, deplacees, maintenant);
+			return [p, deplacees] as const;
+		});
+	} catch (cause) {
+		if (cause instanceof DeplacementRefuse) return { fait: false, message: cause.message };
+		throw cause;
+	}
 
 	/* Le chemin d'arrivée est recomposé sur les lignes TELLES QU'ELLES SONT
 	   DÉSORMAIS, par la remontée de `rangement.ts` — jamais par une seconde. */
-	const idsDeLaBranche = new Set(branche.map((d) => d.id));
-	const apres = demande.lignes.map((d) =>
+	const idsDeLaBranche = new Set(plan.branche.map((d) => d.id));
+	const apres = plan.lignes.map((d) =>
 		idsDeLaBranche.has(d.id)
 			? {
 					...d,
-					domaineId: destination.domaineId,
+					domaineId: plan.destination.domaineId,
 					nom: d.id === dossier.id ? nom : d.nom,
-					parentId: d.id === dossier.id ? destination.id : d.parentId,
-					profondeur: d.profondeur + ecart
+					parentId: d.id === dossier.id ? plan.destination.id : d.parentId,
+					profondeur: d.profondeur + plan.ecart
 				}
 			: d
 	);
@@ -597,6 +544,169 @@ export async function renommerOuDeplacerUnDossier(
 		segments: segmentsAffiches(apres, dossier.id),
 		notes: notesDeplacees.map((n) => n.identifiant)
 	};
+}
+
+/**
+ * LE DROIT VAUT POUR TOUTE LA BRANCHE. Le droit le plus proche l'emporte (`RG-DRO-01`) : un
+ * sous-dossier où l'appelant a été ramené à la lecture lui est soustrait, et gérer le
+ * parent ne lui rend pas le droit de le déplacer ni de le détruire avec lui.
+ */
+function brancheAdministree(
+	lignes: readonly LigneDeDossier[],
+	dossierId: string,
+	droit: (dossierId: string) => DroitDeDossier | null
+): boolean {
+	return sousArbre(lignes, dossierId).every((d) => capacites(droit(d.id)).administrerLeDossier);
+}
+
+export const BRANCHE_RESTREINTE =
+	'Un sous-dossier de cette branche ne vous est pas confié en gestion : la branche reste en place.';
+
+/** La clé du verrou qui sérialise les déplacements dans l'arborescence. */
+const VERROU_DE_L_ARBORESCENCE = 'codicillus:arborescence-des-dossiers';
+
+/** Un déplacement refusé à la relecture de l'arbre, dans la transaction. */
+class DeplacementRefuse extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'DeplacementRefuse';
+	}
+}
+
+interface PlanDeDeplacement {
+	readonly lignes: readonly LigneDeDossier[];
+	readonly dossier: LigneDeDossier;
+	readonly destination: LigneDeDossier;
+	readonly ecart: number;
+	readonly nouvelleProfondeur: number;
+	readonly branche: readonly LigneDeDossier[];
+	readonly descendants: readonly LigneDeDossier[];
+	readonly freres: readonly LigneDeDossier[];
+}
+
+/** La forme d'un déplacement sur un état de l'arbre : un refus, ou ce qu'il faut écrire. */
+function planDuDeplacement(
+	lignes: readonly LigneDeDossier[],
+	dossierId: string,
+	destinationId: string,
+	nom: string
+): PlanDeDeplacement | { readonly message: string } {
+	const dossier = lignes.find((d) => d.id === dossierId);
+	const destination = lignes.find((d) => d.id === destinationId);
+	if (dossier === undefined || destination === undefined) {
+		return { message: DESTINATION_MANQUANTE };
+	}
+	const motif = motifDeRefusDeDestination(lignes, dossier.id, destination.id);
+	if (motif !== null) return { message: motif };
+
+	const segment = identifiantLisible(nom);
+	if (segment === '') return { message: NOM_VIDE };
+	const collision = lignes.some(
+		(d) =>
+			d.parentId === destination.id && d.id !== dossier.id && identifiantLisible(d.nom) === segment
+	);
+	if (collision) return { message: nomDejaPris(nom) };
+
+	const nouvelleProfondeur = destination.profondeur + 1;
+	const branche = sousArbre(lignes, dossier.id);
+	return {
+		lignes,
+		dossier,
+		destination,
+		ecart: nouvelleProfondeur - dossier.profondeur,
+		nouvelleProfondeur,
+		branche,
+		descendants: branche.filter((d) => d.id !== dossier.id),
+		freres: lignes.filter((d) => d.parentId === destination.id && d.id !== dossier.id)
+	};
+}
+
+/** L'écriture d'un déplacement planifié, dans la transaction qui l'a planifié. */
+async function ecrireLeDeplacement(
+	tx: Base,
+	plan: PlanDeDeplacement,
+	nom: string,
+	notesDeplacees: readonly { id: string; dossierId: string }[],
+	maintenant: Date
+): Promise<void> {
+	const { dossier, destination, ecart, branche, descendants, freres } = plan;
+	const changeDeDomaine = dossier.domaineId !== destination.domaineId;
+
+	if (changeDeDomaine && notesDeplacees.length > 0) {
+		/* Les deux clés étrangères composites ne sont pas différables. Les notes se
+		   posent donc, dans CETTE transaction, sur la destination valide avant que
+		   tout le sous-arbre change de domaine en une seule instruction. Elles
+		   retrouvent ensuite leur dossier d'origine, dont l'identifiant est stable. */
+		await tx
+			.update(notes)
+			.set({
+				domaineId: destination.domaineId,
+				dossierId: destination.id,
+				modifieLe: maintenant
+			})
+			.where(
+				inArray(
+					notes.id,
+					notesDeplacees.map((n) => n.id)
+				)
+			);
+	}
+
+	if (changeDeDomaine) {
+		await tx
+			.update(dossiers)
+			.set({
+				domaineId: destination.domaineId,
+				/* LE NOUVEAU NOM EST ÉCRIT AUSSI D'UN DOMAINE À L'AUTRE : la collision a été
+				   éprouvée sur lui, et le taire laissait deux frères à la même adresse. */
+				nom: sql`case when ${dossiers.id} = ${dossier.id} then ${nom} else ${dossiers.nom} end`,
+				parentId: sql`case when ${dossiers.id} = ${dossier.id} then ${destination.id} else ${dossiers.parentId} end`,
+				profondeur: sql`${dossiers.profondeur} + ${ecart}`,
+				position: sql`case when ${dossiers.id} = ${dossier.id} then ${freres.length} else ${dossiers.position} end`,
+				modifieLe: maintenant
+			})
+			.where(
+				inArray(
+					dossiers.id,
+					branche.map((d) => d.id)
+				)
+			);
+
+		for (const dossierDeNote of new Set(notesDeplacees.map((n) => n.dossierId))) {
+			const identifiants = notesDeplacees
+				.filter((n) => n.dossierId === dossierDeNote)
+				.map((n) => n.id);
+			await tx
+				.update(notes)
+				.set({ dossierId: dossierDeNote })
+				.where(inArray(notes.id, identifiants));
+		}
+		return;
+	}
+
+	await tx
+		.update(dossiers)
+		.set({
+			nom,
+			parentId: destination.id,
+			profondeur: plan.nouvelleProfondeur,
+			/* Le rang ne bouge que si le parent bouge : un renommage sur place ne
+			   doit pas renvoyer le dossier en fin de fratrie. */
+			...(dossier.parentId === destination.id ? {} : { position: freres.length }),
+			modifieLe: maintenant
+		})
+		.where(eq(dossiers.id, dossier.id));
+
+	/* Les descendants suivent. L'écart a déjà été refusé plus haut s'il devait
+	   violer le plafond : aucune ligne intermédiaire ne sort de 1..10. */
+	if (ecart !== 0) {
+		for (const d of descendants) {
+			await tx
+				.update(dossiers)
+				.set({ profondeur: d.profondeur + ecart, modifieLe: maintenant })
+				.where(eq(dossiers.id, d.id));
+		}
+	}
 }
 
 export type IssueDeConversionDUnDomaine =
@@ -900,6 +1010,9 @@ export async function supprimerUnDossier(
 	const dossier = parId.get(demande.dossierId);
 	if (dossier === undefined || dossier.parentId === null) return REFUS_MUET;
 	if (!capacites(demande.droit(dossier.id)).administrerLeDossier) return REFUS_MUET;
+	if (!brancheAdministree(demande.lignes, dossier.id, demande.droit)) {
+		return { fait: false, message: BRANCHE_RESTREINTE };
+	}
 	if (demande.saisie !== dossier.nom) return { fait: false, message: SAISIE_NON_CONFORME };
 
 	const branche = sousArbre(demande.lignes, dossier.id);
