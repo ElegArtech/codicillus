@@ -71,6 +71,34 @@ describe('la lecture sait dire non — sans quoi elle ne prouverait rien', () =>
 		expect(() => lireZip(new Uint8Array(abimee))).toThrow(ZipInvalide);
 	});
 
+	it('deux entrées qui pointent sur les mêmes données sont refusées', () => {
+		const ecrite = Buffer.from(
+			ecrireZip([
+				{ chemin: 'a.md', octets: octetsDe('premier') },
+				{ chemin: 'b.md', octets: octetsDe('second') }
+			])
+		);
+		const signature = Buffer.from([0x50, 0x4b, 0x01, 0x02]);
+		const premiere = ecrite.indexOf(signature);
+		const seconde = ecrite.indexOf(signature, premiere + 4);
+		ecrite.writeUInt32LE(ecrite.readUInt32LE(premiere + 42), seconde + 42);
+		expect(() => lireZip(new Uint8Array(ecrite))).toThrow(ZipInvalide);
+	});
+
+	it('une archive qui annonce plus que le plafond est refusée avant toute décompression', () => {
+		const ecrite = Buffer.from(ecrireZip([{ chemin: 'a.md', octets: octetsDe('x') }]));
+		const central = ecrite.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
+		ecrite.writeUInt32LE(0xffffffff, central + 24);
+		expect(() => lireZip(new Uint8Array(ecrite))).toThrow('trop volumineuse');
+	});
+
+	it('un décalage hors de l’archive est une archive invalide, pas une panne', () => {
+		const ecrite = Buffer.from(ecrireZip([{ chemin: 'a.md', octets: octetsDe('x') }]));
+		const central = ecrite.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
+		ecrite.writeUInt32LE(0x7fffffff, central + 42);
+		expect(() => lireZip(new Uint8Array(ecrite))).toThrow(ZipInvalide);
+	});
+
 	it('la somme de contrôle est celle du format, sur le vecteur d’épreuve connu', () => {
 		/* La valeur de référence du CRC-32 pour la chaîne des neuf caractères
 		   d'épreuve, publiée avec l'algorithme. Sans ce cas, une somme

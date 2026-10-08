@@ -184,54 +184,110 @@ function decompresser(charge: Uint8Array, tailleBrute: number, chemin: string): 
 }
 
 /**
+ * LE PLAFOND DE CE QU'UNE ARCHIVE PEUT DÉPLOYER, toutes entrées confondues. Chaque entrée
+ * est bornée à la taille qu'elle annonce, mais une archive peut en annoncer des milliers,
+ * ou faire pointer cent entrées sur les mêmes octets comprimés : quelques mégaoctets
+ * déposés en demandaient des dizaines de gigaoctets.
+ */
+export const PLAFOND_DE_DEPLOIEMENT_EN_OCTETS = 2 * 1024 ** 3;
+
+interface EntreeCentrale {
+	readonly chemin: string;
+	readonly methode: number;
+	readonly somme: number;
+	readonly tailleBrute: number;
+	readonly debut: number;
+	readonly fin: number;
+}
+
+/**
  * Relit l'archive par son répertoire central — jamais en devinant sur les
  * en-têtes locaux. L'ordre rendu est celui du répertoire, c'est-à-dire l'ordre
  * d'écriture.
+ *
+ * TOUT EST ÉPROUVÉ AVANT LA PREMIÈRE DÉCOMPRESSION : les bornes de chaque entrée dans
+ * l'archive, l'absence de chevauchement entre leurs données, et la somme de ce qu'elles
+ * annoncent.
  */
 export function lireZip(octets: Uint8Array): readonly EntreeDeZip[] {
 	const vue = Buffer.from(octets.buffer, octets.byteOffset, octets.byteLength);
-	const finTrouvee = chercherLaFin(vue);
-	const nombre = vue.readUInt16LE(finTrouvee + 10);
-	let position = vue.readUInt32LE(finTrouvee + 16);
+	const centrales = lireLeRepertoire(vue);
 
-	const entrees: EntreeDeZip[] = [];
-	for (let i = 0; i < nombre; i += 1) {
-		if (vue.readUInt32LE(position) !== SIGNATURE_CENTRALE) {
-			throw new ZipInvalide('entrée centrale ' + String(i) + ' sans signature');
+	const parDebut = [...centrales].sort((a, b) => a.debut - b.debut);
+	for (let i = 1; i < parDebut.length; i += 1) {
+		const precedente = parDebut[i - 1] as EntreeCentrale;
+		const courante = parDebut[i] as EntreeCentrale;
+		if (courante.debut < precedente.fin) {
+			throw new ZipInvalide('données partagées entre « ' + courante.chemin + ' » et une autre');
 		}
-		const methode = vue.readUInt16LE(position + 10);
-		const somme = vue.readUInt32LE(position + 16);
-		const tailleComprimee = vue.readUInt32LE(position + 20);
-		const tailleBrute = vue.readUInt32LE(position + 24);
-		const tailleDuNom = vue.readUInt16LE(position + 28);
-		const tailleDesExtras = vue.readUInt16LE(position + 30);
-		const tailleDuCommentaire = vue.readUInt16LE(position + 32);
-		const decalage = vue.readUInt32LE(position + 42);
-		const chemin = vue.toString('utf8', position + 46, position + 46 + tailleDuNom);
-
-		if (vue.readUInt32LE(decalage) !== SIGNATURE_LOCALE) {
-			throw new ZipInvalide('entrée locale de « ' + chemin + ' » sans signature');
-		}
-		const nomLocal = vue.readUInt16LE(decalage + 26);
-		const extrasLocaux = vue.readUInt16LE(decalage + 28);
-		const debut = decalage + TAILLE_ENTETE_LOCAL + nomLocal + extrasLocaux;
-		const charge = vue.subarray(debut, debut + tailleComprimee);
-		const brut =
-			methode === METHODE_BRUTE
-				? new Uint8Array(charge)
-				: decompresser(charge, tailleBrute, chemin);
-
-		if (brut.length !== tailleBrute) {
-			throw new ZipInvalide('taille annoncée non tenue sur « ' + chemin + ' »');
-		}
-		if (sommeDeControle(brut) !== somme) {
-			throw new ZipInvalide('somme de contrôle non tenue sur « ' + chemin + ' »');
-		}
-
-		entrees.push({ chemin, octets: brut });
-		position += TAILLE_ENTREE_CENTRALE + tailleDuNom + tailleDesExtras + tailleDuCommentaire;
 	}
-	return entrees;
+	const annonce = centrales.reduce((somme, e) => somme + e.tailleBrute, 0);
+	if (annonce > PLAFOND_DE_DEPLOIEMENT_EN_OCTETS) {
+		throw new ZipInvalide('archive trop volumineuse une fois décomprimée');
+	}
+
+	return centrales.map((e) => {
+		const charge = vue.subarray(e.debut, e.fin);
+		const brut =
+			e.methode === METHODE_BRUTE
+				? new Uint8Array(charge)
+				: decompresser(charge, e.tailleBrute, e.chemin);
+		if (brut.length !== e.tailleBrute) {
+			throw new ZipInvalide('taille annoncée non tenue sur « ' + e.chemin + ' »');
+		}
+		if (sommeDeControle(brut) !== e.somme) {
+			throw new ZipInvalide('somme de contrôle non tenue sur « ' + e.chemin + ' »');
+		}
+		return { chemin: e.chemin, octets: brut };
+	});
+}
+
+/** Le répertoire central, entrée par entrée, chaque lecture bornée à l'archive. */
+function lireLeRepertoire(vue: Buffer): readonly EntreeCentrale[] {
+	try {
+		const finTrouvee = chercherLaFin(vue);
+		const nombre = vue.readUInt16LE(finTrouvee + 10);
+		let position = vue.readUInt32LE(finTrouvee + 16);
+		const entrees: EntreeCentrale[] = [];
+		for (let i = 0; i < nombre; i += 1) {
+			if (vue.readUInt32LE(position) !== SIGNATURE_CENTRALE) {
+				throw new ZipInvalide('entrée centrale ' + String(i) + ' sans signature');
+			}
+			const tailleDuNom = vue.readUInt16LE(position + 28);
+			const chemin = vue.toString('utf8', position + 46, position + 46 + tailleDuNom);
+			const decalage = vue.readUInt32LE(position + 42);
+			if (vue.readUInt32LE(decalage) !== SIGNATURE_LOCALE) {
+				throw new ZipInvalide('entrée locale de « ' + chemin + ' » sans signature');
+			}
+			const debut =
+				decalage +
+				TAILLE_ENTETE_LOCAL +
+				vue.readUInt16LE(decalage + 26) +
+				vue.readUInt16LE(decalage + 28);
+			const fin = debut + vue.readUInt32LE(position + 20);
+			if (fin > vue.length) {
+				throw new ZipInvalide('données de « ' + chemin + ' » hors de l’archive');
+			}
+			entrees.push({
+				chemin,
+				methode: vue.readUInt16LE(position + 10),
+				somme: vue.readUInt32LE(position + 16),
+				tailleBrute: vue.readUInt32LE(position + 24),
+				debut,
+				fin
+			});
+			position +=
+				TAILLE_ENTREE_CENTRALE +
+				tailleDuNom +
+				vue.readUInt16LE(position + 30) +
+				vue.readUInt16LE(position + 32);
+		}
+		return entrees;
+	} catch (cause) {
+		/* Une position hors de l'archive est une archive invalide, pas une panne. */
+		if (cause instanceof RangeError) throw new ZipInvalide('structure hors de l’archive');
+		throw cause;
+	}
 }
 
 function chercherLaFin(vue: Buffer): number {
