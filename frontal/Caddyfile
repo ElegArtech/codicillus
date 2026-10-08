@@ -1,6 +1,39 @@
 {
 	{$DIRECTIVE_COURRIEL_ACME}
 	admin off
+	# Derrière un tunnel ou un autre mandataire, déclarer ses adresses dans
+	# MANDATAIRES_DE_CONFIANCE : l'adresse du client est alors lue dans son
+	# X-Forwarded-For, de droite à gauche, et jamais au-delà du dernier mandataire
+	# déclaré. Sans déclaration, chaque client apparaissait avec l'adresse du tunnel,
+	# et le ralentissement des connexions frappait tout le monde à la fois.
+	servers {
+		trusted_proxies static {$MANDATAIRES_DE_CONFIANCE:127.0.0.1/32}
+		trusted_proxies_strict
+	}
+}
+
+# L'application reçoit l'adresse du client dans un en-tête que le frontal écrit
+# toujours lui-même : une valeur envoyée par le client est remplacée.
+(application) {
+	reverse_proxy app:3000 {
+		header_up X-Adresse-Client {client_ip}
+	}
+}
+
+# Les en-têtes de sécurité de toute réponse, y compris des pages que le frontal sert seul.
+(entetes) {
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security max-age=31536000
+		-Server
+	}
+}
+
+# Les pages que le frontal sert seul n'ont ni script ni ressource externe.
+(page_du_frontal) {
+	header Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'self'; base-uri 'none'; form-action 'none'"
 }
 
 # Contrôle de santé indépendant du nom du site et de son certificat.
@@ -12,6 +45,7 @@ http://127.0.0.1 {
 {$ADRESSE_SITE} {
 	{$DIRECTIVE_TLS}
 	encode zstd gzip
+	import entetes
 	log {
 		output stdout
 		format json
@@ -31,6 +65,7 @@ http://127.0.0.1 {
 		rewrite * /indisponibilite.html
 		header Cache-Control "no-store"
 		header Retry-After "600"
+		import page_du_frontal
 		file_server {
 			status 503
 		}
@@ -39,25 +74,26 @@ http://127.0.0.1 {
 	@polices path /polices/*.woff2
 	handle @polices {
 		header Cache-Control "public, max-age=31536000, immutable"
-		reverse_proxy app:3000
+		import application
 	}
 	@feuille_polices path /polices/polices.css
 	handle @feuille_polices {
 		header Cache-Control "public, max-age=3600"
-		reverse_proxy app:3000
+		import application
 	}
 	@marque path /logo.png /favicon.ico /favicon-32.png /apple-touch-icon.png
 	handle @marque {
 		header Cache-Control "public, max-age=86400"
-		reverse_proxy app:3000
+		import application
 	}
 	handle {
-		reverse_proxy app:3000
+		import application
 	}
 	handle_errors {
 		root * /srv/indisponibilite
 		rewrite * /indisponibilite.html
 		header Cache-Control "no-store"
+		import page_du_frontal
 		file_server {
 			status {err.status_code}
 		}

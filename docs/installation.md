@@ -126,6 +126,19 @@ Les fichiers doivent s'appeler `site.crt` et `site.key`, être lisibles par Cadd
 l'hôte. Les navigateurs doivent faire confiance à l'autorité qui les a émis. Aucun appel à une
 autorité externe n'est nécessaire pour servir ce certificat.
 
+### Derrière un tunnel ou un mandataire
+
+Quand le frontal ne reçoit pas les connexions directement — tunnel, répartiteur de charge, autre
+mandataire inverse —, déclarer les adresses de ce mandataire :
+
+```dotenv
+MANDATAIRES_DE_CONFIANCE='172.16.0.0/12'
+```
+
+Le frontal lit alors l'adresse réelle du client dans `X-Forwarded-For`, sans jamais remonter
+au-delà du dernier mandataire déclaré. Sans cette déclaration, tous les clients apparaissent avec
+l'adresse du mandataire, et le ralentissement des tentatives de connexion les frappe ensemble.
+
 ### Autorité interne Caddy
 
 Une instance isolée peut également utiliser `DIRECTIVE_TLS='tls internal'` avec une adresse HTTPS.

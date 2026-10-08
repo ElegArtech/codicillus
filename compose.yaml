@@ -22,6 +22,7 @@ services:
       ADRESSE_SITE: ${ADRESSE_SITE:?renseigner ADRESSE_SITE dans .env}
       DIRECTIVE_TLS: ${DIRECTIVE_TLS:-}
       DIRECTIVE_COURRIEL_ACME: ${COURRIEL_ACME:+email ${COURRIEL_ACME:-}}
+      MANDATAIRES_DE_CONFIANCE: ${MANDATAIRES_DE_CONFIANCE:-127.0.0.1/32}
     ports:
       - '${PORT_HTTP:-19080}:80'
       - '${PORT_HTTPS:-19443}:443'
@@ -79,8 +80,7 @@ services:
       HOST: 0.0.0.0
       PORT: '3000'
       ORIGIN: ${ORIGINE_PUBLIQUE:-${ADRESSE_SITE}}
-      ADDRESS_HEADER: X-Forwarded-For
-      XFF_DEPTH: '1'
+      ADDRESS_HEADER: X-Adresse-Client
       BODY_SIZE_LIMIT: 128M
     volumes:
       - fichiers:/var/lib/codicillus/fichiers
