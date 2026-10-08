@@ -978,14 +978,16 @@ export const sessions = pgTable(
 
 /**
  * `RG-M16-01` — « un nombre excessif de tentatives DEPUIS UNE MÊME ORIGINE est ralenti puis
- * bloqué temporairement ». L'identifiant saisi n'est pas stocké : la règle ne le demande pas,
- * et une saisie décalée d'un champ écrirait un mot de passe dans cette table.
+ * bloqué temporairement ». L'identifiant saisi n'est pas stocké : une saisie décalée d'un
+ * champ écrirait un mot de passe dans cette table. Le compte qu'il désigne l'est.
  */
 export const tentativesDeConnexion = pgTable(
 	'tentatives_de_connexion',
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
 		origine: text('origine').notNull(),
+		/* Le compte visé, quand l'identifiant saisi en désigne un — jamais la saisie. */
+		compteId: uuid('compte_id').references(() => comptes.id, { onDelete: 'cascade' }),
 		reussie: boolean('reussie').notNull(),
 		attenteSecondes: integer('attente_secondes').notNull().default(0),
 		blocageJusquA: timestamp('blocage_jusqu_a', { withTimezone: true }),
@@ -997,7 +999,10 @@ export const tentativesDeConnexion = pgTable(
 			'tentatives_blocage_posterieur',
 			sql`${t.blocageJusquA} IS NULL OR ${t.blocageJusquA} > ${t.le}`
 		),
-		index('tentatives_de_connexion_origine_idx').on(t.origine, t.le.desc())
+		index('tentatives_de_connexion_origine_idx').on(t.origine, t.le.desc()),
+		index('tentatives_de_connexion_compte_idx')
+			.on(t.compteId, t.le.desc())
+			.where(sql`${t.compteId} IS NOT NULL`)
 	]
 );
 

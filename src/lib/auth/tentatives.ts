@@ -35,6 +35,8 @@ export interface LigneDeTentative {
 	readonly reussie: boolean;
 	readonly le: Date;
 	readonly blocageJusquA: Date | null;
+	/** Le compte visé ; absent quand l'identifiant n'en désigne aucun. */
+	readonly compteId?: string | null;
 }
 
 /**
@@ -85,17 +87,26 @@ export function etatDesTentatives(
 		return { bloquee: true, secondesRestantes: restantes };
 	}
 
-	/* La remise à zéro : le plus récent d'un succès et d'un blocage échu. */
-	let remiseAZero: Date | null = dernierBlocage;
+	/* LA REMISE À ZÉRO : un blocage échu efface tout ; un succès n'efface que les échecs
+	   DU MÊME COMPTE. Sans cette réserve, quiconque tient un compte valide alternait un
+	   essai contre un autre compte et sa propre connexion, et le barème ne s'ouvrait
+	   jamais. Un identifiant qui ne désigne aucun compte n'est effacé par aucun succès. */
+	const derniereReussite = new Map<string, Date>();
 	for (const l of lignes) {
-		if (!l.reussie) continue;
-		if (remiseAZero === null || l.le > remiseAZero) remiseAZero = l.le;
+		if (!l.reussie || l.compteId === undefined || l.compteId === null) continue;
+		const avant = derniereReussite.get(l.compteId);
+		if (avant === undefined || l.le > avant) derniereReussite.set(l.compteId, l.le);
 	}
 
 	let echecs = 0;
 	for (const l of lignes) {
 		if (l.reussie) continue;
-		if (remiseAZero !== null && l.le <= remiseAZero) continue;
+		if (dernierBlocage !== null && l.le <= dernierBlocage) continue;
+		const reussite =
+			l.compteId === undefined || l.compteId === null
+				? undefined
+				: derniereReussite.get(l.compteId);
+		if (reussite !== undefined && l.le <= reussite) continue;
 		echecs += 1;
 	}
 
@@ -104,6 +115,46 @@ export function etatDesTentatives(
 		return { bloquee: false, echecs, attenteSecondes: 0, ouvreLeBlocage: true };
 	}
 	return { bloquee: false, echecs, attenteSecondes: attente, ouvreLeBlocage: false };
+}
+
+/**
+ * LE RALENTISSEMENT D'UN COMPTE, QUELLE QUE SOIT L'ORIGINE. Le barème par origine ne voit
+ * pas l'attaque répartie sur plusieurs adresses ; celui-ci la voit, au compte visé. Il
+ * ralentit et ne bloque jamais : un blocage du compte serait offert à quiconque connaît
+ * son identifiant pour en priver son titulaire. Les tentatives d'un même compte passent
+ * une à une (`aSonTour`), et le plafond borne donc le rythme des essais à un par
+ * `attenteMaxSecondes`.
+ */
+export const BAREME_DU_COMPTE = {
+	echecsToleres: 5,
+	attenteMaxSecondes: 30,
+	/** Un échec plus ancien ne compte plus : le ralentissement retombe de lui-même. */
+	fenetreEnSecondes: 3600
+} as const;
+
+/**
+ * L'attente imposée à la tentative qui vise un compte, en secondes.
+ *
+ * @param lignes les tentatives de ce compte, dans un ordre quelconque
+ * @param maintenant l'instant de la tentative qui arrive
+ */
+export function attenteDuCompte(lignes: readonly LigneDeTentative[], maintenant: Date): number {
+	const debut = maintenant.getTime() - BAREME_DU_COMPTE.fenetreEnSecondes * 1000;
+	let derniereReussite = debut;
+	for (const l of lignes) {
+		if (l.reussie && l.le.getTime() > derniereReussite) derniereReussite = l.le.getTime();
+	}
+	const echecs = lignes.filter((l) => !l.reussie && l.le.getTime() > derniereReussite).length;
+	if (echecs < BAREME_DU_COMPTE.echecsToleres) return 0;
+	return Math.min(
+		BAREME_DU_COMPTE.attenteMaxSecondes,
+		2 ** (echecs - BAREME_DU_COMPTE.echecsToleres)
+	);
+}
+
+/** La clé de file d'un compte, distincte de toute origine. */
+export function fileDuCompte(compteId: string): string {
+	return 'compte:' + compteId;
 }
 
 /**

@@ -45,6 +45,8 @@ import {
 } from '$lib/donnees/distinctions';
 import { lireRelationsLisibles } from '$lib/donnees/outils';
 import { ouvrirLAcces } from '$lib/donnees/rangement';
+import { enregistrerLaTentative, tentativesDuCompte } from '$lib/auth/depot';
+import { aSonTour, attendre, attenteDuCompte, fileDuCompte } from '$lib/auth/tentatives';
 import type { Actions, PageServerLoad } from './$types';
 import { NOM_DU_COOKIE, attributsDuCookie } from '$lib/auth/sessions';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
@@ -200,19 +202,41 @@ export const actions: Actions = {
 	 * refus est un 403 et non un 404 : le compte de démonstration ne cache pas son
 	 * état.
 	 */
-	changerLeMotDePasse: async ({ locals, request }) => {
+	changerLeMotDePasse: async ({ locals, request, getClientAddress }) => {
 		const { base, sessionId, profil } = await titulaire(locals);
 		const champs = await request.formData();
-		const resultat = await changerLeMotDePasse(base, {
-			profil,
-			sessionCourante: sessionId,
-			saisies: {
-				actuel: String(champs.get('actuel') ?? ''),
-				nouveau: String(champs.get('nouveau') ?? ''),
-				confirmation: String(champs.get('confirmation') ?? '')
-			},
-			maintenant: new Date()
+		/* LE MOT DE PASSE ACTUEL SE DEVINE ICI COMME À LA CONNEXION, avec une session
+		   volée : même file par compte, même ralentissement, et chaque essai compte. */
+		const tour = await aSonTour(fileDuCompte(profil.compteId), async () => {
+			const maintenant = new Date();
+			const attente = attenteDuCompte(
+				await tentativesDuCompte(base, profil.compteId, maintenant),
+				maintenant
+			);
+			await attendre(attente);
+			const issue = await changerLeMotDePasse(base, {
+				profil,
+				sessionCourante: sessionId,
+				saisies: {
+					actuel: String(champs.get('actuel') ?? ''),
+					nouveau: String(champs.get('nouveau') ?? ''),
+					confirmation: String(champs.get('confirmation') ?? '')
+				},
+				maintenant
+			});
+			if (issue.issue === 'actuel-faux' || issue.issue === 'change') {
+				await enregistrerLaTentative(base, {
+					origine: getClientAddress(),
+					compteId: profil.compteId,
+					reussie: issue.issue === 'change',
+					attenteSecondes: attente,
+					blocageJusquA: null
+				});
+			}
+			return issue;
 		});
+		if (!tour.servie) return fail(429, { issue: 'trop' });
+		const resultat = tour.valeur;
 
 		if (resultat.issue === 'verrouille') return fail(403, { issue: resultat.issue });
 		if (resultat.issue !== 'change') return fail(400, { issue: resultat.issue });

@@ -5,12 +5,12 @@
  * `garde.ts`. Une règle qu'on ne peut éprouver qu'avec un serveur debout est une
  * règle qu'on éprouve rarement.
  */
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull } from 'drizzle-orm';
 import type { Base } from '../base/acces';
 import { comptes, parametres, sessions, tentativesDeConnexion } from '../base/schema';
 import type { RoleDeCompte } from '../droits/resolution';
 import type { CompteAAuthentifier } from './authentification';
-import { BAREME, type LigneDeTentative } from './tentatives';
+import { BAREME, BAREME_DU_COMPTE, type LigneDeTentative } from './tentatives';
 
 /**
  * Le compte portant cet identifiant, ou `null`. UNE SEULE REQUÊTE, ET LA MÊME DANS
@@ -159,7 +159,7 @@ export async function valeurDeDureeDeSession(base: Base): Promise<unknown> {
  * tentatives tolérées plus celle qui ouvre le blocage. Si le barème s'allonge, la
  * limite suit — un nombre écrit à la main deviendrait faux en silence.
  */
-export const LIMITE_DE_RELEVE = BAREME.attentesEnSecondes.length + 4;
+export const LIMITE_DE_RELEVE = (BAREME.attentesEnSecondes.length + 4) * 8;
 
 export async function tentativesDeLOrigine(
 	base: Base,
@@ -169,7 +169,8 @@ export async function tentativesDeLOrigine(
 		.select({
 			reussie: tentativesDeConnexion.reussie,
 			le: tentativesDeConnexion.le,
-			blocageJusquA: tentativesDeConnexion.blocageJusquA
+			blocageJusquA: tentativesDeConnexion.blocageJusquA,
+			compteId: tentativesDeConnexion.compteId
 		})
 		.from(tentativesDeConnexion)
 		.where(eq(tentativesDeConnexion.origine, origine))
@@ -178,11 +179,38 @@ export async function tentativesDeLOrigine(
 	return lignes;
 }
 
+/** Les tentatives récentes qui visent un compte, de toute origine. */
+export async function tentativesDuCompte(
+	base: Base,
+	compteId: string,
+	maintenant: Date
+): Promise<readonly LigneDeTentative[]> {
+	return base
+		.select({
+			reussie: tentativesDeConnexion.reussie,
+			le: tentativesDeConnexion.le,
+			blocageJusquA: tentativesDeConnexion.blocageJusquA
+		})
+		.from(tentativesDeConnexion)
+		.where(
+			and(
+				eq(tentativesDeConnexion.compteId, compteId),
+				gt(
+					tentativesDeConnexion.le,
+					new Date(maintenant.getTime() - BAREME_DU_COMPTE.fenetreEnSecondes * 1000)
+				)
+			)
+		)
+		.orderBy(desc(tentativesDeConnexion.le))
+		.limit(LIMITE_DE_RELEVE);
+}
+
 /** Le compteur en base de `STACK §4.7` : une ligne par tentative. */
 export async function enregistrerLaTentative(
 	base: Base,
 	tentative: {
 		readonly origine: string;
+		readonly compteId: string | null;
 		readonly reussie: boolean;
 		readonly attenteSecondes: number;
 		readonly blocageJusquA: Date | null;
@@ -190,6 +218,7 @@ export async function enregistrerLaTentative(
 ): Promise<void> {
 	await base.insert(tentativesDeConnexion).values({
 		origine: tentative.origine,
+		compteId: tentative.compteId,
 		reussie: tentative.reussie,
 		attenteSecondes: tentative.attenteSecondes,
 		blocageJusquA: tentative.blocageJusquA

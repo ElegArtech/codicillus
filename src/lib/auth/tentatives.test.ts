@@ -13,6 +13,8 @@ import { describe, expect, it } from 'vitest';
 import {
 	ATTENTES_MAX_PAR_ORIGINE,
 	BAREME,
+	BAREME_DU_COMPTE,
+	attenteDuCompte,
 	type LigneDeTentative,
 	aSonTour,
 	etatDesTentatives,
@@ -21,14 +23,24 @@ import {
 
 const T0 = new Date('2026-08-20T09:00:00.000Z');
 
-/** Un échec, `secondes` avant `T0`. */
-function echec(secondesAvant: number): LigneDeTentative {
-	return { reussie: false, le: new Date(T0.getTime() - secondesAvant * 1000), blocageJusquA: null };
+/** Un échec, `secondes` avant `T0`, sur un compte. */
+function echec(secondesAvant: number, compteId: string | null = 'c-1'): LigneDeTentative {
+	return {
+		reussie: false,
+		le: new Date(T0.getTime() - secondesAvant * 1000),
+		blocageJusquA: null,
+		compteId
+	};
 }
 
-/** Un succès, `secondes` avant `T0`. */
-function succes(secondesAvant: number): LigneDeTentative {
-	return { reussie: true, le: new Date(T0.getTime() - secondesAvant * 1000), blocageJusquA: null };
+/** Un succès, `secondes` avant `T0`, sur un compte. */
+function succes(secondesAvant: number, compteId = 'c-1'): LigneDeTentative {
+	return {
+		reussie: true,
+		le: new Date(T0.getTime() - secondesAvant * 1000),
+		blocageJusquA: null,
+		compteId
+	};
 }
 
 describe('le ralentissement progressif — « ralenti PUIS bloqué »', () => {
@@ -148,6 +160,54 @@ describe('la remise à zéro par le succès', () => {
 		expect(etat.bloquee).toBe(false);
 		if (etat.bloquee) return;
 		expect(etat.echecs).toBe(2);
+	});
+
+	it('un succès n’efface pas les échecs d’un AUTRE compte', () => {
+		/* L'attaque alternée : un essai contre l'administrateur, puis sa propre
+		   connexion. Les échecs contre l'administrateur restent comptés. */
+		const lignes = [
+			echec(60, 'admin'),
+			succes(50, 'moi'),
+			echec(40, 'admin'),
+			succes(30, 'moi'),
+			echec(20, 'admin'),
+			succes(10, 'moi')
+		];
+		const etat = etatDesTentatives(lignes, T0);
+		expect(etat.bloquee).toBe(false);
+		if (etat.bloquee) return;
+		expect(etat.echecs).toBe(3);
+	});
+
+	it('aucun succès n’efface un identifiant qui ne désigne aucun compte', () => {
+		const etat = etatDesTentatives([echec(60, null), echec(40, null), succes(10)], T0);
+		expect(etat.bloquee).toBe(false);
+		if (etat.bloquee) return;
+		expect(etat.echecs).toBe(2);
+	});
+});
+
+describe('le ralentissement d’un compte, quelle que soit l’origine', () => {
+	it('tolère les premiers échecs, puis double jusqu’au plafond', () => {
+		const n = BAREME_DU_COMPTE.echecsToleres;
+		const attente = (k: number) =>
+			attenteDuCompte(
+				Array.from({ length: k }, (_, i) => echec(i + 1)),
+				T0
+			);
+		expect(attente(n - 1)).toBe(0);
+		expect(attente(n)).toBe(1);
+		expect(attente(n + 1)).toBe(2);
+		expect(attente(n + 20)).toBe(BAREME_DU_COMPTE.attenteMaxSecondes);
+	});
+
+	it('repart de zéro après un succès, et oublie les échecs hors fenêtre', () => {
+		const anciens = Array.from({ length: 10 }, (_, i) =>
+			echec(BAREME_DU_COMPTE.fenetreEnSecondes + i + 1)
+		);
+		expect(attenteDuCompte(anciens, T0)).toBe(0);
+		const effaces = [...Array.from({ length: 10 }, (_, i) => echec(i + 20)), succes(5)];
+		expect(attenteDuCompte(effaces, T0)).toBe(0);
 	});
 });
 

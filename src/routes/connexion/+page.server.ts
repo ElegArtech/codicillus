@@ -20,7 +20,8 @@ import {
 	compteParIdentifiant,
 	enregistrerLaTentative,
 	ouvrirUneSession,
-	tentativesDeLOrigine
+	tentativesDeLOrigine,
+	tentativesDuCompte
 } from '$lib/auth/depot';
 import { arriveeDepuisMotif, cibleApresConnexion, suiteInterne } from '$lib/auth/garde';
 import {
@@ -29,7 +30,15 @@ import {
 	condensatDeJeton,
 	tirerUnJeton
 } from '$lib/auth/sessions';
-import { BAREME, aSonTour, attendre, etatDesTentatives, finDuBlocage } from '$lib/auth/tentatives';
+import {
+	BAREME,
+	aSonTour,
+	attendre,
+	attenteDuCompte,
+	etatDesTentatives,
+	fileDuCompte,
+	finDuBlocage
+} from '$lib/auth/tentatives';
 import { basePartagee } from '$lib/base/acces';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -80,31 +89,53 @@ async function tenter({
 		return fail(429, { issue: 'trop', secondes: etat.secondesRestantes });
 	}
 
-	/* Le ralentissement s'applique AVANT toute évaluation : il ne dépend donc
-	   pas de ce qui va échouer, et il n'ajoute aucun écart de temps entre un
-	   identifiant inconnu et un mot de passe faux (ARB-005). */
-	await attendre(etat.attenteSecondes);
+	/* LE COMPTE VISÉ EST CHERCHÉ AVANT LE RALENTISSEMENT, qui en dépend : chaque compte a
+	   le sien, quelle que soit l'origine, et ses tentatives passent une à une. */
+	const compte = await compteParIdentifiant(base, identifiant);
+	const compteId = compte?.id ?? null;
 
-	if (etat.ouvreLeBlocage) {
-		const jusqua = finDuBlocage(maintenant);
+	const evaluer = async () => {
+		const attente = Math.max(
+			etat.attenteSecondes,
+			compteId === null
+				? 0
+				: attenteDuCompte(await tentativesDuCompte(base, compteId, maintenant), maintenant)
+		);
+
+		/* Le ralentissement s'applique AVANT toute évaluation : il ne dépend donc
+		   pas de ce qui va échouer (ARB-005). */
+		await attendre(attente);
+
+		if (etat.ouvreLeBlocage) {
+			await enregistrerLaTentative(base, {
+				origine,
+				compteId,
+				reussie: false,
+				attenteSecondes: attente,
+				blocageJusquA: finDuBlocage(maintenant)
+			});
+			return null;
+		}
+
+		const decision = await authentifier(compte, motdepasse);
 		await enregistrerLaTentative(base, {
 			origine,
-			reussie: false,
-			attenteSecondes: etat.attenteSecondes,
-			blocageJusquA: jusqua
+			compteId,
+			reussie: decision.reussie,
+			attenteSecondes: attente,
+			blocageJusquA: null
 		});
+		return decision;
+	};
+
+	const tour =
+		compteId === null
+			? { servie: true as const, valeur: await evaluer() }
+			: await aSonTour(fileDuCompte(compteId), evaluer);
+	if (!tour.servie || tour.valeur === null) {
 		return fail(429, { issue: 'trop', secondes: BAREME.blocageEnSecondes });
 	}
-
-	const compte = await compteParIdentifiant(base, identifiant);
-	const decision = await authentifier(compte, motdepasse);
-
-	await enregistrerLaTentative(base, {
-		origine,
-		reussie: decision.reussie,
-		attenteSecondes: etat.attenteSecondes,
-		blocageJusquA: null
-	});
+	const decision = tour.valeur;
 
 	if (!decision.reussie) {
 		/* Un seul et même retour, quelle que soit la cause : identifiant
