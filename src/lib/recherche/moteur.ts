@@ -20,7 +20,7 @@
  * contenu de note — l'index rapporte des IDENTIFIANTS — et ne garde aucun résultat en
  * mémoire (`ADR-006` interdit « tout cache d'index ou de résultat partagé »).
  */
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { Meilisearch } from 'meilisearch';
 import type { EnqueuedTask, Task } from 'meilisearch';
 import type { Base } from '../base/acces';
@@ -407,14 +407,42 @@ export async function etatDeLIndex(client: Meilisearch): Promise<EtatDeLIndex> {
  * anonyme, déjà sorti.
  */
 export async function filtreDeLIdentite(base: Base, identite: Identite): Promise<FiltreDIndex> {
+	return filtreDuPerimetre(identite, await perimetreAutorise(base, identite));
+}
+
+/** Le périmètre autorisé de toute identité ; l'anonyme n'a aucun dossier (son filtre est autre). */
+async function perimetreAutorise(base: Base, identite: Identite): Promise<Perimetre> {
+	if (identite.type === 'anonyme') return { tout: false, dossiers: new Set() };
+	if (identite.role === 'administrateur') return { tout: true };
+	return perimetreDeLIdentite(base, identite);
+}
+
+/**
+ * LA BASE CONFIRME CE QUE LE MOTEUR RAPPORTE. L'index est entretenu après chaque
+ * transaction, sans l'attendre : une note rendue interne, dépubliée ou déplacée pendant
+ * que le moteur traîne — ou tombe — y garde son ancienne visibilité et son ancien dossier.
+ * Le périmètre est donc rejoué en base sur les identifiants rapportés, dans leur ordre.
+ */
+async function confirmerEnBase(
+	base: Base,
+	identite: Identite,
+	perimetre: Perimetre,
+	identifiants: readonly string[]
+): Promise<readonly string[]> {
+	if (identifiants.length === 0) return [];
+	const clauses = [inArray(notes.identifiant, [...identifiants])];
 	if (identite.type === 'anonyme') {
-		return filtreDuPerimetre(identite, { tout: false, dossiers: new Set() });
+		clauses.push(eq(notes.visibilite, 'publique'), eq(notes.statut, 'publiee'));
+	} else if (!perimetre.tout) {
+		if (perimetre.dossiers.size === 0) return [];
+		clauses.push(inArray(notes.dossierId, [...perimetre.dossiers]));
 	}
-	if (identite.role === 'administrateur') {
-		return filtreDuPerimetre(identite, { tout: true });
-	}
-	const perimetre = await perimetreDeLIdentite(base, identite);
-	return filtreDuPerimetre(identite, perimetre);
+	const lignes = await base
+		.select({ identifiant: notes.identifiant })
+		.from(notes)
+		.where(and(...clauses));
+	const confirmes = new Set(lignes.map((l) => l.identifiant));
+	return identifiants.filter((id) => confirmes.has(id));
 }
 
 /** Le périmètre AUTORISÉ d'une identité authentifiée — `resolution.ts` décide. */
@@ -532,9 +560,9 @@ export async function chercherLesNotes(
 	identite: Identite,
 	demande: DemandeDeRecherche
 ): Promise<ResultatDeRecherche> {
-	const perimetre = await filtreDeLIdentite(base, identite);
+	const perimetre = await perimetreAutorise(base, identite);
 	const facettes = demande.facettes === undefined ? [] : clausesDeFacette(demande.facettes);
-	const filtre = filtreComplet(perimetre, facettes);
+	const filtre = filtreComplet(filtreDuPerimetre(identite, perimetre), facettes);
 
 	if (!filtre.interroger) {
 		return { identifiants: [], total: 0, tronque: false, filtre: null, dureeMs: null };
@@ -552,9 +580,11 @@ export async function chercherLesNotes(
 		...(sort.length === 0 ? {} : { sort: [...sort] })
 	});
 
+	const rapportes = reponse.hits.map((h) => h.id);
+	const identifiants = await confirmerEnBase(base, identite, perimetre, rapportes);
 	return {
-		identifiants: reponse.hits.map((h) => h.id),
-		total: reponse.totalHits,
+		identifiants,
+		total: reponse.totalHits - (rapportes.length - identifiants.length),
 		tronque: reponse.totalHits > reponse.hits.length,
 		filtre: filtre.filtre,
 		dureeMs: reponse.processingTimeMs
