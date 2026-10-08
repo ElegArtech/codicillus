@@ -415,6 +415,15 @@ function rendrePieceJointe(bloc: PieceJointeIntegree): string {
 			`<figcaption>${echapper(nom)}</figcaption></figure>`
 		);
 	}
+	/* SEUL LE PDF S'OUVRE DANS UN CADRE : c'est le seul format servi en ligne qui ne
+	   soit ni une image ni une vidéo. Tout autre type n'a pas de lecture intégrée et
+	   se télécharge ; le cadre n'aurait rien d'autre à montrer. */
+	if (formeDeLecture(typeMedia, nom) !== 'pdf') {
+		return (
+			`<figure class="figure piece-integree" data-type-media="${echapper(typeMedia)}">` +
+			`<figcaption>${echapper(nom)} ${secours}</figcaption></figure>`
+		);
+	}
 	return (
 		`<figure class="figure piece-integree" data-type-media="${echapper(typeMedia)}">` +
 		`<iframe class="piece-integree__cadre" src="${echapper(src)}" ` +

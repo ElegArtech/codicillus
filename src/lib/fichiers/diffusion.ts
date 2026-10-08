@@ -1,6 +1,6 @@
 import { createReadStream } from 'node:fs';
 import { Readable } from 'node:stream';
-import { seLitSansScript } from './affichage';
+import { TYPE_DES_OCTETS, TYPE_MEDIA_PDF, typeMediaNormalise } from './affichage';
 import { cheminDUnePiece, tailleSurDisque } from './entrepot';
 
 /** Une plage simple ; les syntaxes non prises en charge sont ignorées. */
@@ -27,15 +27,22 @@ export async function diffuserLaPiece(
 ): Promise<Response | null> {
 	const taille = await tailleSurDisque(racine, piece.noteId, piece.id);
 	if (taille === null) return null;
+	/* LE TYPE ENVOYÉ EST LE TYPE NORMALISÉ, jamais la chaîne déposée : c'est elle que le
+	   navigateur interprète, et c'est sur elle que la décision de lecture a été prise.
+	   Une pièce qui ne s'ouvre pas en ligne part en octets non typés : rien ne peut alors
+	   la charger comme script ou feuille de style, même depuis une page de l'application. */
+	const type = enLigne ? typeMediaNormalise(piece.typeMedia) : TYPE_DES_OCTETS;
 	const headers = new Headers({
-		'content-type': piece.typeMedia,
+		'content-type': type,
 		'content-disposition':
 			(enLigne ? 'inline' : 'attachment') + "; filename*=UTF-8''" + encodeURIComponent(piece.nom),
 		'accept-ranges': 'bytes',
 		'x-content-type-options': 'nosniff',
+		'cross-origin-resource-policy': 'same-origin',
 		/* Ouverte seule dans un onglet, une pièce ne doit jamais exécuter de script dans
-		   l'origine de l'application, quel que soit le type déclaré au dépôt. */
-		...(seLitSansScript(piece.typeMedia) ? { 'content-security-policy': 'sandbox' } : {}),
+		   l'origine de l'application. Le PDF lu en ligne garde les siens : la visionneuse
+		   du navigateur en dépend, et le type envoyé est alors exactement le sien. */
+		...(type === TYPE_MEDIA_PDF ? {} : { 'content-security-policy': 'sandbox' }),
 		'cache-control': 'no-store'
 	});
 	const plage =

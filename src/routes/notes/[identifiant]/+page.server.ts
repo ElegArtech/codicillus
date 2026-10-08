@@ -117,13 +117,6 @@ import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import type { Note, Version } from '../../../../seeds/corpus';
 
-/**
- * Le type de média que la norme HTTP donne à des octets sans type déclaré. Il
- * n'est employé que lorsque le dépôt lui-même n'en annonce aucun — le produit
- * ne devine JAMAIS un type à partir d'un nom de fichier.
- */
-const TYPE_DES_OCTETS_NON_TYPES = 'application/octet-stream';
-
 /* POURQUOI LES REQUÊTES QUI SUIVENT SONT ICI, ET NON DANS `$lib/donnees/` : le
    regroupement dans un module de lecture reste à faire. C'est une dette dite,
    pas un choix d'architecture.
@@ -1252,11 +1245,9 @@ export const actions: Actions = {
 			const fait = await deposerUnePieceJointe(basePartagee(), racineDesFichiers(env), {
 				note: params.identifiant,
 				nom: depose.name,
-				/* LE TYPE VIENT DU DÉPÔT, ET SON ABSENCE A UNE VALEUR NORMALISÉE. Un
-				   navigateur qui ne reconnaît pas un fichier rend une chaîne vide ;
-				   `application/octet-stream` est le type que la norme HTTP donne à des
-				   octets non typés, pas une devinette. Rien n'est inféré du suffixe. */
-				typeMedia: depose.type === '' ? TYPE_DES_OCTETS_NON_TYPES : depose.type,
+				/* Le type déclaré par le navigateur est normalisé au dépôt : rien n'est
+				   inféré du suffixe, et une déclaration malformée vaut octets non typés. */
+				typeMedia: depose.type,
 				octets,
 				identite: locals.identite
 			});

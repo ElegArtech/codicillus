@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { diffuserLaPiece, plageDeLecture } from './diffusion';
 import { ecrireLesOctets } from './entrepot';
-import { formeDeLecture, seLitEnLigne } from './affichage';
+import { formeDeLecture, seLitEnLigne, typeMediaNormalise } from './affichage';
 
 const temporaires: string[] = [];
 afterEach(async () => {
@@ -98,6 +98,39 @@ describe('une pièce jointe n’exécute aucun script', () => {
 			new Request('http://localhost/piece'),
 			seLitEnLigne(typeMedia)
 		);
+		expect(reponse?.headers.get('content-security-policy')).toBe(politique);
+	});
+	it.each([
+		['application/pdf;x=,text/html', 'application/pdf'],
+		['text/html,application/pdf', 'application/octet-stream'],
+		['image/png,text/html', 'application/octet-stream'],
+		['', 'application/octet-stream'],
+		['Application/PDF ; charset=x', 'application/pdf'],
+		['image/png', 'image/png']
+	])('le type déclaré %j est normalisé en %s', (brut, attendu) => {
+		expect(typeMediaNormalise(brut)).toBe(attendu);
+	});
+	it.each([
+		['application/pdf;x=,text/html', 'application/pdf', null],
+		['image/png,text/html', 'application/octet-stream', 'sandbox'],
+		['text/javascript', 'application/octet-stream', 'sandbox']
+	])('%s part en %s', async (typeMedia, envoye, politique) => {
+		const racine = await mkdtemp(join(tmpdir(), 'codicillus-piece-'));
+		temporaires.push(racine);
+		const piece = {
+			noteId: '00000000-0000-0000-0000-000000000001',
+			id: '00000000-0000-0000-0000-000000000004',
+			nom: 'piece',
+			typeMedia
+		};
+		await ecrireLesOctets(racine, piece.noteId, piece.id, new Uint8Array([60, 115]));
+		const reponse = await diffuserLaPiece(
+			racine,
+			piece,
+			new Request('http://localhost/piece'),
+			seLitEnLigne(typeMedia)
+		);
+		expect(reponse?.headers.get('content-type')).toBe(envoye);
 		expect(reponse?.headers.get('content-security-policy')).toBe(politique);
 	});
 });

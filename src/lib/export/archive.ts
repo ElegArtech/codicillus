@@ -46,6 +46,7 @@ import {
 	segmentsDepuisLArchive
 } from './noms';
 import { ecrireZip, lireZip, type EntreeDeZip } from './zip';
+import { typeMediaNormalise } from '../fichiers/affichage';
 
 /**
  * Un dossier du domaine, par son chemin depuis la racine, RACINE INCLUSE. L'ORDRE de la
@@ -884,7 +885,7 @@ export function lireLArchive(entrees: readonly EntreeDeZip[]): DomaineAExporter 
 				}
 				listeDesPieces.push({
 					nom: o.nom,
-					typeMedia: o.type_media,
+					typeMedia: typeMediaNormalise(o.type_media),
 					deposeeLe: o.deposee_le,
 					octets
 				});

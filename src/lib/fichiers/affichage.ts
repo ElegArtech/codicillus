@@ -7,7 +7,6 @@ const TYPES_DES_TABLEURS = new Set([
 	'application/vnd.oasis.opendocument.spreadsheet'
 ]);
 const TYPES_GENERIQUES = new Set([
-	'',
 	'application/octet-stream',
 	'application/zip',
 	'binary/octet-stream'
@@ -15,9 +14,24 @@ const TYPES_GENERIQUES = new Set([
 
 export type FormeDeLecture = 'image' | 'pdf' | 'tableur' | 'video';
 
-function typeDe(typeMedia: string): string {
-	return (typeMedia.split(';')[0] ?? '').trim().toLowerCase();
+/** Les octets dont on ne sait rien, ou dont le type déclaré n'est pas un type. */
+export const TYPE_DES_OCTETS = 'application/octet-stream';
+
+/** `type/sous-type` en jetons de RFC 9110, sans paramètre, sans virgule, sans espace. */
+const MOTIF_DE_TYPE = /^[a-z0-9][a-z0-9!#$&^_.+-]{0,126}\/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$/;
+
+/**
+ * LE TYPE QUE L'ON PEUT CROIRE. Le type d'une pièce vient du navigateur du déposant :
+ * une liste séparée par des virgules y passe pour un PDF ici et se rend en HTML dans
+ * le navigateur du lecteur, qui retient la dernière valeur. Tout ce qui n'est pas un
+ * seul type bien formé devient des octets non typés.
+ */
+export function typeMediaNormalise(typeMedia: string): string {
+	const type = (typeMedia.split(';')[0] ?? '').trim().toLowerCase();
+	return MOTIF_DE_TYPE.test(type) ? type : TYPE_DES_OCTETS;
 }
+
+const typeDe = typeMediaNormalise;
 
 export function formeDeLecture(typeMedia: string, nom = ''): FormeDeLecture | null {
 	const type = typeDe(typeMedia);

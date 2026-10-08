@@ -26,6 +26,7 @@ import {
 } from '../fichiers/entrepot';
 import { INTROUVABLE, type Identite, type Resolution } from '../droits/resolution';
 import { adresseDePieceJointe } from '../rangement/adresses';
+import { typeMediaNormalise } from '../fichiers/affichage';
 import { peutEcrireSurLeDossier } from './edition';
 import { auteurDeLaSuppression, tracerUneSuppression } from './traces';
 import { lireConfiguration } from './lecture';
@@ -128,6 +129,7 @@ export async function deposerUnePieceJointe(
 ): Promise<Resolution<PieceDeposee>> {
 	const nom = depot.nom.trim();
 	if (nom === '') throw new NomDePieceVide();
+	const typeMedia = typeMediaNormalise(depot.typeMedia);
 
 	/* Le droit d'abord, la ressource ensuite — l'ordre de la route d'export. */
 	const [note] = await base
@@ -164,7 +166,7 @@ export async function deposerUnePieceJointe(
 			   un appelant n'entre en base : c'est ce que `P-02` demande, et c'est
 			   aussi ce qui rend le contrôle d'intégrité concluant. */
 			tailleOctets: depot.octets.length,
-			typeMedia: depot.typeMedia,
+			typeMedia,
 			deposeeParId: depot.identite.type === 'authentifie' ? depot.identite.compteId : null
 		});
 	} catch (cause) {
@@ -179,7 +181,7 @@ export async function deposerUnePieceJointe(
 			noteId: note.id,
 			nom,
 			tailleOctets: depot.octets.length,
-			typeMedia: depot.typeMedia,
+			typeMedia,
 			adresse: adresseDePieceJointe(depot.note, nom)
 		}
 	};
