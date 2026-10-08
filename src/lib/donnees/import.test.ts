@@ -1307,6 +1307,7 @@ function moteurDEpreuve(): {
 }
 
 const CIBLE = { domaineId: 'dom-1', dossierId: 'racine-1', auteurId: 'compte-1' };
+const TOUS_LES_DROITS = { ecrireDesNotes: () => true, creerDesSousDossiers: () => true };
 
 describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () => {
 	const plan = classerLeLot(
@@ -1329,13 +1330,15 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const reel = baseDEpreuve();
 		const rapportReel = await executerLImport(reel.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 
 		const simule = baseDEpreuve();
 		const rapportSimule = await executerLImport(simule.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: true,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 
 		/* LA propriété : les deux journaux d’écriture sont identiques. Un
@@ -1349,7 +1352,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const reel = baseDEpreuve();
 		await executerLImport(reel.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 		expect(reel.transactions()).toBe(1);
 		expect(reel.annulations()).toBe(0);
@@ -1357,7 +1361,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const simule = baseDEpreuve();
 		await executerLImport(simule.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: true,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 		expect(simule.transactions()).toBe(1);
 		expect(simule.annulations()).toBe(1);
@@ -1372,7 +1377,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		await expect(
 			executerLImport(cassee, moteurDEpreuve().client, CIBLE, plan, {
 				simulation: true,
-				profondeurDeDepart: 1
+				profondeurDeDepart: 1,
+				droits: TOUS_LES_DROITS
 			})
 		).rejects.toThrow('la base a rompu');
 	});
@@ -1381,7 +1387,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const essai = baseDEpreuve();
 		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 		expect(essai.journal.filter((l) => l.startsWith('insert dossier'))).toHaveLength(3);
 		expect(rapport.dossiersCrees).toBe(3);
@@ -1391,7 +1398,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const essai = baseDEpreuve();
 		await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 		expect(essai.journal).toContain('insert etiquette barman');
 		expect(essai.journal.filter((l) => l.startsWith('insert liaison'))).toHaveLength(1);
@@ -1401,7 +1409,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const essai = baseDEpreuve();
 		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 		const ligne = rapport.lignes.find((l) => l.chemin.endsWith('Restauration.md'));
 		/* LES DEUX RENVOIS SONT CONSIGNÉS, ET LE MOTIF N'EST PAS LE MÊME. La note
@@ -1435,7 +1444,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const essai = baseDEpreuve();
 		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, planType, {
 			simulation: false,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 		expect(rapport.relationsCreees).toBe(1);
 		/* Le second renvoi nomme un type que l'instance ne porte pas : consigné, et
@@ -1453,6 +1463,7 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
 			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS,
 			strict: true
 		});
 		expect(rapport.refuseEnBloc).toBe(true);
@@ -1472,6 +1483,7 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, planPropre, {
 			simulation: false,
 			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS,
 			strict: true
 		});
 		expect(rapport.refuseEnBloc).toBe(false);
@@ -1482,7 +1494,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const essai = baseDEpreuve();
 		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 		expect(rapport.total).toBe(3);
 		expect(rapport.notesCreees).toBe(2);
@@ -1496,7 +1509,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const essai = baseDEpreuve();
 		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
 			simulation: false,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 		/* `RG-M12-09` — `lots_d_import` reçoit l'entrée (migration `009`), et le
 		   rapport le dit. La ligne a longtemps rendu `false` : c'est ce drapeau qui
@@ -1511,7 +1525,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const moteur = moteurDEpreuve();
 		const rapport = await executerLImport(essai.base, moteur.client, CIBLE, plan, {
 			simulation: false,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 
 		const attendues = rapport.lignes
@@ -1541,7 +1556,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const moteur = moteurDEpreuve();
 		const rapport = await executerLImport(essai.base, moteur.client, CIBLE, plan, {
 			simulation: true,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 
 		/* La polarité inverse de l’essai précédent, et c’est elle qui prouve que
@@ -1578,7 +1594,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const essai = baseDEpreuve();
 		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, lot, {
 			simulation: false,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 
 		const ligne = rapport.lignes.find((l) => l.sort === 'note');
@@ -1608,7 +1625,8 @@ describe('l’exécution d’un lot — RG-M12-02, un seul chemin de code', () =
 		const essai = baseDEpreuve();
 		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, lot, {
 			simulation: false,
-			profondeurDeDepart: 1
+			profondeurDeDepart: 1,
+			droits: TOUS_LES_DROITS
 		});
 
 		const ligne = rapport.lignes.find((l) => l.sort === 'note');
@@ -1671,5 +1689,69 @@ describe('les tableurs et vidéos autonomes dans l’arborescence', () => {
 describe('un chemin forgé ne crée aucun dossier « .. »', () => {
 	it('les segments sans lettre ni chiffre sont écartés', () => {
 		expect(segmentsPlafonnes('a/../../b/./c.md', 1).segments).toEqual(['a', 'b']);
+	});
+});
+
+describe('un lot n’écrit que là où son auteur peut écrire', () => {
+	const fichier = (texte: string, chemin = 'Note.md'): FichierDepose => ({
+		chemin,
+		octets: texte.length,
+		texte,
+		binaire: null
+	});
+
+	it('rend unique un identifiant déclaré qui désigne une note hors de la cible', () => {
+		const plan = classerLeLot(
+			'épreuve',
+			[fichier('---\nidentifiant: rh-salaires\ntitre: x\n---\ncorps')],
+			{ ...SANS_SERVICE, identifiantsPris: new Set(['rh-salaires']) }
+		);
+		expect(plan.lignes[0]?.identifiant).toBe('rh-salaires-2');
+	});
+
+	it('reprend un identifiant déclaré que la cible porte — RG-M12-01', () => {
+		const plan = classerLeLot(
+			'épreuve',
+			[fichier('---\nidentifiant: rh-salaires\ntitre: x\n---\ncorps')],
+			{
+				...SANS_SERVICE,
+				identifiantsPris: new Set(['rh-salaires']),
+				notesDeLaCible: new Map([['rh-salaires', 'Ailleurs']])
+			}
+		);
+		expect(plan.lignes[0]?.identifiant).toBe('rh-salaires');
+	});
+
+	it('ne crée aucun sous-dossier sans le droit d’en créer', async () => {
+		const plan = classerLeLot(
+			'épreuve',
+			[fichier('# Titre\n\ncorps', 'A/B/Note.md')],
+			SANS_SERVICE
+		);
+		const essai = baseDEpreuve();
+		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
+			simulation: false,
+			profondeurDeDepart: 1,
+			droits: { ecrireDesNotes: () => true, creerDesSousDossiers: () => false }
+		});
+		expect(essai.journal.filter((l) => l.startsWith('insert dossier'))).toHaveLength(0);
+		expect(rapport.lignes[0]?.sort).toBe('echec');
+		expect(rapport.lignes[0]?.motif).toBe('sans-droit-sur-la-place');
+	});
+
+	it('ne relie pas une note visée hors du droit d’écrire, et ne le dit pas', async () => {
+		const plan = classerLeLot(
+			'épreuve',
+			[fichier('---\ntitre: Adressage\nrelations: [Documente › deja-pris]\n---\nx')],
+			SANS_SERVICE
+		);
+		const essai = baseDEpreuve();
+		const rapport = await executerLImport(essai.base, moteurDEpreuve().client, CIBLE, plan, {
+			simulation: false,
+			profondeurDeDepart: 1,
+			droits: { ecrireDesNotes: (id) => id === CIBLE.dossierId, creerDesSousDossiers: () => true }
+		});
+		expect(rapport.relationsCreees).toBe(0);
+		expect(rapport.lignes[0]?.renvoisNonResolus).toEqual(['Documente › deja-pris']);
 	});
 });

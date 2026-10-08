@@ -28,6 +28,8 @@ export const LIBELLE_DU_MOTIF: Readonly<Record<string, string>> = {
 	'delai-de-conversion-depasse': 'La conversion a dépassé le délai accordé et a été interrompue.',
 	'conversion-absente': "Ce fichier n'a pas été soumis à la conversion.",
 	'contenu-illisible': "Le contenu n'a pas pu être lu comme un document.",
+	'sans-droit-sur-la-place':
+		"Vos droits ne permettent pas d'écrire à cet emplacement : le fichier n'a pas été importé.",
 	'racine-sans-univers':
 		'Fichier placé directement dans le dossier racine, sans univers de destination.'
 };

@@ -34,6 +34,7 @@ import {
 	enregistrerLeLot,
 	entreeDeJournal,
 	executerLImport,
+	type DroitsDImport,
 	formatDuChemin,
 	identifiantsPris,
 	libellesDeFormat,
@@ -77,6 +78,14 @@ import { estUneMiseAJour } from './reprise';
 import type { Actions, PageServerLoad } from './$types';
 import { MESSAGE_INTROUVABLE } from '$lib/donnees/rangement';
 import { refusDEcriture } from '$lib/donnees/amorcage';
+
+/** Les droits de l'appelant, tels que l'écriture du lot les éprouve dossier par dossier. */
+function droitsDImport(acces: AccesAuRangement): DroitsDImport {
+	return {
+		ecrireDesNotes: (id) => capacites(droitEffectif(acces, id)).ecrireDesNotes,
+		creerDesSousDossiers: (id) => capacites(droitEffectif(acces, id)).creerDesSousDossiers
+	};
+}
 
 /**
  * L'appelant et son droit d'importer — le seul point d'entrée du fichier. Le
@@ -355,6 +364,7 @@ async function preparerLeLot(
 
 	return {
 		base,
+		droits: droitsDImport(acces),
 		plan,
 		simulation,
 		strict,
@@ -657,6 +667,7 @@ async function preparerLUnivers(
 
 	return {
 		base,
+		droits: droitsDImport(acces),
 		compteId,
 		source,
 		...universPrepare,
@@ -700,6 +711,7 @@ async function preparerLaRacine(
 	}
 	return {
 		base,
+		droits: droitsDImport(acces),
 		compteId,
 		source,
 		univers: universPrepares,
@@ -712,6 +724,7 @@ async function preparerLaRacine(
 async function executerLesUnivers(
 	prepare: {
 		readonly base: Base;
+		readonly droits: DroitsDImport;
 		readonly compteId: string;
 		readonly simulation: boolean;
 		readonly strict: boolean;
@@ -745,7 +758,8 @@ async function executerLesUnivers(
 					strict: prepare.strict,
 					domaineCible: partie.nom,
 					octetsParChemin,
-					racineDesFichiers: racineDesFichiers(env)
+					racineDesFichiers: racineDesFichiers(env),
+					droits: prepare.droits
 				}
 			);
 			rapports.push({ univers: universPrepare, partie, rapport });
@@ -941,7 +955,8 @@ export const actions: Actions = {
 				   eux, une note intégrée annoncerait une pièce que l'entrepôt ne
 				   porte pas — l'état que `RG-NF-09` appelle un désaccord. */
 				octetsParChemin: prepare.octetsParChemin,
-				racineDesFichiers: racineDesFichiers(env)
+				racineDesFichiers: racineDesFichiers(env),
+				droits: prepare.droits
 			}
 		);
 

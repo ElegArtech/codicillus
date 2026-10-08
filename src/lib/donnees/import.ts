@@ -412,7 +412,13 @@ export type MotifDEchec =
 	 * lever : un défaut d'enchaînement devient une ligne du rapport, pas un lot perdu.
 	 */
 	| 'conversion-absente'
-	| 'contenu-illisible';
+	| 'contenu-illisible'
+	/**
+	 * L'appelant n'a pas le droit d'écrire là où la ligne écrirait : la note existante
+	 * qu'elle mettrait à jour, ou le sous-dossier qu'elle devrait créer, sort de ses
+	 * droits. La cible du lot ne prête pas ses droits à ce qu'elle ne contient pas.
+	 */
+	| 'sans-droit-sur-la-place';
 
 /**
  * Les deux avertissements que l'import lève lui-même (`RG-M12-04`), au même rang que
@@ -1174,15 +1180,17 @@ export function classerLeLot(
 				? segmentsPlafonnes(fichier.chemin, contexte.profondeurDeDepart)
 				: segmentsPlafonnes([...entete.dossier, 'note.md'].join('/'), contexte.profondeurDeDepart);
 		const { segments, aplatie } = place;
-		/* L'IDENTIFIANT DÉCLARÉ EST REPRIS TEL QUEL — `RG-M12-01` : c'est ce qui fait
-		   qu'un fichier renommé ou déplacé met à jour SA note au lieu d'en créer une
-		   seconde. `RG-M12-11` ne s'applique qu'à défaut de déclaration : lever une
-		   collision sur un identifiant déclaré, ce serait écrire une note de plus là où
-		   le corpus en désigne une seule. */
+		/* L'IDENTIFIANT DÉCLARÉ EST REPRIS QUAND LA CIBLE PORTE CETTE NOTE — `RG-M12-01` :
+		   c'est ce qui fait qu'un fichier renommé ou déplacé met à jour SA note au lieu
+		   d'en créer une seconde. Pris AILLEURS, il est rendu unique (`RG-M12-11`) : un
+		   en-tête ne désigne pas une note hors de la cible choisie, sans quoi déposer un
+		   fichier suffirait à réécrire et déplacer une note qu'on ne peut pas lire. */
 		const identifiant =
 			entete.identifiant === null
 				? identifiantDuFichier(titre, segments, pris, dansLaCible, rang + 1, dansLaCibleParPlace)
-				: entete.identifiant;
+				: dansLaCible.has(entete.identifiant)
+					? entete.identifiant
+					: identifiantLibre(entete.identifiant, pris, rang + 1);
 		pris.add(identifiant);
 
 		lignes.push({
@@ -1407,6 +1415,18 @@ export interface CibleDImport {
 }
 
 /**
+ * CE QUE L'APPELANT PEUT FAIRE, DOSSIER PAR DOSSIER. Le droit sur la cible est éprouvé
+ * par la route ; il ne couvre ni un sous-dossier où l'appelant a été restreint (le plus
+ * proche gagne, `RG-DRO-01`), ni une note mise à jour, ni la note visée par un renvoi.
+ * Chacun de ces gestes est éprouvé ici, au dossier qu'il touche — le droit qu'exigerait
+ * le même geste fait à l'écran.
+ */
+export interface DroitsDImport {
+	readonly ecrireDesNotes: (dossierId: string) => boolean;
+	readonly creerDesSousDossiers: (dossierId: string) => boolean;
+}
+
+/**
  * L'annulation d'un lot — une erreur, parce qu'une transaction ne s'annule pas
  * autrement, et une erreur PROPRE au module, parce qu'attraper n'importe quoi
  * effacerait un vrai défaut.
@@ -1427,8 +1447,9 @@ async function dossierDuSegment(
 	cible: CibleDImport,
 	parentId: string,
 	profondeur: number,
-	nom: string
-): Promise<{ readonly id: string; readonly cree: boolean }> {
+	nom: string,
+	peutCreer: boolean
+): Promise<{ readonly id: string; readonly cree: boolean } | null> {
 	const deja = await tx
 		.select({ id: dossiers.id })
 		.from(dossiers)
@@ -1442,6 +1463,7 @@ async function dossierDuSegment(
 		.limit(1);
 	const trouve = deja[0];
 	if (trouve !== undefined) return { id: trouve.id, cree: false };
+	if (!peutCreer) return null;
 
 	/* LA POSITION SE CALCULE, ELLE NE SE LAISSE PAS AU DÉFAUT DE LA COLONNE, qui
 	   vaut zéro : sans ce compte, toute la fratrie créée par un import se
@@ -1539,6 +1561,8 @@ export async function executerLImport(
 		readonly octetsParChemin?: ReadonlyMap<string, Uint8Array>;
 		/** La racine de l'entrepôt de fichiers. Requise avec les octets. */
 		readonly racineDesFichiers?: string;
+		/** Les droits de l'appelant, éprouvés à chaque dossier touché. */
+		readonly droits: DroitsDImport;
 	}
 ): Promise<RapportDImport> {
 	const lignes: LigneDeRapport[] = [];
@@ -1549,6 +1573,20 @@ export async function executerLImport(
 	let refuseEnBloc = false;
 
 	const racineDesFichiers = options.racineDesFichiers;
+
+	/* UN DOSSIER CRÉÉ PAR LE LOT N'A AUCUN DROIT EXPLICITE : il hérite de son parent
+	   (`RG-DRO-01`). Ses droits se lisent donc sur le plus proche dossier préexistant. */
+	const parentDuCree = new Map<string, string>();
+	const preexistant = (dossierId: string): string => {
+		let courant = dossierId;
+		for (let parent = parentDuCree.get(courant); parent !== undefined;) {
+			courant = parent;
+			parent = parentDuCree.get(courant);
+		}
+		return courant;
+	};
+	const peutEcrireDans = (dossierId: string): boolean =>
+		options.droits.ecrireDesNotes(preexistant(dossierId));
 
 	const appliquer = async (tx: Base): Promise<void> => {
 		/* LE RÉFÉRENTIEL DES TYPES DE NOTE, LU UNE FOIS — par identifiant ET par nom :
@@ -1638,13 +1676,28 @@ export async function executerLImport(
 				continue;
 			}
 
-			let dossierId = cible.dossierId;
+			let dossierId: string | null = cible.dossierId;
 			let profondeur = options.profondeurDeDepart;
 			for (const segment of ligne.segments) {
 				profondeur += 1;
-				const dossier = await dossierDuSegment(tx, cible, dossierId, profondeur, segment);
+				const parentId: string = dossierId;
+				const dossier = await dossierDuSegment(
+					tx,
+					cible,
+					parentId,
+					profondeur,
+					segment,
+					options.droits.creerDesSousDossiers(preexistant(parentId))
+				);
+				if (dossier === null) {
+					dossierId = null;
+					break;
+				}
+				if (dossier.cree) {
+					parentDuCree.set(dossier.id, parentId);
+					dossiersCrees += 1;
+				}
 				dossierId = dossier.id;
-				if (dossier.cree) dossiersCrees += 1;
 			}
 
 			/* `RG-M12-01` — une note du même identifiant est MISE À JOUR, jamais
@@ -1652,11 +1705,37 @@ export async function executerLImport(
 			   c'est ce qui rend la branche atteignable après un renommage ou un
 			   déplacement du fichier. */
 			const existante = await tx
-				.select({ id: notes.id })
+				.select({ id: notes.id, dossierId: notes.dossierId, domaineId: notes.domaineId })
 				.from(notes)
 				.where(eq(notes.identifiant, ligne.identifiant))
 				.limit(1);
 			const trouvee = existante[0];
+
+			/* LE DROIT, AU DOSSIER QUI REÇOIT ET À CELUI QUE LA NOTE QUITTE. Le même refus
+			   pour les deux : la ligne ne dit pas si une note existe là où l'appelant ne
+			   peut pas écrire. */
+			if (
+				dossierId === null ||
+				!peutEcrireDans(dossierId) ||
+				(trouvee !== undefined &&
+					(trouvee.domaineId !== cible.domaineId || !peutEcrireDans(trouvee.dossierId)))
+			) {
+				brouillons.push({
+					ligne: {
+						chemin: ligne.chemin,
+						sort: 'echec',
+						motif: 'sans-droit-sur-la-place',
+						identifiant: null,
+						miseAJour: false,
+						aplatie: ligne.aplatie,
+						avertissements: ligne.avertissements,
+						imagesNonReprises: ligne.images.length
+					},
+					renvois: ligne.renvois,
+					noteId: null
+				});
+				continue;
+			}
 			const maintenant = new Date();
 
 			/* LES DEUX COLONNES VOYAGENT ENSEMBLE
@@ -1825,10 +1904,13 @@ export async function executerLImport(
 		const noteParIdentifiant = new Map<string, string>();
 		if (cibles.length > 0) {
 			for (const n of await tx
-				.select({ id: notes.id, identifiant: notes.identifiant })
+				.select({ id: notes.id, identifiant: notes.identifiant, dossierId: notes.dossierId })
 				.from(notes)
 				.where(inArray(notes.identifiant, cibles))) {
-				noteParIdentifiant.set(n.identifiant, n.id);
+				/* UNE RELATION ENGAGE SES DEUX BOUTS — `ajouterUneRelation` exige l'écriture
+				   sur l'un et l'autre. Une note visée hors de ce droit n'est pas résolue, et
+				   le rapport ne la distingue pas d'une note qui n'existe pas. */
+				if (peutEcrireDans(n.dossierId)) noteParIdentifiant.set(n.identifiant, n.id);
 			}
 		}
 
