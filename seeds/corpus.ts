@@ -1162,7 +1162,7 @@ export const CORPUS: readonly Note[] = [
 		univers: 'Production',
 		domaine: 'Applications',
 		dossier: 'Fiches applicatives',
-		url: 'https://client.neltis.fr/incidents',
+		url: 'https://portail.prestataire-reseau.example/incidents',
 		ajoute: '20/07/2026',
 		auteur: 'Sophie Nguyen',
 		fraicheur: 'frais',

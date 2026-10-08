@@ -21,3 +21,6 @@ playwright-report/
 blob-report/
 *.log
 .DS_Store
+
+# Dossiers de travail laissés par les essais d’import
+.tmp-import-*/
