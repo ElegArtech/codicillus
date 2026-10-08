@@ -1,3 +1,4 @@
+import { ADRESSE_DE_DECONNEXION, seDeconnecter } from '$lib/auth/deconnexion';
 import { naviguer } from '$lib/volets/navigation';
 /**
  * Le câblage de la coquille — la barre supérieure, ses deux menus, sa recherche, le mode
@@ -65,7 +66,7 @@ function destinations(contexte: ContexteDeCoquille): Map<string, string | null> 
 		['Mon profil', '/mon-profil'],
 		['Console d’administration', contexte.administrateur ? '/console' : null],
 		["Console d'administration", contexte.administrateur ? '/console' : null],
-		['Se déconnecter', '/deconnexion']
+		['Se déconnecter', ADRESSE_DE_DECONNEXION]
 	]);
 }
 
@@ -175,7 +176,8 @@ export function cablerLaCoquille(document: Document, contexte: ContexteDeCoquill
 		if (entree !== null) {
 			const adresse = cibles.get(libelle(entree));
 			evenement.preventDefault();
-			if (adresse !== null && adresse !== undefined) aller(adresse);
+			if (adresse === ADRESSE_DE_DECONNEXION) seDeconnecter();
+			else if (adresse !== null && adresse !== undefined) aller(adresse);
 			return;
 		}
 

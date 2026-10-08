@@ -7,11 +7,10 @@
  * erreur serait précisément ce que la règle interdit. La réponse est donc la
  * même — 302 vers `/`.
  *
- * DEUX MÉTHODES, ET C'EST LE GEL QUI L'IMPOSE : le menu utilisateur de la coquille
- * est un LIEN, donc un GET. Une déconnexion en GET est déclenchable par un tiers,
- * le cookie étant `SameSite=Lax`. Le risque est borné — fermer une session
- * n'expose rien et ne détruit rien —, et le POST est accepté dès aujourd'hui pour
- * que la coquille n'ait rien à ajouter ici. Écart déclaré.
+ * LA DÉCONNEXION EST UN POST (`seDeconnecter()`), soumis au contrôle d'origine de
+ * SvelteKit. En GET, n'importe quel site ou une image glissée dans une note fermait la
+ * session de qui l'ouvrait. Un GET ne ferme donc rien : il mène au profil, où le bouton
+ * de déconnexion se trouve, ou à l'accueil sans session.
  */
 import type { Cookies } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -28,7 +27,7 @@ async function deconnecter(locals: App.Locals, cookies: Cookies): Promise<Respon
 	   réponse : un cookie survivant à sa session ferait rejouer une lecture
 	   inutile à chaque requête suivante. */
 	return new Response(null, {
-		status: 302,
+		status: 303,
 		headers: new Headers({
 			location: CIBLE_APRES_DECONNEXION,
 			'set-cookie': cookies.serialize(NOM_DU_COOKIE, '', { ...ATTRIBUTS_DU_COOKIE, maxAge: 0 })
@@ -36,6 +35,12 @@ async function deconnecter(locals: App.Locals, cookies: Cookies): Promise<Respon
 	});
 }
 
-export const GET: RequestHandler = async ({ locals, cookies }) => deconnecter(locals, cookies);
+export const GET: RequestHandler = ({ locals }) =>
+	new Response(null, {
+		status: 303,
+		headers: new Headers({
+			location: locals.sessionId === undefined ? CIBLE_APRES_DECONNEXION : '/mon-profil'
+		})
+	});
 
 export const POST: RequestHandler = async ({ locals, cookies }) => deconnecter(locals, cookies);

@@ -17,6 +17,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { seDeconnecter } from '$lib/auth/deconnexion';
 	import { page } from '$app/state';
 	import Vue from '../../vues/V-25.svelte';
 	import '../../vues/V-25.css';
@@ -72,8 +73,8 @@
 			});
 		}
 
-		/* ── Se déconnecter. `/deconnexion` est la seule écriture en GET. ───── */
-		ecouter(document.querySelector('#deconnexion'), 'click', () => location.assign('/deconnexion'));
+		/* ── Se déconnecter. Un POST, jamais un lien. ─────────────────────── */
+		ecouter(document.querySelector('#deconnexion'), 'click', seDeconnecter);
 
 		/* ── Le nom affiché et l'adresse électronique. ──────────────────────── */
 		ecouter(document.querySelector('#enregistrer-identite'), 'click', () => {

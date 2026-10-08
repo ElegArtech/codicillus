@@ -23,6 +23,7 @@
 	import { deserialize } from '$app/forms';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { base as racineDesAssets, resolve } from '$app/paths';
+	import { seDeconnecter } from '$lib/auth/deconnexion';
 	import { page } from '$app/state';
 	import Pictogramme from '$lib/console/Pictogramme.svelte';
 	import {
@@ -1447,7 +1448,14 @@
 			<div class="rail__menu-sep"></div>
 			<a class="rail__menu-lien" href={resolve('/mes-requetes')}>Mes requêtes de documentation</a>
 			<a class="rail__menu-lien" href={resolve('/mon-profil')}>Mon profil</a>
-			<a class="rail__menu-lien" href={resolve('/deconnexion')}>Se déconnecter</a>
+			<a
+				class="rail__menu-lien"
+				href={resolve('/deconnexion')}
+				onclick={(evenement) => {
+					evenement.preventDefault();
+					seDeconnecter();
+				}}>Se déconnecter</a
+			>
 			<div class="rail__menu-version etiq">Codicillus {version}</div>
 		</div>
 	</details>
