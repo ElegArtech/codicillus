@@ -323,6 +323,27 @@
 		menuContextuel = null;
 	}
 
+	onMount(() => {
+		const auClic = (evenement: MouseEvent): void => {
+			if (
+				evenement.target instanceof Element &&
+				evenement.target.closest('.rail__menu-contextuel a[role="menuitem"]') !== null
+			) {
+				fermerLeMenu();
+			} else fermerLeMenu(evenement);
+		};
+		// La fermeture précède les interceptions de navigation sur le document.
+		window.addEventListener('click', auClic, true);
+		return () => window.removeEventListener('click', auClic, true);
+	});
+
+	$effect(() => {
+		if (identite !== undefined) {
+			void page.url.href;
+			fermerLeMenu();
+		}
+	});
+
 	function fermerLeMenuAuClavier(evenement: KeyboardEvent): void {
 		if (evenement.key === 'Escape') menuContextuel = null;
 	}
