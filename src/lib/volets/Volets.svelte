@@ -411,13 +411,13 @@
 				/\/(exporter|pieces-jointes)\//.test(url.pathname)
 			)
 				return;
+			// Empêcher la navigation native laisse les actions du lien s'exécuter,
+			// notamment la fermeture du menu contextuel du rail.
 			if (hote) {
 				e.preventDefault();
-				e.stopImmediatePropagation();
 				ouvrir(adresseLocale(url.href));
 			} else if (integre && estGlobale(url.pathname)) {
 				e.preventDefault();
-				e.stopImmediatePropagation();
 				demanderAuParent('navigation', { adresse: adresseLocale(url.href) });
 			} else if (integre) {
 				lien.setAttribute('data-sveltekit-replacestate', '');
