@@ -38,6 +38,7 @@ import {
 	tableEditing
 } from '@tiptap/pm/tables';
 import {
+	DOMSerializer,
 	Slice,
 	type MarkType,
 	type Node as NoeudProseMirror,
@@ -48,6 +49,7 @@ import { documentDepuisNoeud, noeudDepuisDocument } from './document';
 import { GABARITS, MARQUES_DE_LA_BARRE } from './constructions';
 import type { Document } from '../contenu/document';
 import { sourceDePieceJointeSure } from '../contenu/adresses-sures';
+import { harmoniserLeBalisage, marquerLaMiseEnPage, texteFidele } from '../cablage/copie';
 
 const schema = schemaDeLEditeur;
 
@@ -588,8 +590,54 @@ export function monterLEditeur(
 		return true;
 	};
 
+	/* LA COPIE REND LES LIGNES COMME L'ÉCRAN (`../cablage/copie.ts`). Le fragment copié
+	   n'est affiché nulle part : il est posé hors écran sous les classes de la zone, le
+	   temps d'en relever la mise en page. */
+	const sousLesClassesDeLaZone = <T>(noeuds: Node[], lire: (cadre: HTMLElement) => T): T => {
+		const cadre = zone.ownerDocument.createElement('div');
+		cadre.className = zone.className;
+		cadre.style.cssText = `position:fixed;left:-10000px;top:0;width:${zone.clientWidth || 800}px;pointer-events:none;opacity:0`;
+		cadre.append(...noeuds);
+		zone.ownerDocument.body.append(cadre);
+		try {
+			return lire(cadre);
+		} finally {
+			cadre.remove();
+		}
+	};
+	const serialiseur = DOMSerializer.fromSchema(schema);
+	const serialiseurDeCopie = new DOMSerializer(serialiseur.nodes, serialiseur.marks);
+	const serialiserLeFragment = serialiseurDeCopie.serializeFragment.bind(serialiseurDeCopie);
+	/* La méthode se rappelle elle-même pour chaque contenu de nœud : seul l'appel le
+	   plus externe harmonise, une fois le fragment entier construit. */
+	let profondeur = 0;
+	serialiseurDeCopie.serializeFragment = (fragment, options, cible) => {
+		profondeur += 1;
+		try {
+			const rendu = serialiserLeFragment(fragment, options, cible);
+			if (profondeur === 1)
+				sousLesClassesDeLaZone(Array.from(rendu.childNodes), (cadre) => {
+					marquerLaMiseEnPage(cadre);
+					harmoniserLeBalisage(cadre);
+					rendu.append(...Array.from(cadre.childNodes));
+				});
+			return rendu;
+		} finally {
+			profondeur -= 1;
+		}
+	};
+	const texteDeLaCopie = (tranche: Slice): string => {
+		const rendu = serialiseur.serializeFragment(tranche.content, { document: zone.ownerDocument });
+		return sousLesClassesDeLaZone(Array.from(rendu.childNodes), (cadre) => {
+			marquerLaMiseEnPage(cadre);
+			return texteFidele(cadre.cloneNode(true) as HTMLElement);
+		});
+	};
+
 	const vue: EditorView = new EditorView({ mount: zone } as unknown as HTMLElement, {
 		state: etat,
+		clipboardSerializer: serialiseurDeCopie,
+		clipboardTextSerializer: texteDeLaCopie,
 		handlePaste: (vue, evenement) => {
 			const image = Array.from(evenement.clipboardData?.files ?? []).find((f) =>
 				f.type.startsWith('image/')

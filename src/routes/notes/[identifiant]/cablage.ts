@@ -15,6 +15,7 @@
  * registre, le dépliage du panneau de signalement, la copie d'un bloc de code et
  * l'agrandissement d'une figure.
  */
+import { harmoniserLeBalisage, marquerLaMiseEnPage, texteFidele } from '$lib/cablage/copie';
 import { soumettreVers } from '$lib/cablage/formulaires';
 import type { Registre } from '$lib/donnees/note';
 import { adresseDeNote } from '$lib/rangement/adresses';
@@ -291,6 +292,25 @@ export function cablerLaLecture(
 		});
 	}
 
+	/* La sélection copiée au clavier ou au menu suit la même règle que « Copier » :
+	   sans elle, le navigateur glisserait une ligne vide entre deux lignes du corps. */
+	ecouter(document, 'copy', (evenement) => {
+		if (evenement.defaultPrevented || !(evenement instanceof ClipboardEvent)) return;
+		const presse = evenement.clipboardData;
+		const selection = document.getSelection();
+		if (presse === null || selection === null || selection.rangeCount !== 1) return;
+		if (selection.isCollapsed) return;
+		const plage = selection.getRangeAt(0);
+		const commun = plage.commonAncestorContainer;
+		const ancre = commun instanceof Element ? commun : commun.parentElement;
+		const corps = ancre?.closest<HTMLElement>('.prose');
+		if (corps === null || corps === undefined || corps.isContentEditable) return;
+		const contenu = contenuCopiable(corps, plage);
+		presse.setData('text/html', contenu.html);
+		presse.setData('text/plain', contenu.texte);
+		evenement.preventDefault();
+	});
+
 	/* La suppression : le second bouton délègue au premier, celui que
 	   `cablerLaSuppression()` a câblé avec la confirmation chiffrée. */
 	const suppressions = boutonsNommes(document, 'Supprimer');
@@ -377,35 +397,31 @@ interface ContenuCopiable {
 	readonly texte: string;
 }
 
-/** Le corps seul, privé des commandes d'interface et avec des liens autonomes. */
-function contenuCopiable(corps: HTMLElement): ContenuCopiable {
-	const copie = corps.cloneNode(true) as HTMLElement;
+/**
+ * Le corps seul — ou la part qu'une sélection en retient —, privé des commandes
+ * d'interface et avec des liens autonomes. La mise en page est relevée sur le corps
+ * affiché avant le clonage : la copie garde les lignes telles que l'écran les montre.
+ */
+function contenuCopiable(corps: HTMLElement, plage?: Range): ContenuCopiable {
+	const demarquer = marquerLaMiseEnPage(corps);
+	let copie: HTMLElement;
+	try {
+		copie = corps.cloneNode(plage === undefined) as HTMLElement;
+		if (plage !== undefined) copie.append(plage.cloneContents());
+	} finally {
+		demarquer();
+	}
 	for (const commande of copie.querySelectorAll('button')) commande.remove();
+	/* Le clone appartient au même document : les accesseurs rendent déjà l'adresse
+	   absolue, qu'on inscrit dans l'attribut pour qu'elle voyage. */
+	for (const lien of copie.querySelectorAll<HTMLAnchorElement>('a[href]'))
+		lien.setAttribute('href', lien.href);
+	for (const image of copie.querySelectorAll<HTMLImageElement>('img[src]'))
+		image.setAttribute('src', image.src);
 
-	const liens = Array.from(corps.querySelectorAll<HTMLAnchorElement>('a'));
-	for (const [rang, lien] of Array.from(copie.querySelectorAll<HTMLAnchorElement>('a')).entries()) {
-		const original = liens[rang];
-		if (original !== undefined) lien.href = original.href;
-	}
-	const images = Array.from(corps.querySelectorAll<HTMLImageElement>('img'));
-	for (const [rang, image] of Array.from(
-		copie.querySelectorAll<HTMLImageElement>('img')
-	).entries()) {
-		const originale = images[rang];
-		if (originale !== undefined) image.src = originale.src;
-	}
-
-	/* `innerText` respecte les paragraphes, les listes et les retours des blocs de
-	   code, mais seulement sur un nœud rendu. Le clone est donc posé hors écran le
-	   temps d'une lecture, sans modifier le document visible. */
-	copie.setAttribute('aria-hidden', 'true');
-	copie.style.cssText =
-		'position:fixed;left:-10000px;top:0;width:800px;pointer-events:none;opacity:0';
-	corps.ownerDocument.body.append(copie);
-	const texte = copie.innerText.trim();
-	const html = copie.innerHTML;
-	copie.remove();
-	return { html, texte };
+	const balisage = copie.cloneNode(true) as HTMLElement;
+	harmoniserLeBalisage(balisage);
+	return { html: balisage.innerHTML, texte: texteFidele(copie) };
 }
 
 /** Écrit en riche quand le navigateur le permet, puis se replie sur le texte. */
